@@ -51,6 +51,20 @@ import HorizontaLDots from "./horizontal-dots.svg";
 import ChatIcon from "./chat.svg";
 import MoreDotIcon from "./more-dot.svg";
 import BellIcon from "./bell.svg";
+import TicketIcon from "./ticket.svg";
+import LedgerIcon from "./ledger.svg";
+import ApprovalsIcon from "./approvals.svg";
+import PayrollIcon from "./payroll.svg";
+import LoansIcon from "./loans.svg";
+import PoliciesIcon from "./policies.svg";
+import AccountingIcon from "./accounting.svg";
+import ReportsIcon from "./reports.svg";
+import AdvancesIcon from "./advances.svg";
+import LeaveIcon from "./leave.svg";
+import CommunicationIcon from "./communication.svg";
+import AssetsIcon from "./assets.svg";
+import AuditTrailIcon from "./audit-trail.svg";
+import SettingsIcon from "./settings.svg";
 
 export {
   DownloadIcon,
@@ -106,4 +120,18 @@ export {
   HorizontaLDots,
   ChevronUpIcon,
   ChatIcon,
+  TicketIcon,
+  LedgerIcon,
+  ApprovalsIcon,
+  PayrollIcon,
+  LoansIcon,
+  PoliciesIcon,
+  AccountingIcon,
+  ReportsIcon,
+  AdvancesIcon,
+  LeaveIcon,
+  CommunicationIcon,
+  AssetsIcon,
+  AuditTrailIcon,
+  SettingsIcon,
 };
