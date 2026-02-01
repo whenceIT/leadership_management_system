@@ -3,6 +3,7 @@
 # dependencies
 /.idea
 /node_modules
+/scripts/backend/node_modules
 /.pnp
 .pnp.js
 .yarn/install-state.gz
