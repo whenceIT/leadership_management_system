@@ -48,13 +48,13 @@ export default function StatisticsChart() {
     chart: {
       fontFamily: "Outfit, sans-serif",
       height: 310,
-      type: "line", // Set the chart type to 'line'
+      type: "line", // Set to chart type to 'line'
       toolbar: {
         show: false, // Hide chart toolbar
       },
     },
     stroke: {
-      curve: "straight", // Define the line style (straight, smooth, or step)
+      curve: "straight", // Define line style (straight, smooth, or step)
       width: [2, 2], // Line width for each dataset
     },
 
@@ -66,7 +66,7 @@ export default function StatisticsChart() {
       },
     },
     markers: {
-      size: 0, // Size of the marker points
+      size: 0, // Size of marker points
       strokeColors: "#fff", // Marker border color
       strokeWidth: 2,
       hover: {
@@ -124,7 +124,7 @@ export default function StatisticsChart() {
       labels: {
         style: {
           fontSize: "12px", // Adjust font size for y-axis labels
-          colors: ["#6B7280"], // Color of the labels
+          colors: ["#6B7280"], // Color of labels
         },
       },
       title: {
@@ -138,11 +138,11 @@ export default function StatisticsChart() {
 
   const series = [
     {
-      name: "Sales",
+      name: "Disbursements",
       data: [180, 190, 170, 160, 175, 165, 170, 205, 230, 210, 240, 235],
     },
     {
-      name: "Revenue",
+      name: "Collections",
       data: [40, 30, 50, 40, 55, 40, 70, 100, 110, 120, 150, 140],
     },
   ];
@@ -151,10 +151,10 @@ export default function StatisticsChart() {
       <div className="flex flex-col gap-5 mb-6 sm:flex-row sm:justify-between">
         <div className="w-full">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-            Statistics
+            Loan Statistics
           </h3>
           <p className="mt-1 text-gray-500 text-theme-sm dark:text-gray-400">
-            Target you've set for each month
+            Loan disbursements and collections overview
           </p>
         </div>
         <div className="flex items-center gap-3 sm:justify-end">

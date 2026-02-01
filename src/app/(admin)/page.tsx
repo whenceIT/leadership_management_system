@@ -9,8 +9,8 @@ import DemographicCard from "@/components/ecommerce/DemographicCard";
 
 export const metadata: Metadata = {
   title:
-    "Whence Finacial Services | Beyond the familia",
-  description: "This is Next.js Home for TailAdmin Dashboard Template",
+    "Smart Leadership Financial Services | Dashboard",
+  description: "Comprehensive loan management and financial services platform",
 };
 
 export default function Ecommerce() {

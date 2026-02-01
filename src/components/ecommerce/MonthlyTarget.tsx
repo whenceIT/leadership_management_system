@@ -7,7 +7,7 @@ import { Dropdown } from "../ui/dropdown/Dropdown";
 import { MoreDotIcon } from "@/icons";
 import { useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
-// Dynamically import the ReactApexChart component
+// Dynamically import ReactApexChart component
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
@@ -78,10 +78,10 @@ export default function MonthlyTarget() {
         <div className="flex justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-800 dark:text-white/90">
-              Monthly Target
+              Monthly Collection Target
             </h3>
             <p className="mt-1 font-normal text-gray-500 text-theme-sm dark:text-gray-400">
-              Target you’ve set for each month
+              Collection target you've set for each month
             </p>
           </div>
           <div className="relative inline-block">
@@ -125,7 +125,7 @@ export default function MonthlyTarget() {
           </span>
         </div>
         <p className="mx-auto mt-10 w-full max-w-[380px] text-center text-sm text-gray-500 sm:text-base">
-          You earn $3287 today, it&apos;s higher than last month. Keep up your
+          You collected ZMW 32,870 today, it's higher than last month. Keep up your
           good work!
         </p>
       </div>
@@ -136,7 +136,7 @@ export default function MonthlyTarget() {
             Target
           </p>
           <p className="flex items-center justify-center gap-1 text-base font-semibold text-gray-800 dark:text-white/90 sm:text-lg">
-            $20K
+            ZMW 20K
             <svg
               width="16"
               height="16"
@@ -158,10 +158,10 @@ export default function MonthlyTarget() {
 
         <div>
           <p className="mb-1 text-center text-gray-500 text-theme-xs dark:text-gray-400 sm:text-sm">
-            Revenue
+            Collections
           </p>
           <p className="flex items-center justify-center gap-1 text-base font-semibold text-gray-800 dark:text-white/90 sm:text-lg">
-            $20K
+            ZMW 20K
             <svg
               width="16"
               height="16"
@@ -186,7 +186,7 @@ export default function MonthlyTarget() {
             Today
           </p>
           <p className="flex items-center justify-center gap-1 text-base font-semibold text-gray-800 dark:text-white/90 sm:text-lg">
-            $20K
+            ZMW 20K
             <svg
               width="16"
               height="16"
