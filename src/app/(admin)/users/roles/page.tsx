@@ -2,6 +2,7 @@
 
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -51,6 +52,7 @@ interface ApiResponse {
 }
 
 export default function RolesPage() {
+  const router = useRouter();
   const [showPermissions, setShowPermissions] = useState<number | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [roleUsers, setRoleUsers] = useState<RoleUser[]>([]);
@@ -219,6 +221,33 @@ export default function RolesPage() {
     }
   };
 
+  // Delete role
+  const handleDeleteRole = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete the role "${name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/roles/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        fetchRoles(currentPage, searchTerm);
+      } else {
+        setError(data.message || "Failed to delete role");
+      }
+    } catch (err) {
+      console.error("Error deleting role:", err);
+      setError("Failed to connect to server.");
+    }
+  };
+
   return (
     <div>
       <PageBreadcrumb pageTitle="Manage User Roles" />
@@ -258,7 +287,11 @@ export default function RolesPage() {
               Assignments
             </Button>
             {activeTab === "roles" && (
-              <Button size="sm" variant="primary">
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => router.push("/admin/users/roles/create")}
+              >
                 Add New Role
               </Button>
             )}
@@ -389,16 +422,27 @@ export default function RolesPage() {
                           </TableCell>
                           <TableCell className="px-4 py-3 text-start">
                             <div className="flex items-center gap-2">
-                              <Button size="sm" variant="outline" className="px-3 py-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="px-3 py-2"
+                                onClick={() => router.push(`/admin/users/roles/${role.id}/edit`)}
+                              >
                                 Edit
                               </Button>
-                              <Button size="sm" variant="outline" className="px-3 py-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="px-3 py-2"
+                                onClick={() => router.push(`/admin/users/roles/${role.id}/permissions`)}
+                              >
                                 Permissions
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="px-3 py-2 text-red-600 hover:text-red-700"
+                                onClick={() => handleDeleteRole(role.id, role.name)}
                               >
                                 Delete
                               </Button>
