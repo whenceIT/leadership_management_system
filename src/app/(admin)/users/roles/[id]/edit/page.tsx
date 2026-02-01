@@ -332,7 +332,6 @@ export default function EditRolePage() {
           {/* Form Actions */}
           <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6 dark:border-gray-700">
             <Button
-              type="button"
               size="sm"
               variant="outline"
               onClick={() => router.push("/admin/users/roles")}
@@ -340,14 +339,13 @@ export default function EditRolePage() {
             >
               Cancel
             </Button>
-            <Button
+            <button
               type="submit"
-              size="sm"
-              variant="primary"
               disabled={saving}
+              className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? "Saving..." : "Save Changes"}
-            </Button>
+            </button>
           </div>
         </form>
       </div>
