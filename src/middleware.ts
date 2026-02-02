@@ -1,52 +1,39 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Define protected routes
 const protectedRoutes = ['/admin', '/dashboard', '/profile', '/settings'];
-
-// Define public routes
 const publicRoutes = ['/signin', '/signup', '/forgot-password', '/reset-password'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Get user_id cookie
-  const userId = request.cookies.get('user_id')?.value;
-
-  // Check if route is protected
-  const isProtectedRoute = protectedRoutes.some(route => 
-    pathname.startsWith(route)
-  );
-
-  // Check if route is public
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname.startsWith(route)
-  );
-
-  // If trying to access protected route without authentication
-  if (isProtectedRoute && !userId) {
-    const loginUrl = new URL('/signin', request.url);
-    return NextResponse.redirect(loginUrl);
+  // Skip static files and _next paths
+  if (!pathname || pathname.startsWith('/_next') || pathname === '/favicon.ico') {
+    return NextResponse.next();
   }
 
-  // If trying to access auth routes while authenticated
+  // Get cookie safely
+  const userId = request.cookies.get('user_id')?.value;
+
+  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+
+  // Protected route without user -> redirect to signin
+  if (isProtectedRoute && !userId) {
+    const loginUrl = new URL('/signin', request.url);
+    return NextResponse.rewrite(loginUrl);
+  }
+
+  // Public route with user -> redirect to home
   if (isPublicRoute && userId) {
     const homeUrl = new URL('/', request.url);
-    return NextResponse.redirect(homeUrl);
+    return NextResponse.rewrite(homeUrl);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
+
