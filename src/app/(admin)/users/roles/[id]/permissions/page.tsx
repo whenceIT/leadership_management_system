@@ -22,63 +22,9 @@ interface Permission {
 
 interface ApiResponse {
   success: boolean;
-  data?: Role;
+  data?: Role | Permission[];
   message?: string;
 }
-
-// Define available permissions based on the system
-const availablePermissions: Permission[] = [
-  { id: 1, name: "Users Management", slug: "users.manage", description: "Full access to user management" },
-  { id: 2, name: "Users View", slug: "users.view", description: "View user information" },
-  { id: 3, name: "Users Create", slug: "users.create", description: "Create new users" },
-  { id: 4, name: "Users Edit", slug: "users.edit", description: "Edit user information" },
-  { id: 5, name: "Users Delete", slug: "users.delete", description: "Delete users" },
-  { id: 6, name: "Roles Management", slug: "roles.manage", description: "Full access to role management" },
-  { id: 7, name: "Roles View", slug: "roles.view", description: "View roles" },
-  { id: 8, name: "Roles Create", slug: "roles.create", description: "Create new roles" },
-  { id: 9, name: "Roles Edit", slug: "roles.edit", description: "Edit roles" },
-  { id: 10, name: "Roles Delete", slug: "roles.delete", description: "Delete roles" },
-  { id: 11, name: "Loans Management", slug: "loans.manage", description: "Full access to loan management" },
-  { id: 12, name: "Loans View", slug: "loans.view", description: "View loan information" },
-  { id: 13, name: "Loans Create", slug: "loans.create", description: "Create new loans" },
-  { id: 14, name: "Loans Edit", slug: "loans.edit", description: "Edit loan information" },
-  { id: 15, name: "Loans Delete", slug: "loans.delete", description: "Delete loans" },
-  { id: 16, name: "Loans Approve", slug: "loans.approve", description: "Approve loan applications" },
-  { id: 17, name: "Savings Management", slug: "savings.manage", description: "Full access to savings management" },
-  { id: 18, name: "Savings View", slug: "savings.view", description: "View savings information" },
-  { id: 19, name: "Savings Create", slug: "savings.create", description: "Create new savings accounts" },
-  { id: 20, name: "Savings Edit", slug: "savings.edit", description: "Edit savings information" },
-  { id: 21, name: "Savings Delete", slug: "savings.delete", description: "Delete savings accounts" },
-  { id: 22, name: "Reports Management", slug: "reports.manage", description: "Full access to reports" },
-  { id: 23, name: "Reports View", slug: "reports.view", description: "View reports" },
-  { id: 24, name: "Reports Export", slug: "reports.export", description: "Export reports" },
-  { id: 25, name: "Settings Management", slug: "settings.manage", description: "Full access to system settings" },
-  { id: 26, name: "Settings View", slug: "settings.view", description: "View system settings" },
-  { id: 27, name: "Settings Edit", slug: "settings.edit", description: "Edit system settings" },
-  { id: 28, name: "Audit Trail", slug: "audit.view", description: "View audit trail" },
-  { id: 29, name: "Clients Management", slug: "clients.manage", description: "Full access to client management" },
-  { id: 30, name: "Clients View", slug: "clients.view", description: "View client information" },
-  { id: 31, name: "Clients Create", slug: "clients.create", description: "Create new clients" },
-  { id: 32, name: "Clients Edit", slug: "clients.edit", description: "Edit client information" },
-  { id: 33, name: "Clients Delete", slug: "clients.delete", description: "Delete clients" },
-  { id: 34, name: "Payroll Management", slug: "payroll.manage", description: "Full access to payroll" },
-  { id: 35, name: "Payroll View", slug: "payroll.view", description: "View payroll information" },
-  { id: 36, name: "Payroll Process", slug: "payroll.process", description: "Process payroll" },
-  { id: 37, name: "Assets Management", slug: "assets.manage", description: "Full access to assets" },
-  { id: 38, name: "Assets View", slug: "assets.view", description: "View assets" },
-  { id: 39, name: "Assets Create", slug: "assets.create", description: "Create new assets" },
-  { id: 40, name: "Assets Edit", slug: "assets.edit", description: "Edit assets" },
-  { id: 41, name: "Assets Delete", slug: "assets.delete", description: "Delete assets" },
-  { id: 42, name: "Leave Management", slug: "leave.manage", description: "Full access to leave management" },
-  { id: 43, name: "Leave View", slug: "leave.view", description: "View leave requests" },
-  { id: 44, name: "Leave Approve", slug: "leave.approve", description: "Approve leave requests" },
-  { id: 45, name: "Advances Management", slug: "advances.manage", description: "Full access to advances" },
-  { id: 46, name: "Advances View", slug: "advances.view", description: "View advances" },
-  { id: 47, name: "Advances Approve", slug: "advances.approve", description: "Approve advances" },
-  { id: 48, name: "Communication", slug: "communication.send", description: "Send communications" },
-  { id: 49, name: "Policies Management", slug: "policies.manage", description: "Full access to policies" },
-  { id: 50, name: "Policies View", slug: "policies.view", description: "View policies" },
-];
 
 export default function RolePermissionsPage() {
   const router = useRouter();
@@ -86,11 +32,38 @@ export default function RolePermissionsPage() {
   const roleId = params.id as string;
 
   const [role, setRole] = useState<Role | null>(null);
+  const [availablePermissions, setAvailablePermissions] = useState<Permission[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Fetch permissions from database
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      try {
+        const response = await fetch(`http://localhost:3001/api/permissions`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data: ApiResponse = await response.json();
+
+        if (data.success && Array.isArray(data.data)) {
+          setAvailablePermissions(data.data);
+        } else {
+          console.error("Failed to fetch permissions:", data.message);
+        }
+      } catch (err) {
+        console.error("Error fetching permissions:", err);
+      }
+    };
+
+    fetchPermissions();
+  }, []);
 
   // Fetch role data
   useEffect(() => {
@@ -179,22 +152,18 @@ export default function RolePermissionsPage() {
   };
 
   // Group permissions by category
-  const groupedPermissions: Record<string, Permission[]> = {
-    Users: availablePermissions.filter((p) => p.slug.startsWith("users.")),
-    Roles: availablePermissions.filter((p) => p.slug.startsWith("roles.")),
-    Clients: availablePermissions.filter((p) => p.slug.startsWith("clients.")),
-    Loans: availablePermissions.filter((p) => p.slug.startsWith("loans.")),
-    Savings: availablePermissions.filter((p) => p.slug.startsWith("savings.")),
-    Payroll: availablePermissions.filter((p) => p.slug.startsWith("payroll.")),
-    Assets: availablePermissions.filter((p) => p.slug.startsWith("assets.")),
-    Leave: availablePermissions.filter((p) => p.slug.startsWith("leave.")),
-    Advances: availablePermissions.filter((p) => p.slug.startsWith("advances.")),
-    Reports: availablePermissions.filter((p) => p.slug.startsWith("reports.")),
-    Settings: availablePermissions.filter((p) => p.slug.startsWith("settings.")),
-    Policies: availablePermissions.filter((p) => p.slug.startsWith("policies.")),
-    Communication: availablePermissions.filter((p) => p.slug.startsWith("communication.")),
-    Audit: availablePermissions.filter((p) => p.slug.startsWith("audit.")),
-  };
+  const groupedPermissions: Record<string, Permission[]> = {};
+  
+  availablePermissions.forEach((permission) => {
+    // Extract category from slug (e.g., "users.view" -> "Users")
+    const parts = permission.slug.split('.');
+    const category = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : 'Other';
+    
+    if (!groupedPermissions[category]) {
+      groupedPermissions[category] = [];
+    }
+    groupedPermissions[category].push(permission);
+  });
 
   if (loading) {
     return (

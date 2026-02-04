@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession, getUserById } from '@/lib/auth';
+import { getValidatedSession, getUserById, clearSession } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get current session
-    const session = await getSession();
+    // Get validated session (checks if session is valid and not expired)
+    const session = await getValidatedSession();
 
     if (!session) {
       return NextResponse.json(
-        { success: false, message: 'Not authenticated' },
+        { success: false, message: 'Not authenticated or session expired' },
         { status: 401 }
       );
     }
@@ -17,15 +17,32 @@ export async function GET(request: NextRequest) {
     const user = await getUserById(session.userId) as any;
 
     if (!user) {
+      // User not found, clear session
+      await clearSession();
       return NextResponse.json(
         { success: false, message: 'User not found' },
         { status: 404 }
       );
     }
 
+    // Check if user is blocked
+    if (user && 'blocked' in user && user.blocked) {
+      await clearSession();
+      return NextResponse.json(
+        { success: false, message: 'User account is blocked' },
+        { status: 403 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: true,
+        session: {
+          userId: session.userId,
+          email: session.email,
+          name: session.name,
+          status: session.status,
+        },
         user: {
           id: user.id,
           email: user.email,

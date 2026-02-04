@@ -6,6 +6,7 @@ const ClientController = require('../controllers/ClientController');
 const OfficeController = require('../controllers/OfficeController');
 const DropdownController = require('../controllers/DropdownController');
 const RoleUserController = require('../controllers/RoleUserController');
+const PermissionController = require('../controllers/PermissionController');
 
 // Initialize controllers
 const userController = new UserController();
@@ -14,6 +15,7 @@ const clientController = new ClientController();
 const officeController = new OfficeController();
 const dropdownController = new DropdownController();
 const roleUserController = new RoleUserController();
+const permissionController = new PermissionController();
 
 // ==================== USER ROUTES ====================
 
@@ -144,6 +146,29 @@ router.post('/roles/assign', (req, res) => roleController.assignRoleToUser(req, 
  * @access   Public
  */
 router.post('/roles/remove', (req, res) => roleController.removeRoleFromUser(req, res));
+
+// ==================== PERMISSION ROUTES ====================
+
+/**
+ * @route   GET /api/permissions
+ * @desc    Get all permissions
+ * @access   Public
+ */
+router.get('/permissions', (req, res) => permissionController.getAllPermissions(req, res));
+
+/**
+ * @route   GET /api/permissions/grouped
+ * @desc    Get all permissions grouped by category
+ * @access   Public
+ */
+router.get('/permissions/grouped', (req, res) => permissionController.getAllPermissionsGrouped(req, res));
+
+/**
+ * @route   GET /api/permissions/:id
+ * @desc    Get permission by ID
+ * @access   Public
+ */
+router.get('/permissions/:id', (req, res) => permissionController.getPermissionById(req, res));
 
 // ==================== ROLE USER ROUTES ====================
 

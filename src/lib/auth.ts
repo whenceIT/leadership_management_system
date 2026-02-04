@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { queryOne } from './db';
 
 const SALT_ROUNDS = 10;
+const SESSION_COOKIE_NAME = 'user_id';
+const SESSION_EXPIRY_DAYS = 7;
 
 // Hash password
 export async function hashPassword(password: string): Promise<string> {
@@ -124,4 +126,53 @@ export async function updateLastLogin(userId: number) {
   `;
   
   await queryOne(sql, [userId]);
+}
+
+// Validate session and check if it's expired
+export async function validateSession(): Promise<boolean> {
+  const cookieStore = await cookies();
+  const userId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+  
+  if (!userId) {
+    return false;
+  }
+  
+  // Check if user exists in database
+  const user = await getUserById(parseInt(userId));
+  
+  if (!user) {
+    // User doesn't exist, clear session
+    await clearSession();
+    return false;
+  }
+  
+  // Check if user is blocked
+  if (user && 'blocked' in user && user.blocked) {
+    await clearSession();
+    return false;
+  }
+  
+  return true;
+}
+
+// Get session with validation
+export async function getValidatedSession() {
+  const isValid = await validateSession();
+  
+  if (!isValid) {
+    return null;
+  }
+  
+  return await getSession();
+}
+
+// Redirect to login if session is invalid
+export async function requireAuth(): Promise<{ userId: number; email: string; name: string | undefined; status: string | undefined } | null> {
+  const session = await getValidatedSession();
+  
+  if (!session) {
+    return null;
+  }
+  
+  return session;
 }
