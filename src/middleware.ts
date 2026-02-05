@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Define protected routes
 const protectedRoutes = ['/admin', '/dashboard', '/profile', '/settings'];
-
-// Define public routes
 const publicRoutes = ['/signin', '/signup', '/forgot-password', '/reset-password'];
 
 export function middleware(request: NextRequest) {
@@ -23,14 +20,13 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
-  // If trying to access protected route without authentication
+  // Protected route without user -> redirect to signin
   if (isProtectedRoute && !userId) {
     const loginUrl = new URL('/signin', request.url);
-    loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // If trying to access auth routes while authenticated
+  // Public route with user -> redirect to home
   if (isPublicRoute && userId) {
     const homeUrl = new URL('/', request.url);
     return NextResponse.redirect(homeUrl);
@@ -40,14 +36,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 };
