@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import * as toastr from 'toastr';
 
@@ -20,17 +20,9 @@ export function useAuth() {
   const [session, setSession] = useState<UserSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [wasPreviouslyAuthenticated, setWasPreviouslyAuthenticated] = useState(false);
 
-  useEffect(() => {
-    checkSession();
-    
-    // Set up interval to check session periodically
-    const interval = setInterval(checkSession, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/session');
       const data = await response.json();
@@ -38,34 +30,72 @@ export function useAuth() {
       if (response.ok && data.session) {
         setSession(data.session);
         setIsAuthenticated(true);
+        setWasPreviouslyAuthenticated(true);
       } else {
         // Session is invalid or expired
-        handleSessionExpired();
+        // Only show notification if user was previously authenticated
+        if (wasPreviouslyAuthenticated || isAuthenticated) {
+          handleSessionExpired();
+        } else {
+          // User was never authenticated or already logged out
+          setSession(null);
+          setIsAuthenticated(false);
+        }
       }
     } catch (error) {
       console.error('Error checking session:', error);
-      handleSessionExpired();
+      // Only show notification if user was previously authenticated
+      if (wasPreviouslyAuthenticated || isAuthenticated) {
+        handleSessionExpired();
+      } else {
+        setSession(null);
+        setIsAuthenticated(false);
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [wasPreviouslyAuthenticated, isAuthenticated]);
 
-  const handleSessionExpired = () => {
+  const handleSessionExpired = useCallback(() => {
     setSession(null);
     setIsAuthenticated(false);
+    setWasPreviouslyAuthenticated(false);
     
-    // Show notification
-    toastr.warning('Your session has expired. Please log in again.', 'Session Expired');
+    // Clear localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('thisUser');
+    }
+    
+    // Only show notification if we're on the client side and not on login page
+    if (typeof window !== 'undefined' && !window.location.pathname.includes('/signin')) {
+      toastr.warning('Your session has expired. Please log in again.', 'Session Expired');
+    }
     
     // Redirect to login page
     router.push('/signin');
-  };
+  }, [router]);
+
+  useEffect(() => {
+    checkSession();
+    
+    // Set up interval to check session periodically (every 30 seconds)
+    const interval = setInterval(checkSession, 30000);
+    
+    return () => clearInterval(interval);
+  }, [checkSession]);
 
   const logout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
       setSession(null);
       setIsAuthenticated(false);
+      setWasPreviouslyAuthenticated(false);
+      
+      // Clear localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('thisUser');
+      }
+      
       router.push('/signin');
     } catch (error) {
       console.error('Error during logout:', error);

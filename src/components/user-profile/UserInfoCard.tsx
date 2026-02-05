@@ -1,18 +1,57 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useModal } from "../../hooks/useModal";
+import { useUserSync } from "../../hooks/useUserSync";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 
+interface UserData {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  gender?: string;
+  [key: string]: any;
+}
+
 export default function UserInfoCard() {
   const { isOpen, openModal, closeModal } = useModal();
+  const [userData, setUserData] = useState<UserData | null>(null);
+  
+  // Use the sync hook to keep user data up to date
+  useUserSync();
+  
+  // Listen for localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedUser = localStorage.getItem('thisUser');
+      if (storedUser) {
+        try {
+          setUserData(JSON.parse(storedUser));
+        } catch (e) {
+          console.error('Error parsing user data from localStorage:', e);
+        }
+      }
+    };
+    
+    // Read initial data
+    handleStorageChange();
+    
+    // Listen for storage events (when localStorage is updated in other tabs)
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+  
   const handleSave = () => {
     // Handle save logic here
     console.log("Saving changes...");
     closeModal();
   };
+  
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -27,7 +66,7 @@ export default function UserInfoCard() {
                 First Name
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Musharof
+                {userData?.first_name || 'N/A'}
               </p>
             </div>
 
@@ -36,7 +75,7 @@ export default function UserInfoCard() {
                 Last Name
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Chowdhury
+                {userData?.last_name || 'N/A'}
               </p>
             </div>
 
@@ -45,7 +84,7 @@ export default function UserInfoCard() {
                 Email address
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                randomuser@pimjo.com
+                {userData?.email || 'N/A'}
               </p>
             </div>
 
@@ -54,16 +93,25 @@ export default function UserInfoCard() {
                 Phone
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                +09 363 398 46
+                {userData?.phone || 'N/A'}
               </p>
             </div>
 
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Bio
+                Gender
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Team Manager
+                {userData?.gender ? userData.gender.charAt(0).toUpperCase() + userData.gender.slice(1) : 'N/A'}
+              </p>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                Status
+              </p>
+              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                {userData?.status || 'N/A'}
               </p>
             </div>
           </div>
@@ -148,22 +196,22 @@ export default function UserInfoCard() {
                 <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                   <div className="col-span-2 lg:col-span-1">
                     <Label>First Name</Label>
-                    <Input type="text" defaultValue="Musharof" />
+                    <Input type="text" defaultValue={userData?.first_name || ''} />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Last Name</Label>
-                    <Input type="text" defaultValue="Chowdhury" />
+                    <Input type="text" defaultValue={userData?.last_name || ''} />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Email Address</Label>
-                    <Input type="text" defaultValue="randomuser@pimjo.com" />
+                    <Input type="text" defaultValue={userData?.email || ''} />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
                     <Label>Phone</Label>
-                    <Input type="text" defaultValue="+09 363 398 46" />
+                    <Input type="text" defaultValue={userData?.phone || ''} />
                   </div>
 
                   <div className="col-span-2">

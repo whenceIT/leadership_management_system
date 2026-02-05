@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserByEmail, comparePassword, setSession, updateLastLogin } from '@/lib/auth';
+import { setSession } from '@/lib/auth';
+
+const API_BASE_URL = 'https://smartbackend.whencefinancesystem.com';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,15 +25,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user from database
-    const user = await getUserByEmail(email) as any;
+    // Call external API for authentication
+    const apiResponse = await fetch(`${API_BASE_URL}/sign-in`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    });
 
-    if (!user) {
+    if (!apiResponse.ok) {
+      const errorData = await apiResponse.json().catch(() => ({}));
       return NextResponse.json(
-        { success: false, message: 'Invalid email or password' },
-        { status: 401 }
+        { 
+          success: false, 
+          message: errorData.message || 'Authentication failed' 
+        },
+        { status: apiResponse.status }
       );
     }
+
+    const user = await apiResponse.json();
 
     // Check if user is blocked
     if (user.blocked === 1) {
@@ -49,19 +66,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Compare password
-    const isPasswordValid = await comparePassword(password, user.password);
-
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid email or password' },
-        { status: 401 }
-      );
-    }
-
-    // Update last login timestamp
-    await updateLastLogin(user.id);
-
     // Set session cookies
     await setSession(user.id, {
       email: user.email,
@@ -70,22 +74,12 @@ export async function POST(request: NextRequest) {
       status: user.status,
     });
 
-    // Return success response
+    // Return success response with all user data
     return NextResponse.json(
       {
         success: true,
         message: 'Login successful',
-        user: {
-          id: user.id,
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          status: user.status,
-          phone: user.phone,
-          gender: user.gender,
-          office_id: user.office_id,
-          enable_google2fa: user.enable_google2fa,
-        },
+        user: user, // Return entire user object with all fields
       },
       { status: 200 }
     );

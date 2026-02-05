@@ -47,6 +47,9 @@ export default function SignInForm() {
       const data = await response.json();
 
       if (data.success) {
+        // Store all user data in localStorage
+        localStorage.setItem('thisUser', JSON.stringify(data.user));
+        
         setSuccess("Login successful! Redirecting...");
         setTimeout(() => {
           router.push("/");
@@ -158,7 +161,7 @@ export default function SignInForm() {
 
             <div className="mt-5">
               <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                Don&apos;t have an account? {""}
+                Don't have an account? {""}
                 <Link
                   href="/signup"
                   className="text-brand-500 hover:text-brand-600 dark:text-brand-400"

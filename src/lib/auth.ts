@@ -4,7 +4,7 @@ import { queryOne } from './db';
 
 const SALT_ROUNDS = 10;
 const SESSION_COOKIE_NAME = 'user_id';
-const SESSION_EXPIRY_DAYS = 7;
+const SESSION_EXPIRY_DAYS = 1; // 1 day = 24 hours
 
 // Hash password
 export async function hashPassword(password: string): Promise<string> {
@@ -25,7 +25,7 @@ export async function setSession(userId: number, userData: any) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24 * SESSION_EXPIRY_DAYS, // 24 hours (1 day)
     path: '/',
   });
 

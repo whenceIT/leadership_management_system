@@ -1,61 +1,110 @@
 "use client";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useModal } from "../../hooks/useModal";
+import { useUserSync } from "../../hooks/useUserSync";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
 
+interface UserData {
+  id: number;
+  address?: string;
+  current_address?: string;
+  emergency_contact_name?: string;
+  emergency_phone?: string;
+  relation_to_emergency?: string;
+  [key: string]: any;
+}
+
 export default function UserAddressCard() {
   const { isOpen, openModal, closeModal } = useModal();
+  const [userData, setUserData] = useState<UserData | null>(null);
+  
+  // Use the sync hook to keep user data up to date
+  useUserSync();
+  
+  // Listen for localStorage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const storedUser = localStorage.getItem('thisUser');
+      if (storedUser) {
+        try {
+          setUserData(JSON.parse(storedUser));
+        } catch (e) {
+          console.error('Error parsing user data from localStorage:', e);
+        }
+      }
+    };
+    
+    // Read initial data
+    handleStorageChange();
+    
+    // Listen for storage events (when localStorage is updated in other tabs)
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+  
   const handleSave = () => {
     // Handle save logic here
+    //Update user address API call can be placed here
     console.log("Saving changes...");
     closeModal();
   };
+  
   return (
     <>
       <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <h4 className="text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-6">
-              Address
+              Address & Contact
             </h4>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
               <div>
                 <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  Country
+                  Address
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  United States
+                  {userData?.address || 'N/A'}
                 </p>
               </div>
 
               <div>
                 <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  City/State
+                  Current Address
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  Phoenix, Arizona, United States.
+                  {userData?.current_address || 'N/A'}
                 </p>
               </div>
 
               <div>
                 <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  Postal Code
+                  Emergency Contact Name
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  ERT 2489
+                  {userData?.emergency_contact_name || 'N/A'}
                 </p>
               </div>
 
               <div>
                 <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                  TAX ID
+                  Emergency Phone
                 </p>
                 <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                  AS4568384
+                  {userData?.emergency_phone || 'N/A'}
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
+                  Relation to Emergency Contact
+                </p>
+                <p className="text-sm font-medium text-gray-800 dark:text-white/90">
+                  {userData?.relation_to_emergency || 'N/A'}
                 </p>
               </div>
             </div>
@@ -98,23 +147,28 @@ export default function UserAddressCard() {
             <div className="px-2 overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
                 <div>
-                  <Label>Country</Label>
-                  <Input type="text" defaultValue="United States" />
+                  <Label>Address</Label>
+                  <Input type="text" defaultValue={userData?.address || ''} />
                 </div>
 
                 <div>
-                  <Label>City/State</Label>
-                  <Input type="text" defaultValue="Arizona, United States." />
+                  <Label>Current Address</Label>
+                  <Input type="text" defaultValue={userData?.current_address || ''} />
                 </div>
 
                 <div>
-                  <Label>Postal Code</Label>
-                  <Input type="text" defaultValue="ERT 2489" />
+                  <Label>Emergency Contact Name</Label>
+                  <Input type="text" defaultValue={userData?.emergency_contact_name || ''} />
                 </div>
 
                 <div>
-                  <Label>TAX ID</Label>
-                  <Input type="text" defaultValue="AS4568384" />
+                  <Label>Emergency Phone</Label>
+                  <Input type="text" defaultValue={userData?.emergency_phone || ''} />
+                </div>
+
+                <div>
+                  <Label>Relation to Emergency Contact</Label>
+                  <Input type="text" defaultValue={userData?.relation_to_emergency || ''} />
                 </div>
               </div>
             </div>
