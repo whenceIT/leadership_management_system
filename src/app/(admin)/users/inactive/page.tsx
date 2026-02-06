@@ -51,7 +51,7 @@ export default function InactiveUsersPage() {
   useEffect(() => {
     async function fetchOffices() {
       try {
-        const response = await fetch("http://localhost:3001/api/offices");
+        const response = await fetch("https://smartbackend.whencefinancesystem.com/offices");
         const data = await response.json();
         if (data.success) {
           setOffices(data.data);
@@ -76,7 +76,7 @@ export default function InactiveUsersPage() {
           ...(officeId && { officeId }),
         });
         const response = await fetch(
-          `http://localhost:3001/api/users/inactive?${params.toString()}`
+          `https://smartbackend.whencefinancesystem.com/users/inactive?${params.toString()}`
         );
         const data: ApiResponse = await response.json();
         if (data.success) {
@@ -112,7 +112,7 @@ export default function InactiveUsersPage() {
     }
     try {
       const response = await fetch(
-        `http://localhost:3001/api/users/${userId}/reactivate`,
+        `https://smartbackend.whencefinancesystem.com/users/${userId}/reactivate`,
         {
           method: "POST",
         }
@@ -127,7 +127,7 @@ export default function InactiveUsersPage() {
           ...(officeId && { officeId }),
         });
         const refreshResponse = await fetch(
-          `http://localhost:3001/api/users/inactive?${params.toString()}`
+          `https://smartbackend.whencefinancesystem.com/users/inactive?${params.toString()}`
         );
         const refreshData: ApiResponse = await refreshResponse.json();
         if (refreshData.success) {

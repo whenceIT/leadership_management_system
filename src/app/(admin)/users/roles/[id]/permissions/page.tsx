@@ -20,9 +20,15 @@ interface Permission {
   description: string | null;
 }
 
-interface ApiResponse {
+interface PermissionsApiResponse {
   success: boolean;
-  data?: Role | Permission[];
+  data?: Permission[];
+  message?: string;
+}
+
+interface RoleApiResponse {
+  success: boolean;
+  data?: Role;
   message?: string;
 }
 
@@ -43,22 +49,24 @@ export default function RolePermissionsPage() {
   useEffect(() => {
     const fetchPermissions = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/permissions`, {
+        const response = await fetch(`https://smartbackend.whencefinancesystem.com/permissions`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
         });
 
-        const data: ApiResponse = await response.json();
+        const data: PermissionsApiResponse = await response.json();
 
         if (data.success && Array.isArray(data.data)) {
           setAvailablePermissions(data.data);
         } else {
           console.error("Failed to fetch permissions:", data.message);
+          setAvailablePermissions([]);
         }
       } catch (err) {
         console.error("Error fetching permissions:", err);
+        setAvailablePermissions([]);
       }
     };
 
@@ -72,14 +80,14 @@ export default function RolePermissionsPage() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`http://localhost:3001/api/roles/${roleId}`, {
+        const response = await fetch(`https://smartbackend.whencefinancesystem.com/roles/${roleId}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
         });
 
-        const data: ApiResponse = await response.json();
+        const data: RoleApiResponse = await response.json();
 
         if (data.success && data.data) {
           setRole(data.data);
@@ -87,16 +95,20 @@ export default function RolePermissionsPage() {
           setSelectedPermissions(permissions);
         } else {
           setError(data.message || "Failed to fetch role");
+          setRole(null);
         }
       } catch (err) {
         console.error("Error fetching role:", err);
         setError("Failed to connect to server. Please check if API is running.");
+        setRole(null);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRole();
+    if (roleId) {
+      fetchRole();
+    }
   }, [roleId]);
 
   // Handle permission toggle
@@ -125,7 +137,7 @@ export default function RolePermissionsPage() {
     setSuccess(null);
 
     try {
-      const response = await fetch(`http://localhost:3001/api/roles/${roleId}/permissions`, {
+      const response = await fetch(`https://smartbackend.whencefinancesystem.com/roles/${roleId}/permissions`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -133,7 +145,7 @@ export default function RolePermissionsPage() {
         body: JSON.stringify({ permissions: selectedPermissions }),
       });
 
-      const data: ApiResponse = await response.json();
+      const data: RoleApiResponse = await response.json();
 
       if (data.success) {
         setSuccess("Permissions updated successfully!");
@@ -187,7 +199,7 @@ export default function RolePermissionsPage() {
               Edit Permissions
             </h1>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Manage permissions for role: <span className="font-medium text-gray-900 dark:text-white">{role?.name}</span>
+              Manage permissions for role: <span className="font-medium text-gray-900 dark:text-white">{role?.name || 'Unknown'}</span>
             </p>
           </div>
           <div className="flex items-center gap-3">

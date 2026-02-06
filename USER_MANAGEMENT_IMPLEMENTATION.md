@@ -238,7 +238,7 @@ The pages use the following components from the template:
 
 ### Data Not Loading
 - Check browser console for errors
-- Verify API endpoints are accessible (try `http://localhost:3001/api/users`)
+- Verify API endpoints are accessible (try `https://smartbackend.whencefinancesystem.com/users`)
 - Check network tab in browser dev tools for failed requests
 
 ## Documentation

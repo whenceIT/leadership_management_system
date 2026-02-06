@@ -51,7 +51,7 @@ export default function ViewUsersPage() {
   useEffect(() => {
     async function fetchOffices() {
       try {
-        const response = await fetch("http://localhost:3001/api/offices");
+        const response = await fetch("https://smartbackend.whencefinancesystem.com/offices");
         const data = await response.json();
         if (data.success) {
           setOffices(data.data);
@@ -77,7 +77,7 @@ export default function ViewUsersPage() {
         });
 
         const response = await fetch(
-          `http://localhost:3001/api/users?${params.toString()}`
+          `https://smartbackend.whencefinancesystem.com/users?${params.toString()}`
         );
         const data: ApiResponse = await response.json();
 
@@ -115,7 +115,7 @@ export default function ViewUsersPage() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/users/${userId}/deactivate`, {
+      const response = await fetch(`https://smartbackend.whencefinancesystem.com/users/${userId}/deactivate`, {
         method: "POST",
       });
 
@@ -130,7 +130,7 @@ export default function ViewUsersPage() {
         });
 
         const usersResponse = await fetch(
-          `http://localhost:3001/api/users?${params.toString()}`
+          `https://smartbackend.whencefinancesystem.com/users?${params.toString()}`
         );
         const usersData: ApiResponse = await usersResponse.json();
 
