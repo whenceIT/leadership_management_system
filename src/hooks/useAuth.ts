@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import * as toastr from 'toastr';
 
 export interface UserSession {
   userId: number;
@@ -33,7 +32,7 @@ export function useAuth() {
         setWasPreviouslyAuthenticated(true);
       } else {
         // Session is invalid or expired
-        // Only show notification if user was previously authenticated
+        // Only handle session expired if user was previously authenticated
         if (wasPreviouslyAuthenticated || isAuthenticated) {
           handleSessionExpired();
         } else {
@@ -44,7 +43,7 @@ export function useAuth() {
       }
     } catch (error) {
       console.error('Error checking session:', error);
-      // Only show notification if user was previously authenticated
+      // Only handle session expired if user was previously authenticated
       if (wasPreviouslyAuthenticated || isAuthenticated) {
         handleSessionExpired();
       } else {
@@ -64,11 +63,6 @@ export function useAuth() {
     // Clear localStorage
     if (typeof window !== 'undefined') {
       localStorage.removeItem('thisUser');
-    }
-    
-    // Only show notification if we're on the client side and not on login page
-    if (typeof window !== 'undefined' && !window.location.pathname.includes('/signin')) {
-      toastr.warning('Your session has expired. Please log in again.', 'Session Expired');
     }
     
     // Redirect to login page

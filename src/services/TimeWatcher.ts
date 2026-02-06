@@ -3,26 +3,6 @@
  * A real-time event service that monitors time and sends periodic notifications
  */
 
-import * as toastr from 'toastr';
-
-// Configure toastr globally using the proper API
-toastr.options.closeButton = true;
-toastr.options.debug = false;
-toastr.options.newestOnTop = true;
-toastr.options.progressBar = true;
-toastr.options.positionClass = 'toast-top-right';
-toastr.options.preventDuplicates = true;
-toastr.options.onclick = undefined;
-toastr.options.showDuration = 300;
-toastr.options.hideDuration = 1000;
-toastr.options.timeOut = 5000;
-toastr.options.extendedTimeOut = 1000;
-toastr.options.showEasing = 'swing';
-toastr.options.hideEasing = 'linear';
-toastr.options.showMethod = 'fadeIn';
-toastr.options.hideMethod = 'fadeOut';
-toastr.options.tapToDismiss = true;
-
 export interface TimeWatcherConfig {
   interval?: number; // Interval in milliseconds (default: 5000ms)
   enabled?: boolean; // Whether the watcher is enabled (default: true)
@@ -163,19 +143,18 @@ class TimeWatcher {
       }
     });
 
-    // Show toast notification with bounceIn animation
+    // Log notification
     this.showNotification(event);
   }
 
   /**
-   * Show a toast notification with bounceIn animation
+   * Show a notification (using console.log)
    */
   private showNotification(event: TimeWatcherEvent): void {
     const timeString = event.timestamp.toLocaleTimeString();
-    const fullMessage = `${timeString} - ${event.message}`;
-
-    // Show the toast (bounceIn animation is applied via CSS)
-    toastr.info(fullMessage, event.title);
+    const fullMessage = `${timeString} - ${event.title}: ${event.message}`;
+    
+    console.log(fullMessage);
   }
 
   /**
