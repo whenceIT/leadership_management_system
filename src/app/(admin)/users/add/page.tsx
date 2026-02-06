@@ -64,7 +64,7 @@ export default function AddUserPage() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('http://localhost:3001/api/dropdown/all', {
+        const response = await fetch('https://smart.whencefinancesystem.com/api/dropdown/all', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ export default function AddUserPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/users', {
+      const response = await fetch('https://smart.whencefinancesystem.com/api/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
