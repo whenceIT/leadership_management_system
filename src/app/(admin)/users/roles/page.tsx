@@ -76,7 +76,7 @@ export default function RolesPage() {
         ...(search && { search }),
       });
 
-      const response = await fetch(`https://smartbackend.whencefinancesystem.com/roles?${params}`, {
+      const response = await fetch(`/api/roles?${params}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -114,7 +114,7 @@ export default function RolesPage() {
         ...(search && { search }),
       });
 
-      const response = await fetch(`https://smartbackend.whencefinancesystem.com/role-users?${params}`, {
+      const response = await fetch(`/api/role-users?${params}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -201,7 +201,7 @@ export default function RolesPage() {
     }
 
     try {
-      const response = await fetch(`https://smartbackend.whencefinancesystem.com/role-users/${id}`, {
+      const response = await fetch(`/api/role-users/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -228,7 +228,7 @@ export default function RolesPage() {
     }
 
     try {
-      const response = await fetch(`https://smartbackend.whencefinancesystem.com/roles/${id}`, {
+      const response = await fetch(`/api/roles/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

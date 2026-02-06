@@ -64,7 +64,7 @@ export default function CreateRolePage() {
     setError(null);
 
     try {
-      const response = await fetch("https://smartbackend.whencefinancesystem.com/roles", {
+      const response = await fetch("/api/roles", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

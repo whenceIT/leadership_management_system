@@ -67,7 +67,7 @@ export default function ClientUsersPage() {
         ...(status && { status }),
       });
 
-      const response = await fetch(`https://smartbackend.whencefinancesystem.com/clients/users?${params}`, {
+      const response = await fetch(`/api/clients/users?${params}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

@@ -61,7 +61,7 @@ export default function EditRolePage() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`https://smartbackend.whencefinancesystem.com/roles/${roleId}`, {
+        const response = await fetch(`/api/roles/${roleId}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -123,7 +123,7 @@ export default function EditRolePage() {
     setSuccess(null);
 
     try {
-      const response = await fetch(`https://smartbackend.whencefinancesystem.com/roles/${roleId}`, {
+      const response = await fetch(`/api/roles/${roleId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
