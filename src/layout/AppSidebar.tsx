@@ -142,6 +142,7 @@ const navItems: NavItem[] = [
     subItems: [
       { name: "General", path: "/settings/general", pro: false },
       { name: "Organisation", path: "/settings/organisation", pro: false },
+      { name: "Impersonate Profile", path: "/settings/impersonate", pro: false, new: true },
       { name: "System fail safes", path: "/settings/fail-safes", pro: false },
     ],
   },
