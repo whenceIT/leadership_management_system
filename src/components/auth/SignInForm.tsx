@@ -35,14 +35,24 @@ export default function SignInForm() {
     setError("");
     setSuccess("");
 
+    // Create a timeout promise that rejects after 6 seconds
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error("timeout"));
+      }, 6000);
+    });
+
     try {
-      const response = await fetch("/api/auth/login", {
+      const fetchPromise = fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
+
+      // Race between fetch and timeout
+      const response = await Promise.race<Response>([fetchPromise, timeoutPromise]);
 
       const data = await response.json();
 
@@ -59,8 +69,12 @@ export default function SignInForm() {
         setError(data.message || "Login failed. Please try again.");
       }
     } catch (err) {
-      setError("An error occurred. Please try again.");
-      console.error("Login error:", err);
+      if (err instanceof Error && err.message === "timeout") {
+        setError("Your credentials couldn't be found. The server took too long to respond. Please try again.");
+      } else {
+        setError("An error occurred. Please try again.");
+        console.error("Login error:", err);
+      }
     } finally {
       setLoading(false);
     }

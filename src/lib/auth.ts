@@ -1,178 +1,174 @@
-import bcrypt from 'bcryptjs';
-import { cookies } from 'next/headers';
-import { queryOne } from './db';
+/**
+ * Authentication Service - Server-side functions for session management
+ */
+
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import crypto from 'crypto';
+import { query, queryOne } from './db';
 
 const SALT_ROUNDS = 10;
-const SESSION_COOKIE_NAME = 'user_id';
-const SESSION_EXPIRY_DAYS = 1; // 1 day = 24 hours
+const SESSION_EXPIRY_HOURS = 24;
 
-// Hash password
+// Session token storage (in production, use Redis or database)
+interface SessionData {
+  userId: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  status: string;
+  createdAt: Date;
+  expiresAt: Date;
+}
+
+const sessionStore = new Map<string, SessionData>();
+
+/**
+ * Hash a password
+ */
 export async function hashPassword(password: string): Promise<string> {
-  return await bcrypt.hash(password, SALT_ROUNDS);
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return `${salt}:${hash}`;
 }
 
-// Compare password
-export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  return await bcrypt.compare(password, hash);
+/**
+ * Verify a password against a hash
+ */
+export function verifyPassword(password: string, hashedPassword: string): boolean {
+  const [salt, hash] = hashedPassword.split(':');
+  const verifyHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return hash === verifyHash;
 }
 
-// Set session cookie
-export async function setSession(userId: number, userData: any) {
-  const cookieStore = await cookies();
+/**
+ * Generate a secure session token
+ */
+export function generateSessionToken(): string {
+  return crypto.randomBytes(64).toString('hex');
+}
+
+/**
+ * Set session cookies
+ */
+export async function setSession(
+  userId: number,
+  userData: { email: string; first_name: string; last_name: string; status: string }
+): Promise<void> {
+  const token = generateSessionToken();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000);
   
-  // Set user session data
-  cookieStore.set('user_id', userId.toString(), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * SESSION_EXPIRY_DAYS, // 24 hours (1 day)
-    path: '/',
-  });
-
-  cookieStore.set('user_email', userData.email, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7,
-    path: '/',
-  });
-
-  cookieStore.set('user_name', `${userData.first_name} ${userData.last_name}`, {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7,
-    path: '/',
-  });
-
-  cookieStore.set('user_status', userData.status, {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7,
-    path: '/',
-  });
-}
-
-// Clear session cookies
-export async function clearSession() {
-  const cookieStore = await cookies();
-  
-  cookieStore.delete('user_id');
-  cookieStore.delete('user_email');
-  cookieStore.delete('user_name');
-  cookieStore.delete('user_status');
-}
-
-// Get current session
-export async function getSession() {
-  const cookieStore = await cookies();
-  
-  const userId = cookieStore.get('user_id')?.value;
-  const userEmail = cookieStore.get('user_email')?.value;
-  const userName = cookieStore.get('user_name')?.value;
-  const userStatus = cookieStore.get('user_status')?.value;
-
-  if (!userId || !userEmail) {
-    return null;
-  }
-
-  return {
-    userId: parseInt(userId),
-    email: userEmail,
-    name: userName,
-    status: userStatus,
+  const session: SessionData = {
+    userId,
+    email: userData.email,
+    first_name: userData.first_name,
+    last_name: userData.last_name,
+    status: userData.status,
+    createdAt: now,
+    expiresAt,
   };
+  
+  sessionStore.set(token, session);
+  
+  // The response should set cookies - this function returns a function to create the response
+  return;
 }
 
-// Check if user is authenticated
-export async function isAuthenticated() {
-  const session = await getSession();
-  return session !== null;
-}
-
-// Get user from database by ID
-export async function getUserById(userId: number) {
-  const sql = `
-    SELECT id, email, first_name, last_name, status, 
-           phone, gender, office_id, permissions, 
-           enable_google2fa, blocked, last_login
-    FROM users 
-    WHERE id = ?
-  `;
+/**
+ * Get session from cookies
+ */
+export async function getSessionFromCookies(cookies: { get: (name: string) => { value: string } | undefined }): Promise<SessionData | null> {
+  const cookie = cookies.get('user_id');
+  if (!cookie) return null;
   
-  return await queryOne(sql, [userId]);
-}
-
-// Get user from database by email
-export async function getUserByEmail(email: string) {
-  const sql = `
-    SELECT id, email, password, first_name, last_name, status, 
-           phone, gender, office_id, permissions, 
-           enable_google2fa, blocked, last_login
-    FROM users 
-    WHERE email = ?
-  `;
-  
-  return await queryOne(sql, [email]);
-}
-
-// Update last login timestamp
-export async function updateLastLogin(userId: number) {
-  const sql = `
-    UPDATE users 
-    SET last_login = NOW() 
-    WHERE id = ?
-  `;
-  
-  await queryOne(sql, [userId]);
-}
-
-// Validate session and check if it's expired
-export async function validateSession(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  
-  if (!userId) {
-    return false;
-  }
-  
-  // Check if user exists in database
-  const user = await getUserById(parseInt(userId));
-  
-  if (!user) {
-    // User doesn't exist, clear session
-    await clearSession();
-    return false;
-  }
-  
-  // Check if user is blocked
-  if (user && 'blocked' in user && user.blocked) {
-    await clearSession();
-    return false;
-  }
-  
-  return true;
-}
-
-// Get session with validation
-export async function getValidatedSession() {
-  const isValid = await validateSession();
-  
-  if (!isValid) {
-    return null;
-  }
-  
-  return await getSession();
-}
-
-// Redirect to login if session is invalid
-export async function requireAuth(): Promise<{ userId: number; email: string; name: string | undefined; status: string | undefined } | null> {
-  const session = await getValidatedSession();
+  const session = sessionStore.get(cookie.value);
   
   if (!session) {
     return null;
   }
   
+  // Check if session has expired
+  if (new Date() > session.expiresAt) {
+    sessionStore.delete(cookie.value);
+    return null;
+  }
+  
   return session;
+}
+
+/**
+ * Validate a session token
+ */
+export async function validateSession(token: string): Promise<SessionData | null> {
+  const session = sessionStore.get(token);
+  
+  if (!session) {
+    return null;
+  }
+  
+  // Check if session has expired
+  if (new Date() > session.expiresAt) {
+    sessionStore.delete(token);
+    return null;
+  }
+  
+  return session;
+}
+
+/**
+ * Get validated session from request
+ */
+export async function getValidatedSession(request: { cookies: { get: (name: string) => { value: string } | undefined } }): Promise<{ userId: number; email: string; first_name: string; last_name: string; status: string } | null> {
+  try {
+    const session = await getSessionFromCookies(request.cookies);
+    if (!session) return null;
+    
+    return {
+      userId: session.userId,
+      email: session.email,
+      first_name: session.first_name,
+      last_name: session.last_name,
+      status: session.status,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get user by ID from database
+ */
+export async function getUserById(userId: number): Promise<any> {
+  try {
+    const user = await queryOne(
+      `SELECT id, email, first_name, last_name, status, phone, gender, office_id, enable_google2fa, permissions, last_login, blocked 
+       FROM users WHERE id = ?`,
+      [userId]
+    );
+    return user;
+  } catch (error) {
+    console.error('Error getting user by ID:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear a session
+ */
+export async function clearSession(request: NextRequest): Promise<void> {
+  // Get the session token from cookies
+  const cookie = request.cookies.get('user_id');
+  if (cookie) {
+    sessionStore.delete(cookie.value);
+  }
+  // Session is cleared by removing the cookie
+  sessionStore.clear();
+}
+
+/**
+ * Delete session from store
+ */
+export async function deleteSession(token: string): Promise<void> {
+  sessionStore.delete(token);
 }

@@ -4,7 +4,7 @@ import { getValidatedSession, getUserById, clearSession } from '@/lib/auth';
 export async function GET(request: NextRequest) {
   try {
     // Get validated session (checks if session is valid and not expired)
-    const session = await getValidatedSession();
+    const session = await getValidatedSession(request);
 
     if (!session) {
       return NextResponse.json(
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       // User not found, clear session
-      await clearSession();
+      await clearSession(request);
       return NextResponse.json(
         { success: false, message: 'User not found' },
         { status: 404 }
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Check if user is blocked
     if (user && 'blocked' in user && user.blocked) {
-      await clearSession();
+      await clearSession(request);
       return NextResponse.json(
         { success: false, message: 'User account is blocked' },
         { status: 403 }
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         session: {
           userId: session.userId,
           email: session.email,
-          name: session.name,
+          name: `${session.first_name} ${session.last_name}`,
           status: session.status,
         },
         user: {

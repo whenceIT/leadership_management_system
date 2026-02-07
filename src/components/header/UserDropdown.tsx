@@ -47,10 +47,10 @@ export default function UserDropdown() {
     fetchUser();
   }, []);
 
-function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
-  e.stopPropagation();
-  setIsOpen((prev) => !prev);
-}
+  function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+    e.stopPropagation();
+    setIsOpen((prev) => !prev);
+  }
 
   function closeDropdown() {
     setIsOpen(false);

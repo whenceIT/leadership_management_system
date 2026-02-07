@@ -74,15 +74,27 @@ export async function POST(request: NextRequest) {
       status: user.status,
     });
 
-    // Return success response with all user data
-    return NextResponse.json(
+    // Create response with session cookie
+    const response = NextResponse.json(
       {
         success: true,
         message: 'Login successful',
-        user: user, // Return entire user object with all fields
+        user: user,
       },
       { status: 200 }
     );
+
+    // Set the user_id cookie
+    const token = generateSessionToken();
+    response.cookies.set('user_id', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
@@ -90,4 +102,9 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+function generateSessionToken(): string {
+  const crypto = require('crypto');
+  return crypto.randomBytes(64).toString('hex');
 }
