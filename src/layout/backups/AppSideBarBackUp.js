@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState,useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -34,70 +34,12 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-// LMS Module Icons
-const KPIIconComponent = () => (
-  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-  </svg>
-);
-
-const ReviewIconComponent = () => (
-  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 002-2V2 0 7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-  </svg>
-);
-
-const WorkflowIconComponent = () => (
-  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-  </svg>
-);
-
-const AssistantIconComponent = () => (
-  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-  </svg>
-);
-
-const RoleCardIconComponent = () => (
-  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-  </svg>
-);
-
 const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
     name: "Dashboard",
     path: "/",
   },
-  // LMS Modules Section
-  {
-    icon: <RoleCardIconComponent />,
-    name: "Role Cards",
-    path: "/lms/role-cards",
-  },
-  {
-    icon: <KPIIconComponent />,
-    name: "KPI Dashboard",
-    path: "/lms/kpi-dashboard",
-  },
-  {
-    icon: <ReviewIconComponent />,
-    name: "Reviews",
-    path: "/lms/reviews",
-  },
-  {
-    icon: <WorkflowIconComponent />,
-    name: "Workflows",
-    path: "/lms/workflows",
-  },
-  {
-    icon: <AssistantIconComponent />,
-    name: "Assistant",
-    path: "/lms/assistant",
-  },
-  // Existing Modules
   {
     icon: <TicketIcon />,
     name: "Tickets",
@@ -135,7 +77,120 @@ const navItems: NavItem[] = [
       { name: "Loan Calculator", path: "/loans/calculator", pro: false },
     ],
   },
-  
+  {
+    name: "Approvals",
+    icon: <ApprovalsIcon />,
+    subItems: [
+      { name: "Loans Pending", path: "/approvals/loans-pending", pro: false },
+      { name: "Top Ups Pending Approval", path: "/approvals/top-ups-pending", pro: false },
+      { name: "Transaction Approvals", path: "/approvals/transactions", pro: false },
+      { name: "Reloan Approvals", path: "/approvals/reloans", pro: false },
+      { name: "Waiver Approvals", path: "/approvals/waivers", pro: false },
+      { name: "Charge Approvals", path: "/approvals/charges", pro: false },
+      { name: "Clients Pending Approval", path: "/approvals/clients", pro: false },
+      { name: "Advances Pending Approvals", path: "/approvals/advances", pro: false },
+      { name: "Advance-TopUps Approvals", path: "/approvals/advance-topups", pro: false },
+      { name: "Pending Leave Approvals", path: "/approvals/leave", pro: false },
+    ],
+  },
+
+  {
+    name: "Payroll Loan Applications",
+    icon: <PayrollIcon />,
+    subItems: [
+      { name: "Pending approval", path: "/payroll/pending", pro: false },
+      { name: "Approved", path: "/payroll/approved", pro: false },
+      { name: "Declined", path: "/payroll/declined", pro: false },
+    ],
+  },
+  {
+    name: "Company Policies",
+    icon: <PoliciesIcon />,
+    subItems: [
+      { name: "View Policies", path: "/policies/view", pro: false },
+      { name: "User Responses", path: "/policies/user-responses", pro: false },
+      { name: "Add Policies", path: "/policies/add", pro: false },
+    ],
+  },
+  {
+    name: "Accounting",
+    icon: <AccountingIcon />,
+    subItems: [
+      { name: "Chart of Accounts", path: "/accounting/gl_account/data", pro: false },
+      { name: "Journals", path: "/accounting/journal/data", pro: false },
+      { name: "Add Journal Entry", path: "/accounting/journal/create", pro: false },
+      { name: "Reconciliation", path: "/accounting/reconciliation/data", pro: false },
+      { name: "Close Periods", path: "/accounting/period/data", pro: false },
+    ],
+  },
+  {
+    name: "Reports",
+    icon: <ReportsIcon />,
+    subItems: [
+      { name: "Client Reports", path: "/report/client_report", pro: false },
+      { name: "Loan Reports", path: "/report/loan_report", pro: false },
+      { name: "Financial Reports", path: "/report/financial_report", pro: false },
+      { name: "Organisation Reports", path: "/report/company_report", pro: false },
+      { name: "Savings Reports", path: "/report/savings_report", pro: false },
+      { name: "Report Scheduler", path: "/report/report_scheduler/data", pro: false },
+    ],
+  },
+  {
+    name: "Advances",
+    icon: <AdvancesIcon />,
+    subItems: [
+      { name: "Apply for Advance", path: "/advances/apply", pro: false },
+      { name: "My Advances", path: "/advances/my_advances", pro: false },
+      { name: "Active Advances", path: "/advances/active_advances", pro: false },
+      { name: "Pending Approvals", path: "/advances/pending_approvals", pro: false },
+      { name: "TopUps Pending Approval", path: "/advances/topups_pending_approval", pro: false },
+      { name: "Declined Advances", path: "/advances/declined_advances", pro: false },
+      { name: "Closed Advances", path: "/advances/closed_advances", pro: false },
+    ],
+  },
+  {
+    name: "Annual Leave",
+    icon: <LeaveIcon />,
+    subItems: [
+      { name: "My Leave Days", path: "/leave/my_leave_days", pro: false },
+      { name: "Active Leave", path: "/leave/active_leave", pro: false },
+      { name: "Pending Leave Approvals", path: "/leave/pending_leave_approvals", pro: false },
+      { name: "Declined Leave", path: "/leave/declined_leave", pro: false },
+    ],
+  },
+  {
+    name: "Communication",
+    icon: <CommunicationIcon />,
+    subItems: [
+      { name: "View Campaigns", path: "/communication/data", pro: false },
+      { name: "Create Campaign", path: "/communication/create", pro: false },
+    ],
+  },
+  {
+    name: "Assets",
+    icon: <AssetsIcon />,
+    subItems: [
+      { name: "View Assets", path: "/asset/data", pro: false },
+      { name: "Add Asset", path: "/asset/create", pro: false },
+      { name: "Manage Asset Types", path: "/asset/type/data", pro: false },
+    ],
+  },
+  {
+    name: "Users",
+    icon: <UserCircleIcon />,
+    subItems: [
+      { name: "View Users", path: "/users/view", pro: false },
+      { name: "View Inactive Users", path: "/users/inactive", pro: false },
+      { name: "View Client Users", path: "/users/clients", pro: false },
+      { name: "Manage Roles", path: "/users/roles", pro: false },
+      { name: "Add User", path: "/users/add", pro: false },
+    ],
+  },
+  {
+    icon: <AuditTrailIcon />,
+    name: "Audit Trail",
+    path: "/audit-trail",
+  },
   {
     name: "Settings",
     icon: <SettingsIcon />,
@@ -157,7 +212,8 @@ const AppSidebar: React.FC = () => {
   );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const isActive = useCallback((path: string) => path === pathname, [pathname]);
+  // const isActive = (path: string) => path === pathname;
+   const isActive = useCallback((path: string) => path === pathname, [pathname]);
 
   useEffect(() => {
     // Check if current path matches any submenu item
@@ -177,7 +233,7 @@ const AppSidebar: React.FC = () => {
     if (!submenuMatched) {
       setOpenSubmenu(null);
     }
-  }, [pathname, isActive]);
+  }, [pathname,isActive]);
 
   useEffect(() => {
     // Set the height of the submenu items when the submenu is opened

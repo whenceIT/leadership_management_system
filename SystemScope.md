@@ -1,3 +1,6 @@
+<!-- Mock most data, because i will be pulling some data from an api in another system LoanManagementSystem -->
+<!-- implement best next js tool and mechnisms and global reusability (Hooks, Components, lib, services, context, Providers) -->
+
 LEADERSHIP MANAGEMENT SYSTEM (LMS) AUTOMATION & INTEGRATION SPECIFICATION
 I. EXECUTIVE SUMMARY: THE PROBLEM & SOLUTION
 The Core Problem: Founder Dependency Syndrome
