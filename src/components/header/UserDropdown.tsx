@@ -20,6 +20,37 @@ interface User {
   last_login?: string;
 }
 
+/**
+ * Get user from localStorage
+ */
+function getStoredUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  
+  const userStr = localStorage.getItem('thisUser');
+  if (!userStr) return null;
+  
+  try {
+    const user = JSON.parse(userStr);
+    if (user && user.id && user.email) {
+      return user as User;
+    }
+    return null;
+  } catch (e) {
+    console.error('Error parsing stored user:', e);
+    return null;
+  }
+}
+
+/**
+ * Clear all auth-related localStorage items and redirect to login
+ */
+function clearAuthAndRedirect(router: any) {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('thisUser');
+  }
+  router.push("/signin");
+}
+
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -29,12 +60,32 @@ export default function UserDropdown() {
 
   useEffect(() => {
     async function fetchUser() {
+      // First, try to get user from localStorage immediately
+      const storedUser = getStoredUser();
+      if (storedUser) {
+        setUser(storedUser);
+        setIsLoading(false);
+        return;
+      }
+
+      // No localStorage user, try API session
       try {
         const response = await fetch("/api/auth/session");
+        
+        if (response.status === 401) {
+          // Session expired or invalid, logout and redirect to login
+          clearAuthAndRedirect(router);
+          return;
+        }
+        
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.user) {
             setUser(data.user);
+            // Store in localStorage for future use
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('thisUser', JSON.stringify(data.user));
+            }
           }
         }
       } catch (error) {
@@ -45,7 +96,7 @@ export default function UserDropdown() {
     }
 
     fetchUser();
-  }, []);
+  }, [router]);
 
   function toggleDropdown(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     e.stopPropagation();
@@ -64,8 +115,8 @@ export default function UserDropdown() {
       });
 
       if (response.ok) {
-        closeDropdown();
-        router.push("/signin");
+        // Clear localStorage and redirect
+        clearAuthAndRedirect(router);
       } else {
         console.error("Logout failed");
         setIsLoggingOut(false);

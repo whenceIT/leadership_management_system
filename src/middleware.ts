@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const protectedRoutes = ['/admin', '/dashboard', '/profile', '/settings'];
+const protectedRoutes = ['/admin', '/dashboard', '/profile', '/settings', '/users'];
 const publicRoutes = ['/signin', '/signup', '/forgot-password', '/reset-password'];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // Get user_id cookie
-  const userId = request.cookies.get('user_id')?.value;
 
   // Check if route is protected
   const isProtectedRoute = protectedRoutes.some(route => 
@@ -20,14 +17,18 @@ export function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
-  // Protected route without user -> redirect to signin
-  if (isProtectedRoute && !userId) {
+  // Check if session_id cookie exists
+  const sessionId = request.cookies.get('session_id')?.value;
+  const hasValidSession = !!sessionId;
+
+  // Protected route without valid session -> redirect to signin
+  if (isProtectedRoute && !hasValidSession) {
     const loginUrl = new URL('/signin', request.url);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Public route with user -> redirect to home
-  if (isPublicRoute && userId) {
+  // Public route with valid session -> redirect to home
+  if (isPublicRoute && hasValidSession) {
     const homeUrl = new URL('/', request.url);
     return NextResponse.redirect(homeUrl);
   }

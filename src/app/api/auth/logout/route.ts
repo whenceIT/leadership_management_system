@@ -1,24 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { clearSession } from '@/lib/auth';
+import { deleteSession } from '@/lib/auth';
+import { createLogoutResponse } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    // Clear session from store
-    await clearSession(request);
+    // Delete session server-side
+    await deleteSession(request);
 
-    // Create response and delete the cookie
-    const response = NextResponse.json(
-      {
-        success: true,
-        message: 'Logged out successfully',
-      },
-      { status: 200 }
-    );
-
-    // Delete the user_id cookie
-    response.cookies.delete('user_id');
-
-    return response;
+    // Create logout response with cookie deletion
+    return createLogoutResponse();
   } catch (error) {
     console.error('Logout error:', error);
     return NextResponse.json(

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getValidatedSession, getUserById, clearSession } from '@/lib/auth';
+import { resolveSession, getSessionById, deleteSession, getUserById } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get validated session (checks if session is valid and not expired)
-    const session = await getValidatedSession(request);
+    // Session Resolver: Reads cookie, fetches session, returns null if invalid
+    const session = await resolveSession(request);
 
     if (!session) {
       return NextResponse.json(
@@ -14,11 +14,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get full user data from database
-    const user = await getUserById(session.userId) as any;
+    const user = await getUserById(session.user_id) as any;
 
     if (!user) {
       // User not found, clear session
-      await clearSession(request);
+      await deleteSession(request);
       return NextResponse.json(
         { success: false, message: 'User not found' },
         { status: 404 }
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Check if user is blocked
     if (user && 'blocked' in user && user.blocked) {
-      await clearSession(request);
+      await deleteSession(request);
       return NextResponse.json(
         { success: false, message: 'User account is blocked' },
         { status: 403 }
@@ -38,10 +38,13 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         session: {
-          userId: session.userId,
+          user_id: session.user_id,
+          office_id: session.office_id,
+          role: session.role,
           email: session.email,
           name: `${session.first_name} ${session.last_name}`,
           status: session.status,
+          expires_at: session.expires_at,
         },
         user: {
           id: user.id,

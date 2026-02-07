@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { setSession } from '@/lib/auth';
+import { createSession, createSessionResponse, getSessionById, deleteSession, getUserById } from '@/lib/auth';
 
 const API_BASE_URL = 'https://smartbackend.whencefinancesystem.com';
 
@@ -66,35 +66,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Set session cookies
-    await setSession(user.id, {
+    // Create session server-side
+    const sessionId = await createSession(user.id, {
+      office_id: user.office_id,
+      role: user.role,
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
       status: user.status,
     });
 
-    // Create response with session cookie
-    const response = NextResponse.json(
+    // Return success response with session cookie
+    return createSessionResponse(
+      sessionId,
       {
         success: true,
         message: 'Login successful',
         user: user,
       },
-      { status: 200 }
+      200
     );
-
-    // Set the user_id cookie
-    const token = generateSessionToken();
-    response.cookies.set('user_id', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 24 hours
-      path: '/',
-    });
-
-    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
@@ -102,9 +93,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
-
-function generateSessionToken(): string {
-  const crypto = require('crypto');
-  return crypto.randomBytes(64).toString('hex');
 }
