@@ -1,300 +1,671 @@
-import type { Metadata } from "next";
+'use client';
 
-export const metadata: Metadata = {
-  title: "Workflows | LMS - Leadership Management System",
-  description: "Integrated workflow management and automated handoffs",
-};
+import { useState, useEffect } from 'react';
+import { useUserPosition, PositionType } from '@/hooks/useUserPosition';
+import { 
+  RoleDependency,
+  ESCALATION_RULES,
+  HANDOFF_CONFIGS,
+  ROLE_DEPENDENCIES
+} from '@/hooks/useWorkflowEngine';
 
-// Mock workflow data
-const activeWorkflows = [
-  {
-    id: 1,
-    title: "Collections to Recoveries Handoff",
-    status: "Pending Approval",
-    from: "Branch Manager",
-    to: "Recoveries Coordinator",
-    created: "2024-02-05",
-    priority: "High",
-    description: "Day 90 of delinquency - Loan #4521 requires recovery action",
-  },
-  {
-    id: 2,
-    title: "Loan Approval Escalation",
-    status: "In Progress",
-    from: "Loan Officer",
-    to: "Branch Manager",
-    created: "2024-02-06",
-    priority: "Medium",
-    description: "Loan application #8892 exceeds local approval limit",
-  },
-  {
-    id: 3,
-    title: "Risk Assessment Review",
-    status: "Awaiting Review",
-    from: "Risk Manager",
-    to: "Provincial Manager",
-    created: "2024-02-07",
-    priority: "High",
-    description: "Anomalous default pattern detected across 3 branches",
-  },
-];
+// ============================================
+// POSITION-SPECIFIC WORKFLOW CONFIGURATIONS
+// ============================================
 
-const automatedHandoffs = [
-  {
-    id: 1,
-    trigger: "Day 90 Delinquency",
-    action: "Flag for Recoveries",
-    status: "Active",
-    successRate: 94,
-  },
-  {
-    id: 2,
-    trigger: "Default > 5%",
-    action: "Alert District Manager",
-    status: "Active",
-    successRate: 98,
-  },
-  {
-    id: 3,
-    trigger: "Loan Approved",
-    action: "Update Portfolio",
-    status: "Active",
-    successRate: 100,
-  },
-  {
-    id: 4,
-    trigger: "Staff Training Due",
-    action: "Send Reminder",
-    status: "Active",
-    successRate: 87,
-  },
-];
+interface PositionWorkflowConfig {
+  position: PositionType;
+  displayName: string;
+  workflowTypes: string[];
+  pendingActions: PendingAction[];
+  incomingHandoffs: HandoffItem[];
+  escalationItems: EscalationItem[];
+  kpiMetrics: KPIMetric[];
+}
+
+interface PendingAction {
+  id: string;
+  title: string;
+  type: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  deadline?: string;
+  workflowId?: string;
+}
+
+interface HandoffItem {
+  id: string;
+  fromRole: string;
+  type: string;
+  description: string;
+  receivedAt: string;
+  status: 'pending' | 'in_progress' | 'completed';
+}
+
+interface EscalationItem {
+  id: string;
+  fromRole: string;
+  reason: string;
+  escalatedAt: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  currentLevel: number;
+}
+
+interface KPIMetric {
+  name: string;
+  value: string;
+  target: string;
+  status: 'on-track' | 'at-risk' | 'behind';
+  trend: 'up' | 'down' | 'stable';
+}
+
+// Branch Manager Workflows
+const getBranchManagerWorkflows = (): PositionWorkflowConfig => ({
+  position: 'Branch Manager',
+  displayName: 'Branch Manager',
+  workflowTypes: ['loan_approval', 'collection', 'disbursement', 'client_onboarding'],
+  pendingActions: [
+    { id: 'pa1', title: 'Approve Loan #8892 - K25,000', type: 'approval', priority: 'high', deadline: '2024-02-08', workflowId: 'wf_123' },
+    { id: 'pa2', title: 'Review Collection Performance', type: 'review', priority: 'medium', deadline: '2024-02-10' },
+    { id: 'pa3', title: 'Sign Off Daily Reports', type: 'signoff', priority: 'low' },
+  ],
+  incomingHandoffs: [
+    { id: 'hh1', fromRole: 'Recoveries Coordinator', type: 'collection_handoff', description: 'Loan #4521 - Day 90 delinquent', receivedAt: '2024-02-05', status: 'pending' },
+  ],
+  escalationItems: [
+    { id: 'es1', fromRole: 'District Manager', reason: 'Default rate exceeded 25%', escalatedAt: '2024-02-07', priority: 'high', currentLevel: 1 },
+  ],
+  kpiMetrics: [
+    { name: 'Monthly Disbursement', value: 'K420,000', target: 'K450,000+', status: 'on-track', trend: 'up' },
+    { name: 'Month-1 Default Rate', value: '26.5%', target: '≤25%', status: 'at-risk', trend: 'down' },
+    { name: 'Recovery Rate', value: '62%', target: '≥65%', status: 'at-risk', trend: 'stable' },
+  ],
+});
+
+// District Manager Workflows
+const getDistrictManagerWorkflows = (): PositionWorkflowConfig => ({
+  position: 'District Manager',
+  displayName: 'District Manager',
+  workflowTypes: ['district_oversight', 'branch_approval', 'performance_review', 'resource_allocation'],
+  pendingActions: [
+    { id: 'pa1', title: 'Approve District Budget Q1', type: 'approval', priority: 'high', deadline: '2024-02-15', workflowId: 'wf_456' },
+    { id: 'pa2', title: 'Review Branch Performance Reports', type: 'review', priority: 'medium' },
+    { id: 'pa3', title: 'Conduct DM Meeting', type: 'meeting', priority: 'medium', deadline: '2024-02-12' },
+  ],
+  incomingHandoffs: [
+    { id: 'hh1', fromRole: 'Branch Manager', type: 'escalation', description: 'Branch A - Performance concerns', receivedAt: '2024-02-06', status: 'in_progress' },
+  ],
+  escalationItems: [
+    { id: 'es1', fromRole: 'Provincial Manager', reason: 'District default rate review', escalatedAt: '2024-02-01', priority: 'medium', currentLevel: 2 },
+  ],
+  kpiMetrics: [
+    { name: 'District Revenue', value: 'K1.2M', target: 'K1.16M', status: 'on-track', trend: 'up' },
+    { name: 'Avg Default Rate', value: '26.8%', target: '≤25.36%', status: 'at-risk', trend: 'down' },
+    { name: 'Branch Compliance', value: '100%', target: '100%', status: 'on-track', trend: 'stable' },
+  ],
+});
+
+// Provincial Manager Workflows
+const getProvincialManagerWorkflows = (): PositionWorkflowConfig => ({
+  position: 'Provincial Manager',
+  displayName: 'Provincial Manager',
+  workflowTypes: ['provincial_strategy', 'district_oversight', 'policy_implementation', 'stakeholder_management'],
+  pendingActions: [
+    { id: 'pa1', title: 'Approve Provincial Strategy Q2', type: 'approval', priority: 'critical', deadline: '2024-02-20', workflowId: 'wf_789' },
+    { id: 'pa2', title: 'Review District Performance', type: 'review', priority: 'high' },
+    { id: 'pa3', title: 'Board Presentation Prep', type: 'planning', priority: 'high', deadline: '2024-02-25' },
+  ],
+  incomingHandoffs: [
+    { id: 'hh1', fromRole: 'District Manager', type: 'quarterly_report', description: 'Q1 Performance Report', receivedAt: '2024-02-07', status: 'pending' },
+  ],
+  escalationItems: [
+    { id: 'es1', fromRole: 'Executive', reason: 'Strategic initiative review', escalatedAt: '2024-02-05', priority: 'high', currentLevel: 1 },
+  ],
+  kpiMetrics: [
+    { name: 'Provincial Revenue', value: 'K5.2M', target: 'K5.8M', status: 'at-risk', trend: 'up' },
+    { name: 'Net Contribution', value: '22%', target: '+25%', status: 'at-risk', trend: 'stable' },
+    { name: 'District Health Score', value: '78%', target: '≥85%', status: 'at-risk', trend: 'down' },
+  ],
+});
+
+// Risk Manager Workflows
+const getRiskManagerWorkflows = (): PositionWorkflowConfig => ({
+  position: 'Risk Manager',
+  displayName: 'Risk Manager',
+  workflowTypes: ['risk_assessment', 'fraud_detection', 'compliance_review', 'audit_management'],
+  pendingActions: [
+    { id: 'pa1', title: 'Investigate Suspicious Activity #2024-089', type: 'investigation', priority: 'critical', deadline: '2024-02-08', workflowId: 'wf_101' },
+    { id: 'pa2', title: 'Monthly Risk Report', type: 'reporting', priority: 'high', deadline: '2024-02-10' },
+    { id: 'pa3', title: 'Update Fraud Detection Rules', type: 'configuration', priority: 'medium' },
+  ],
+  incomingHandoffs: [
+    { id: 'hh1', fromRole: 'Branch Manager', type: 'risk_alert', description: 'Unusual default pattern detected', receivedAt: '2024-02-06', status: 'in_progress' },
+  ],
+  escalationItems: [
+    { id: 'es1', fromRole: 'Provincial Manager', reason: 'Cross-branch fraud pattern', escalatedAt: '2024-02-07', priority: 'critical', currentLevel: 2 },
+  ],
+  kpiMetrics: [
+    { name: 'Losses Prevented', value: 'K520,000', target: '≥K500,000', status: 'on-track', trend: 'up' },
+    { name: 'Fraud Detection Rate', value: '92%', target: '≥90%', status: 'on-track', trend: 'stable' },
+    { name: 'Avg Detection Time', value: '5 days', target: '≤7 days', status: 'on-track', trend: 'down' },
+  ],
+});
+
+// Recoveries Coordinator Workflows
+const getRecoveriesCoordinatorWorkflows = (): PositionWorkflowConfig => ({
+  position: 'Recoveries Coordinator',
+  displayName: 'Recoveries Coordinator',
+  workflowTypes: ['recovery_operations', 'payment_negotiation', 'collateral_management', 'legal_coordination'],
+  pendingActions: [
+    { id: 'pa1', title: 'Process Payment Plan #5678', type: 'processing', priority: 'high', deadline: '2024-02-08', workflowId: 'wf_201' },
+    { id: 'pa2', title: 'Review Day-90 Portfolio', type: 'review', priority: 'high' },
+    { id: 'pa3', title: 'Coordinate Legal Action #3 Cases', type: 'legal', priority: 'medium' },
+  ],
+  incomingHandoffs: [
+    { id: 'hh1', fromRole: 'Branch Manager', type: 'collection_handoff', description: '8 loans eligible for recovery', receivedAt: '2024-02-05', status: 'in_progress' },
+    { id: 'hh2', fromRole: 'Branch Manager', type: 'collection_handoff', description: 'Loan #4521 - Full dossier', receivedAt: '2024-02-05', status: 'pending' },
+  ],
+  escalationItems: [
+    { id: 'es1', fromRole: 'Risk Manager', reason: 'High-value fraud case', escalatedAt: '2024-02-06', priority: 'critical', currentLevel: 1 },
+  ],
+  kpiMetrics: [
+    { name: 'Monthly Recoveries', value: 'K195,000', target: '≥K190,000', status: 'on-track', trend: 'up' },
+    { name: 'Net Recovery Income', value: 'K156,000', target: '≥K152,000', status: 'on-track', trend: 'stable' },
+    { name: 'Recovery Rate', value: '67%', target: '≥65%', status: 'on-track', trend: 'up' },
+  ],
+});
+
+// Generic workflow config for other positions
+const getGenericWorkflows = (position: string): PositionWorkflowConfig => ({
+  position: position as PositionType,
+  displayName: position,
+  workflowTypes: ['general', 'reporting', 'approvals'],
+  pendingActions: [
+    { id: 'pa1', title: 'Review Pending Items', type: 'review', priority: 'medium' },
+  ],
+  incomingHandoffs: [],
+  escalationItems: [],
+  kpiMetrics: [
+    { name: 'Performance', value: 'TBD', target: 'TBD', status: 'on-track', trend: 'stable' },
+  ],
+});
+
+// ============================================
+// GET POSITION-SPECIFIC CONFIG
+// ============================================
+
+function getPositionWorkflowConfig(position: PositionType | null): PositionWorkflowConfig {
+  if (!position) return getGenericWorkflows('Branch Manager');
+  
+  switch (position) {
+    case 'Branch Manager':
+      return getBranchManagerWorkflows();
+    case 'District Manager':
+      return getDistrictManagerWorkflows();
+    case 'Provincial Manager':
+      return getProvincialManagerWorkflows();
+    case 'Risk Manager':
+      return getRiskManagerWorkflows();
+    case 'Recoveries Coordinator':
+      return getRecoveriesCoordinatorWorkflows();
+    default:
+      return getGenericWorkflows(position);
+  }
+}
+
+// ============================================
+// DEPENDENCY MAPPING BY POSITION
+// ============================================
+
+function getPositionDependencies(position: string): { upstream: RoleDependency[]; downstream: RoleDependency[] } {
+  const upstream = ROLE_DEPENDENCIES.filter((d: RoleDependency) => d.downstreamRole === position);
+  const downstream = ROLE_DEPENDENCIES.filter((d: RoleDependency) => d.upstreamRole === position);
+  
+  return { upstream, downstream };
+}
+
+// ============================================
+// COMPONENT
+// ============================================
 
 export default function WorkflowsPage() {
+  const { position: rawPosition, isLoading: isUserLoading } = useUserPosition();
+  const [config, setConfig] = useState<PositionWorkflowConfig | null>(null);
+  const [activeTab, setActiveTab] = useState<'workflows' | 'dependencies' | 'handoffs' | 'escalations'>('workflows');
+
+  useEffect(() => {
+    if (!isUserLoading && rawPosition) {
+      const normalizedPosition = rawPosition as PositionType;
+      setConfig(getPositionWorkflowConfig(normalizedPosition));
+    }
+  }, [rawPosition, isUserLoading]);
+
+  if (isUserLoading || !config) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
+      </div>
+    );
+  }
+
+  const { upstream, downstream } = getPositionDependencies(config.position as string);
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Workflow Management
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Workflow Management
+            </h1>
+            <span className="px-3 py-1 text-sm font-medium bg-brand-100 text-brand-800 rounded-full">
+              {config.displayName}
+            </span>
+          </div>
           <p className="mt-1 text-gray-500 dark:text-gray-400">
-            Automated handoffs and cross-role dependency mapping
+            Cross-role dependency mapping and automated workflow orchestration
           </p>
         </div>
         <div className="flex gap-3">
           <button className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             Configure Workflows
           </button>
+          <button className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors">
+            Create Workflow
+          </button>
         </div>
       </div>
 
-      {/* Cross-Role Dependency Map */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Cross-Role Dependency Map
-          </h3>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <span className="font-medium text-blue-800 dark:text-blue-300">Branch Manager</span>
-              </div>
-              <p className="text-xs text-blue-700 dark:text-blue-400">Actions affect District Manager KPIs</p>
-            </div>
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200 dark:border-gray-700">
+        <nav className="flex gap-6">
+          {[
+            { id: 'workflows', label: 'Active Workflows' },
+            { id: 'dependencies', label: 'Role Dependencies' },
+            { id: 'handoffs', label: 'Automated Handoffs' },
+            { id: 'escalations', label: 'Escalations' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-brand-500 text-brand-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
+      {/* Tab Content */}
+      {activeTab === 'workflows' && (
+        <div className="space-y-6">
+          {/* KPI Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {config.kpiMetrics.map((metric, idx) => (
+              <div key={idx} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">{metric.name}</p>
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                    metric.status === 'on-track' ? 'bg-green-100 text-green-800' :
+                    metric.status === 'at-risk' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {metric.status === 'on-track' ? '✓' : metric.status === 'at-risk' ? '⚠' : '✗'} {metric.status.replace('-', ' ')}
+                  </span>
                 </div>
-                <span className="font-medium text-green-800 dark:text-green-300">Risk Manager</span>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{metric.value}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Target: {metric.target}</p>
               </div>
-              <p className="text-xs text-green-700 dark:text-green-400">Findings impact Accountant reporting</p>
-            </div>
-
-            <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-800">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75 3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <span className="font-medium text-purple-800 dark:text-purple-300">IT Manager</span>
-              </div>
-              <p className="text-xs text-purple-700 dark:text-purple-400">Updates enable all managers</p>
-            </div>
-
-            <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-100 dark:border-orange-800">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                </div>
-                <span className="font-medium text-orange-800 dark:text-orange-300">R&D Coordinator</span>
-              </div>
-              <p className="text-xs text-orange-700 dark:text-orange-400">Creates future opportunities</p>
-            </div>
+            ))}
           </div>
-        </div>
-      </div>
 
-      {/* Active Workflows */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Active Workflows
-          </h3>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            {activeWorkflows.map((workflow) => (
-              <div
-                key={workflow.id}
-                className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full ${
-                      workflow.priority === 'High' ? 'bg-red-500' : 'bg-yellow-500'
-                    }`} />
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">
-                        {workflow.title}
-                      </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {workflow.from} → {workflow.to}
-                      </p>
+          {/* Pending Actions */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Pending Actions
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                {config.pendingActions.map((action) => (
+                  <div key={action.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-brand-500 transition-colors">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                            action.priority === 'critical' ? 'bg-red-100 text-red-800' :
+                            action.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                            action.priority === 'medium' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {action.priority}
+                          </span>
+                          <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded">
+                            {action.type}
+                          </span>
+                        </div>
+                        <h4 className="font-medium text-gray-900 dark:text-white">{action.title}</h4>
+                        {action.deadline && (
+                          <p className="text-sm text-gray-500 mt-1">Deadline: {action.deadline}</p>
+                        )}
+                      </div>
+                      <button className="px-3 py-1 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm transition-colors">
+                        Action
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      workflow.status === 'Pending Approval'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : workflow.status === 'In Progress'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-purple-100 text-purple-800'
-                    }`}>
-                      {workflow.status}
-                    </span>
-                    <button className="px-3 py-1 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm transition-colors">
-                      Review
-                    </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Active Workflows */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Active Workflows
+              </h3>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {config.workflowTypes.map((type) => (
+                  <div key={type} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-brand-500 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                        Active
+                      </span>
+                      <span className="text-xs text-gray-500">0 pending</span>
+                    </div>
+                    <h4 className="font-medium text-gray-900 dark:text-white capitalize">{type.replace('_', ' ')}</h4>
+                    <p className="text-xs text-gray-500 mt-1">No active instances</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'dependencies' && (
+        <div className="space-y-6">
+          {/* Dependency Map */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Cross-Role Dependency Map
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">How your actions impact other roles and vice versa</p>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Downstream Dependencies (Roles YOU affect) */}
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
+                    Downstream Dependencies
+                    <span className="text-xs font-normal text-gray-500">(Roles you impact)</span>
+                  </h4>
+                  <div className="space-y-3">
+                    {downstream.map((dep, idx) => (
+                      <div key={idx} className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-blue-800 dark:text-blue-300">{dep.downstreamRole}</span>
+                          <span className="text-xs px-2 py-0.5 bg-blue-200 text-blue-800 rounded">{dep.dependencyType.replace('_', ' ')}</span>
+                        </div>
+                        <p className="text-sm text-blue-700 dark:text-blue-400">{dep.description}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex-1 bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${dep.weight * 100}%` }}></div>
+                          </div>
+                          <span className="text-xs text-blue-600">{Math.round(dep.weight * 100)}% impact</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  {workflow.description}
-                </p>
-                <div className="mt-2 text-xs text-gray-500">
-                  Created: {workflow.created}
+
+                {/* Upstream Dependencies (Roles that affect YOU) */}
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                    Upstream Dependencies
+                    <span className="text-xs font-normal text-gray-500">(Roles that impact you)</span>
+                  </h4>
+                  <div className="space-y-3">
+                    {upstream.map((dep, idx) => (
+                      <div key={idx} className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-green-800 dark:text-green-300">{dep.upstreamRole}</span>
+                          <span className="text-xs px-2 py-0.5 bg-green-200 text-green-800 rounded">{dep.dependencyType.replace('_', ' ')}</span>
+                        </div>
+                        <p className="text-sm text-green-700 dark:text-green-400">{dep.description}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex-1 bg-green-200 dark:bg-green-800 rounded-full h-2">
+                            <div className="bg-green-600 h-2 rounded-full" style={{ width: `${dep.weight * 100}%` }}></div>
+                          </div>
+                          <span className="text-xs text-green-600">{Math.round(dep.weight * 100)}% impact</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Automated Handoffs */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Automated Handoffs
-          </h3>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {automatedHandoffs.map((handoff) => (
-              <div
-                key={handoff.id}
-                className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-brand-500 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
-                    {handoff.status}
-                  </span>
-                  <span className="text-sm font-medium text-green-600">
-                    {handoff.successRate}%
-                  </span>
+      {activeTab === 'handoffs' && (
+        <div className="space-y-6">
+          {/* Incoming Handoffs */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Incoming Handoffs
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">Automated transfers from other roles</p>
+            </div>
+            <div className="p-6">
+              {config.incomingHandoffs.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No pending handoffs</p>
+              ) : (
+                <div className="space-y-4">
+                  {config.incomingHandoffs.map((handoff) => (
+                    <div key={handoff.id} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                              handoff.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              handoff.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {handoff.status.replace('_', ' ')}
+                            </span>
+                            <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded">
+                              {handoff.type.replace('_', ' ')}
+                            </span>
+                          </div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">{handoff.description}</h4>
+                          <p className="text-sm text-gray-500 mt-1">
+                            From: {handoff.fromRole} • Received: {handoff.receivedAt}
+                          </p>
+                        </div>
+                        <button className="px-3 py-1 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm transition-colors">
+                          Review
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <h4 className="font-medium text-gray-900 dark:text-white">
-                  {handoff.trigger}
-                </h4>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {handoff.action}
-                </p>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Intelligent Escalation */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Intelligent Escalation System
-          </h3>
-        </div>
-        <div className="p-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-semibold">1</span>
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">Issue Detected</p>
-                <p className="text-sm text-gray-500">System identifies the issue</p>
-              </div>
-              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+          {/* Automated Handoff Configurations */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Automated Handoff Rules
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">Configured handoff triggers and workflows</p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-semibold">2</span>
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">Authority Check</p>
-                <p className="text-sm text-gray-500">Is this within role's authority?</p>
-              </div>
-              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-semibold">3</span>
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">Precedent Check</p>
-                <p className="text-sm text-gray-500">Similar past decisions available?</p>
-              </div>
-              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-semibold">4</span>
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-gray-900 dark:text-white">Auto-Escalate</p>
-                <p className="text-sm text-gray-500">Time elapsed or pattern detected</p>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {HANDOFF_CONFIGS.slice(0, 4).map((handoff, idx) => (
+                  <div key={idx} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-brand-500 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                        Active
+                      </span>
+                      <span className="text-xs text-gray-500">{handoff.slaMinutes}h SLA</span>
+                    </div>
+                    <h4 className="font-medium text-gray-900 dark:text-white">
+                      {handoff.sourceState} → {handoff.targetState}
+                    </h4>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {handoff.sourceRole} → {handoff.targetRole}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-2">
+                      Required approvals: {handoff.requiredApprovals.join(', ') || 'None'}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'escalations' && (
+        <div className="space-y-6">
+          {/* Escalation Items */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Active Escalations
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">Issues requiring your attention or escalation</p>
+            </div>
+            <div className="p-6">
+              {config.escalationItems.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No active escalations</p>
+              ) : (
+                <div className="space-y-4">
+                  {config.escalationItems.map((escalation) => (
+                    <div key={escalation.id} className={`p-4 border rounded-lg ${
+                      escalation.priority === 'critical' ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20' :
+                      escalation.priority === 'high' ? 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20' :
+                      'border-gray-200 dark:border-gray-700'
+                    }`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                              escalation.priority === 'critical' ? 'bg-red-200 text-red-800' :
+                              escalation.priority === 'high' ? 'bg-orange-200 text-orange-800' :
+                              'bg-gray-200 text-gray-800'
+                            }`}>
+                              {escalation.priority}
+                            </span>
+                            <span className="text-xs text-gray-500">Level {escalation.currentLevel}</span>
+                          </div>
+                          <h4 className="font-medium text-gray-900 dark:text-white">{escalation.reason}</h4>
+                          <p className="text-sm text-gray-500 mt-1">
+                            From: {escalation.fromRole} • Escalated: {escalation.escalatedAt}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm transition-colors">
+                            Resolve
+                          </button>
+                          <button className="px-3 py-1 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm transition-colors">
+                            Escalate
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Escalation Rules */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Escalation Rules
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">Configured rules for automatic escalation</p>
+            </div>
+            <div className="p-6">
+              <div className="space-y-3">
+                {ESCALATION_RULES.slice(0, 4).map((rule, idx) => (
+                  <div key={idx} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                        rule.priority === 'critical' ? 'bg-red-100 text-red-800' :
+                        rule.priority === 'high' ? 'bg-orange-100 text-orange-800' :
+                        rule.priority === 'medium' ? 'bg-blue-100 text-blue-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {rule.priority}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {rule.autoResolve ? 'Auto-resolve' : 'Manual resolution'}
+                      </span>
+                    </div>
+                    <h4 className="font-medium text-gray-900 dark:text-white">{rule.description}</h4>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Path: {rule.escalationPath.join(' → ')}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Intelligent Escalation System */}
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+            <h3 className="text-lg font-semibold mb-4">Intelligent Escalation System</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white/10 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-medium">Authority Check</span>
+                </div>
+                <p className="text-sm text-purple-100">Automatically evaluates if issues are within assigned role's authority</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-medium">Time-Based</span>
+                </div>
+                <p className="text-sm text-purple-100">Escalates automatically when SLA deadlines are exceeded</p>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <span className="font-medium">Pattern Detection</span>
+                </div>
+                <p className="text-sm text-purple-100">Identifies recurring issues and triggers proactive escalation</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

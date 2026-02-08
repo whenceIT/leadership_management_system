@@ -35,24 +35,22 @@ export default function SignInForm() {
     setError("");
     setSuccess("");
 
-    // Create a timeout promise that rejects after 6 seconds
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error("timeout"));
-      }, 6000);
-    });
+    // Create AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
 
     try {
-      const fetchPromise = fetch("/api/auth/login", {
+      const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
+        signal: controller.signal,
       });
 
-      // Race between fetch and timeout
-      const response = await Promise.race<Response>([fetchPromise, timeoutPromise]);
+      // Clear timeout immediately after response
+      clearTimeout(timeoutId);
 
       const data = await response.json();
 
@@ -68,13 +66,14 @@ export default function SignInForm() {
       } else {
         setError(data.message || "Login failed. Please try again.");
       }
-    } catch (err) {
-      if (err instanceof Error && err.message === "timeout") {
-        setError("Your credentials couldn't be found. The server took too long to respond. Please try again.");
+    } catch (err: any) {
+      // Handle timeout/abort errors
+      if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+        setError("Your credentials couldn't be found.");
       } else {
         setError("An error occurred. Please try again.");
-        console.error("Login error:", err);
       }
+      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }

@@ -22,13 +22,16 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
   }),
   
   // General Operations
-  'General Operations Administrator': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'General Operations Administrator (GOA)': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+    loading: () => <DashboardLoading />
+  }),
+  'General Operations Manager (GOM)': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   'General Operations Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
     loading: () => <DashboardLoading />
   }),
-  'Performance Operations Administrator': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Performance Operations Administrator (POA)': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   
@@ -80,7 +83,7 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
   }),
   
   // Marketing
-  'Creative Artwork & Marketing Representative Manager Performance Review': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Creative Artwork & Marketing Representative Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
     loading: () => <DashboardLoading />
   }),
 };

@@ -291,6 +291,7 @@ export const AVAILABLE_POSITIONS = [
   'Provincial Manager',
   'General Operations Manager (GOM)',
   'General Operations Administrator (GOA)',
+  'General Operations Manager',
   'IT Manager',
   'IT Coordinator',
   'Management Accountant',
@@ -304,7 +305,6 @@ export const AVAILABLE_POSITIONS = [
   'Administration',
   'Creative Artwork & Marketing Representative Manager',
   'District Regional Manager',
-  'General Operations Manager',
   'Performance Operations Administrator (POA)',
 ] as const;
 
