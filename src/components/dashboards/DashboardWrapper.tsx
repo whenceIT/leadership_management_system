@@ -14,76 +14,88 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'District Manager': dynamic(() => import('@/components/dashboards/DistrictManagerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
-  'District Regional Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'District Regional Manager': dynamic(() => import('@/components/dashboards/DistrictRegionalManagerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
-  'Provincial Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Provincial Manager': dynamic(() => import('@/components/dashboards/ProvincialManagerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   
   // General Operations
-  'General Operations Administrator (GOA)': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'General Operations Administrator (GOA)': dynamic(() => import('@/components/dashboards/GOADashboard'), { 
     loading: () => <DashboardLoading />
   }),
-  'General Operations Manager (GOM)': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'General Operations Administrator': dynamic(() => import('@/components/dashboards/GOADashboard'), { 
     loading: () => <DashboardLoading />
   }),
-  'General Operations Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'General Operations Manager (GOM)': dynamic(() => import('@/components/dashboards/GOMDashboard'), { 
     loading: () => <DashboardLoading />
   }),
-  'Performance Operations Administrator (POA)': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'General Operations Manager': dynamic(() => import('@/components/dashboards/GOMDashboard'), { 
+    loading: () => <DashboardLoading />
+  }),
+  'Performance Operations Administrator (POA)': dynamic(() => import('@/components/dashboards/POADashboard'), { 
+    loading: () => <DashboardLoading />
+  }),
+  'Performance Operations Administrator': dynamic(() => import('@/components/dashboards/POADashboard'), { 
     loading: () => <DashboardLoading />
   }),
   
   // Administration
-  'Administration': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Administration': dynamic(() => import('@/components/dashboards/AdministrationDashboard'), { 
     loading: () => <DashboardLoading />
   }),
-  'Manager Administration': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Manager Administration': dynamic(() => import('@/components/dashboards/ManagerAdministrationDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   
   // Finance & Accounting
-  'Management Accountant': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Management Accountant': dynamic(() => import('@/components/dashboards/ManagementAccountantDashboard'), { 
     loading: () => <DashboardLoading />
   }),
-  'Payroll Loans Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Payroll Loans Manager': dynamic(() => import('@/components/dashboards/PayrollLoansManagerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   
   // Risk & Recovery
-  'Risk Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Risk Manager': dynamic(() => import('@/components/dashboards/RiskManagerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
-  'Recoveries Coordinator': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Recoveries Coordinator': dynamic(() => import('@/components/dashboards/RecoveriesCoordinatorDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   
   // IT
-  'IT Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'IT Manager': dynamic(() => import('@/components/dashboards/ITManagerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
-  'IT Coordinator': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'IT Coordinator': dynamic(() => import('@/components/dashboards/ITCoordinatorDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   
   // HR & Training
-  'Policy & Training Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Policy & Training Manager': dynamic(() => import('@/components/dashboards/PolicyTrainingManagerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   
   // Operations
-  'Motor Vehicles Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Motor Vehicles Manager': dynamic(() => import('@/components/dashboards/MotorVehiclesManagerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   
   // R&D
-  'R&D Coordinator': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'R&D Coordinator': dynamic(() => import('@/components/dashboards/RDCoordinatorDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   
   // Marketing
-  'Creative Artwork & Marketing Representative Manager': dynamic(() => import('@/components/dashboards/GenericDashboard'), { 
+  'Creative Artwork & Marketing Representative Manager': dynamic(() => import('@/components/dashboards/MarketingManagerDashboard'), { 
+    loading: () => <DashboardLoading />
+  }),
+  'Creative Artwork & Marketing Representative Manager Performance Review': dynamic(() => import('@/components/dashboards/MarketingManagerDashboard'), { 
+    loading: () => <DashboardLoading />
+  }),
+  'Marketing Manager': dynamic(() => import('@/components/dashboards/MarketingManagerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
 };

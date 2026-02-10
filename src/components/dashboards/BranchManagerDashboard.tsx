@@ -1,16 +1,46 @@
 'use client';
 
 import React from 'react';
-import { DashboardBase, KPICard, AlertCard, SectionCard } from './DashboardBase';
+import { DashboardBase, KPICard, AlertCard, SectionCard, QuickInfoBar, JobPurpose, KPIMetricsCard, CollapsibleCard } from './DashboardBase';
+import { roleCardsData } from '@/data/role-cards-data';
 
-export default function BranchManagerDashboard() {
+interface BranchManagerDashboardProps {
+  position?: string;
+}
+
+export default function BranchManagerDashboard({ position = 'Branch Manager' }: BranchManagerDashboardProps) {
+  const roleCard = roleCardsData[position] || roleCardsData['Branch Manager'] || {
+    department: 'TBD',
+    reportsTo: 'TBD',
+    directReports: 'TBD',
+    location: 'TBD',
+    jobPurpose: 'TBD',
+    kpis: []
+  };
+
   return (
     <DashboardBase
-      title="Branch Manager Dashboard"
+      title={roleCard.title}
       subtitle="Real-time branch performance and operations overview"
     >
+      {/* Quick Info Bar */}
+      <QuickInfoBar
+        department={roleCard.department}
+        reportsTo={roleCard.reportsTo}
+        directReports={roleCard.directReports}
+        location={roleCard.location}
+      />
+
+      {/* Job Purpose */}
+      <JobPurpose purpose={roleCard.jobPurpose} />
+
+      {/* KPI Metrics from Role Card */}
+      {roleCard.kpis && roleCard.kpis.length > 0 && (
+        <KPIMetricsCard kpis={roleCard.kpis} title="Key Performance Indicators (KPIs)" />
+      )}
+
       <div className="grid grid-cols-12 gap-4 md:gap-6">
-        {/* KPI Cards */}
+        {/* KPI Cards with expand functionality */}
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="Month-1 Default Rate"
@@ -21,6 +51,13 @@ export default function BranchManagerDashboard() {
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
+            }
+            expandable={true}
+            expandedContent={
+              <div className="space-y-2 text-sm">
+                <p className="text-gray-600 dark:text-gray-300">Target: ≤2.5%</p>
+                <p className="text-green-600 dark:text-green-400">✅ On Track</p>
+              </div>
             }
           />
         </div>
@@ -36,6 +73,13 @@ export default function BranchManagerDashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             }
+            expandable={true}
+            expandedContent={
+              <div className="space-y-2 text-sm">
+                <p className="text-gray-600 dark:text-gray-300">Target: ≥93%</p>
+                <p className="text-green-600 dark:text-green-400">✅ Exceeding Target</p>
+              </div>
+            }
           />
         </div>
 
@@ -49,6 +93,13 @@ export default function BranchManagerDashboard() {
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
+            }
+            expandable={true}
+            expandedContent={
+              <div className="space-y-2 text-sm">
+                <p className="text-gray-600 dark:text-gray-300">This Month: 1,224</p>
+                <p className="text-gray-600 dark:text-gray-300">Last Month: 1,198</p>
+              </div>
             }
           />
         </div>
@@ -64,12 +115,19 @@ export default function BranchManagerDashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
             }
+            expandable={true}
+            expandedContent={
+              <div className="space-y-2 text-sm">
+                <p className="text-gray-600 dark:text-gray-300">Target: ≥85%</p>
+                <p className="text-green-600 dark:text-green-400">✅ Above Target</p>
+              </div>
+            }
           />
         </div>
 
         {/* Alerts Section */}
         <div className="col-span-12 lg:col-span-8">
-          <SectionCard title="Priority Actions">
+          <CollapsibleCard title="Priority Actions" defaultExpanded={true}>
             <div className="space-y-4">
               <AlertCard
                 title="Review Required - High Default Risk"
@@ -79,6 +137,13 @@ export default function BranchManagerDashboard() {
                   <button className="text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:underline">
                     Review Now →
                   </button>
+                }
+                expandable={true}
+                expandedContent={
+                  <div className="space-y-2 text-sm">
+                    <p className="text-gray-600 dark:text-gray-300">Clients: #4521, #4523, #4525, #4527, #4529</p>
+                    <p className="text-gray-600 dark:text-gray-300">Total at Risk: K125,000</p>
+                  </div>
                 }
               />
               <AlertCard
@@ -90,14 +155,21 @@ export default function BranchManagerDashboard() {
                     Start Report →
                   </button>
                 }
+                expandable={true}
+                expandedContent={
+                  <div className="space-y-2 text-sm">
+                    <p className="text-gray-600 dark:text-gray-300">Template: Monthly Performance Report</p>
+                    <p className="text-gray-600 dark:text-gray-300">Due: Tomorrow, 5:00 PM</p>
+                  </div>
+                }
               />
             </div>
-          </SectionCard>
+          </CollapsibleCard>
         </div>
 
         {/* Quick Stats */}
         <div className="col-span-12 lg:col-span-4">
-          <SectionCard title="Quick Stats">
+          <CollapsibleCard title="Quick Stats" defaultExpanded={true}>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 dark:text-gray-400">Pending Approvals</span>
@@ -116,12 +188,12 @@ export default function BranchManagerDashboard() {
                 <span className="font-semibold text-green-600 dark:text-green-400">95%</span>
               </div>
             </div>
-          </SectionCard>
+          </CollapsibleCard>
         </div>
 
         {/* Collections Waterfall */}
         <div className="col-span-12">
-          <SectionCard title="Collections Waterfall" action={<button className="text-sm text-brand-500 hover:underline">View Details</button>}>
+          <CollapsibleCard title="Collections Waterfall" action={<button className="text-sm text-brand-500 hover:underline">View Details</button>} defaultExpanded={true}>
             <div className="grid grid-cols-5 gap-4 text-center">
               <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Due</p>
@@ -144,12 +216,12 @@ export default function BranchManagerDashboard() {
                 <p className="text-xl font-bold text-gray-900 dark:text-white">94.5%</p>
               </div>
             </div>
-          </SectionCard>
+          </CollapsibleCard>
         </div>
 
         {/* Team Overview */}
         <div className="col-span-12 lg:col-span-6">
-          <SectionCard title="Team Performance">
+          <CollapsibleCard title="Team Performance" defaultExpanded={true}>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-gray-900">
@@ -182,12 +254,12 @@ export default function BranchManagerDashboard() {
                 </tbody>
               </table>
             </div>
-          </SectionCard>
+          </CollapsibleCard>
         </div>
 
         {/* Recent Activity */}
         <div className="col-span-12 lg:col-span-6">
-          <SectionCard title="Recent Activity">
+          <CollapsibleCard title="Recent Activity" defaultExpanded={true}>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
@@ -223,7 +295,7 @@ export default function BranchManagerDashboard() {
                 </div>
               </div>
             </div>
-          </SectionCard>
+          </CollapsibleCard>
         </div>
       </div>
     </DashboardBase>
