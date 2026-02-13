@@ -44,6 +44,10 @@ export function useUserSync() {
         const mergedData = {
           ...existingData,
           ...data.user,
+          // Ensure position_id is preserved if not in new data
+          position_id: data.user.position_id || existingData.position_id,
+          // Ensure position is preserved if not in new data
+          position: data.user.position || existingData.position,
         };
         
         // Save merged data back to localStorage

@@ -1,13 +1,23 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useUserPosition, AVAILABLE_POSITIONS, PositionType } from '@/hooks/useUserPosition';
+import { useUserPosition } from '@/hooks/useUserPosition';
 import Button from '@/components/ui/button/Button';
+
+interface LeadershipPosition {
+  id: number;
+  name: string;
+  status: number;
+  job_description: string;
+  date_added: string;
+}
 
 export default function ImpersonateProfilePage() {
   const {
     user,
-    position: currentPosition,
+    positionId: currentPositionId,
+    positionName: currentPositionName,
+    positions,
     isLoading,
     impersonatePosition,
     cancelImpersonation,
@@ -15,7 +25,7 @@ export default function ImpersonateProfilePage() {
     getOriginalUser
   } = useUserPosition();
 
-  const [selectedPosition, setSelectedPosition] = useState<PositionType>('Branch Manager');
+  const [selectedPositionId, setSelectedPositionId] = useState<number>(5); // Default to Branch Manager
   const [duration, setDuration] = useState<number>(60);
   const [impersonationStatus, setImpersonationStatus] = useState<{
     success: boolean;
@@ -29,15 +39,15 @@ export default function ImpersonateProfilePage() {
       if (originalUser) {
         setImpersonationStatus({
           success: true,
-          message: `Currently impersonating as ${currentPosition}. Original user: ${originalUser.first_name} ${originalUser.last_name}`
+          message: `Currently impersonating as ${currentPositionName}. Original user: ${originalUser.first_name} ${originalUser.last_name}`
         });
       }
     }
-  }, [isImpersonating, currentPosition, getOriginalUser]);
+  }, [isImpersonating, currentPositionName, getOriginalUser]);
 
   const handleImpersonate = () => {
     setImpersonationStatus(null);
-    const result = impersonatePosition(selectedPosition, duration);
+    const result = impersonatePosition(selectedPositionId, duration);
     setImpersonationStatus({
       success: result.success,
       message: result.message
@@ -53,6 +63,9 @@ export default function ImpersonateProfilePage() {
       });
     }
   };
+
+  // Get selected position name for display
+  const selectedPositionName = positions.find(p => p.id === selectedPositionId)?.name || 'Branch Manager';
 
   if (isLoading) {
     return (
@@ -91,8 +104,8 @@ export default function ImpersonateProfilePage() {
             <p className="font-medium text-gray-900 dark:text-white">{user?.email}</p>
           </div>
           <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <p className="text-sm text-gray-500 dark:text-gray-400">Current Position</p>
-            <p className="font-medium text-brand-500">{currentPosition}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Current Position ID</p>
+            <p className="font-medium text-brand-500">{currentPositionId} - {currentPositionName}</p>
           </div>
         </div>
 
@@ -132,18 +145,18 @@ export default function ImpersonateProfilePage() {
                 Select Position to Impersonate
               </label>
               <select
-                value={selectedPosition}
-                onChange={(e) => setSelectedPosition(e.target.value as PositionType)}
+                value={selectedPositionId}
+                onChange={(e) => setSelectedPositionId(Number(e.target.value))}
                 className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
               >
-                {AVAILABLE_POSITIONS.map((pos) => (
-                  <option key={pos} value={pos}>
-                    {pos}
+                {positions.map((pos: LeadershipPosition) => (
+                  <option key={pos.id} value={pos.id}>
+                    {pos.id} - {pos.name}
                   </option>
                 ))}
               </select>
               <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                This will change your displayed position to the selected role
+                This will change your displayed position to ID {selectedPositionId}: {selectedPositionName}
               </p>
             </div>
 
@@ -194,7 +207,7 @@ export default function ImpersonateProfilePage() {
             <Button
               variant="primary"
               onClick={handleImpersonate}
-              disabled={!selectedPosition}
+              disabled={!selectedPositionId}
             >
               Start Impersonation
             </Button>
