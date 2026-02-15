@@ -1,27 +1,18 @@
 "use client";
 
-const morningBrief = {
-  greeting: "Good morning, John",
-  date: "Tuesday, February 7, 2024",
-  priorityActions: [
-    { action: "Review Branch B's Month-2 delinquency action plans", due: "Due today", urgent: true },
-    { action: "Approve inter-branch portfolio transfer for Client Y", due: "Awaiting 24h", urgent: false },
-    { action: "Complete monthly coaching session with Branch Manager Z", due: "Scheduled", urgent: false },
-    { action: "Review new regulatory change impact analysis", due: "Released yesterday", urgent: false },
-  ],
-  teamSnapshot: {
-    totalStaff: 24,
-    onLeave: 2,
-    pendingTasks: 12,
-    completedToday: 5,
-  },
-  alerts: [
-    { type: "warning", message: "Branch B showing rising Month-1 defaults - investigation suggested" },
-    { type: "info", message: "Staff training completion rate below target - intervention needed" },
-    { type: "success", message: "Cross-branch best practice sharing opportunity identified" },
-  ],
-};
+import { useState, useEffect } from 'react';
+import PriorityActionService, { PriorityAction } from '@/services/PriorityActionService';
+import { useUserData } from '@/hooks/useUserSync';
+import { useLoanUpdates } from '@/hooks/useLoanUpdates';
 
+// Static alerts that don't change
+const alerts = [
+  { type: "warning", message: "Branch B showing rising Month-1 defaults - investigation suggested" },
+  { type: "info", message: "Staff training completion rate below target - intervention needed" },
+  { type: "success", message: "Cross-branch best practice sharing opportunity identified" },
+];
+
+// Static decision support data
 const decisionSupport = [
   {
     category: "Loan Approval",
@@ -36,8 +27,127 @@ const decisionSupport = [
 ];
 
 export default function AssistantPage() {
+  const [priorityActions, setPriorityActions] = useState<PriorityAction[]>([]);
+  const [teamSnapshot, setTeamSnapshot] = useState({
+    totalStaff: 24,
+    onLeave: 2,
+    pendingTasks: 0,
+    completedToday: 0,
+  });
+  const [greeting, setGreeting] = useState("Good morning");
+  const [date, setDate] = useState("");
+  const [isClient, setIsClient] = useState(false);
+
+  // Get WebSocket connection status (similar to LoanWebSocketDebug)
+  const { latestLoan, isConnected, error, reconnect } = useLoanUpdates();
+
+  // Get user data hook
+  const { getUserData } = useUserData();
+
+  // Helper function to get user's full name
+  const getUserName = () => {
+    const user = getUserData();
+    if (user?.first_name && user?.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    }
+    if (user?.name) {
+      return user.name;
+    }
+    return 'User';
+  };
+
+  useEffect(() => {
+    setIsClient(true);
+    
+    // Initialize date and greeting
+    const now = new Date();
+    const hour = now.getHours();
+    let greetingText = 'Good morning';
+    if (hour >= 12 && hour < 17) greetingText = 'Good afternoon';
+    else if (hour >= 17) greetingText = 'Good evening';
+    
+    // Get user's name
+    const userName = getUserName();
+    setGreeting(`${greetingText}, ${userName}`);
+    
+    setDate(now.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }));
+
+    // Get PriorityActionService instance and load initial priority actions
+    const service = PriorityActionService.getInstance();
+    const actions = service.getPriorityActions();
+    setPriorityActions(actions);
+    setTeamSnapshot(prev => ({
+      ...prev,
+      pendingTasks: actions.length,
+    }));
+
+    // Subscribe to real-time priority action updates
+    const unsubscribeFn = service.subscribe((updatedActions) => {
+      console.log('📋 AssistantPage: Received priority action update, count:', updatedActions.length);
+      setPriorityActions(updatedActions);
+      setTeamSnapshot(prev => ({
+        ...prev,
+        pendingTasks: updatedActions.length,
+      }));
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribeFn) {
+        unsubscribeFn();
+      }
+    };
+  }, []);
+
+  // Handle marking an action as completed
+  const handleCompleteAction = (index: number) => {
+    const service = PriorityActionService.getInstance();
+    service.markAsCompleted(index);
+    const updatedActions = service.getPriorityActions();
+    setPriorityActions(updatedActions);
+    setTeamSnapshot(prev => ({
+      ...prev,
+      pendingTasks: updatedActions.length,
+      completedToday: prev.completedToday + 1,
+    }));
+  };
+
+  if (!isClient) {
+    return null; // Prevent hydration mismatch
+  }
+
   return (
     <div className="space-y-6">
+      {/* Connection Status - Similar to LoanWebSocketDebug */}
+      <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-3 rounded-lg">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-gray-700 dark:text-gray-300">WebSocket:</span>
+          {isConnected ? (
+            <span className="text-green-600 font-bold">🟢 Connected</span>
+          ) : (
+            <span className="text-red-600 font-bold">🔴 Disconnected</span>
+          )}
+        </div>
+        {!isConnected && (
+          <button
+            onClick={reconnect}
+            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded"
+          >
+            Reconnect
+          </button>
+        )}
+        {latestLoan && (
+          <span className="text-sm text-gray-500">
+            Last loan: {latestLoan.client || latestLoan.borrower_name || 'Unknown'}
+          </span>
+        )}
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -63,53 +173,66 @@ export default function AssistantPage() {
             </svg>
           </div>
           <div className="flex-1">
-            <h2 className="text-2xl font-bold">{morningBrief.greeting}</h2>
-            <p className="text-white/80">{morningBrief.date}</p>
+            <h2 className="text-2xl font-bold">{greeting}</h2>
+            <p className="text-white/80">{date}</p>
           </div>
         </div>
 
-        {/* Today's Priority Actions */}
+        {/* Today's Priority Actions - Dynamic from PriorityActionService */}
         <div className="mt-6">
           <h3 className="font-semibold mb-3">Today's Priority Actions</h3>
           <div className="space-y-2">
-            {morningBrief.priorityActions.map((action, index) => (
-              <div
-                key={index}
-                className={`flex items-center gap-3 p-3 rounded-lg ${
-                  action.urgent ? 'bg-white/20' : 'bg-white/10'
-                }`}
-              >
-                <div className={`w-2 h-2 rounded-full ${action.urgent ? 'bg-red-400' : 'bg-green-400'}`} />
-                <div className="flex-1">
-                  <p className="font-medium">{action.action}</p>
-                  <p className="text-xs text-white/70">{action.due}</p>
-                </div>
-                {action.urgent && (
-                  <span className="px-2 py-1 bg-red-500/30 text-xs font-medium rounded">
-                    Urgent
-                  </span>
-                )}
+            {priorityActions.length === 0 ? (
+              <div className="p-3 rounded-lg bg-white/10 text-center">
+                <p className="text-sm text-white/70">No pending priority actions</p>
               </div>
-            ))}
+            ) : (
+              priorityActions.map((action, index) => (
+                <div
+                  key={index}
+                  className={`flex items-center gap-3 p-3 rounded-lg ${
+                    action.urgent ? 'bg-white/20' : 'bg-white/10'
+                  }`}
+                >
+                  <div className={`w-2 h-2 rounded-full ${action.urgent ? 'bg-red-400' : 'bg-green-400'}`} />
+                  <div className="flex-1">
+                    <p className="font-medium">{action.action}</p>
+                    <p className="text-xs text-white/70">{action.due}</p>
+                  </div>
+                  {action.urgent && (
+                    <span className="px-2 py-1 bg-red-500/30 text-xs font-medium rounded">
+                      Urgent
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleCompleteAction(index)}
+                    className="px-2 py-1 bg-white/20 hover:bg-white/30 text-xs font-medium rounded transition-colors"
+                    title="Mark as completed"
+                  >
+                    ✓
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
         {/* Team Snapshot */}
         <div className="mt-6 grid grid-cols-4 gap-4">
           <div className="text-center">
-            <p className="text-2xl font-bold">{morningBrief.teamSnapshot.totalStaff}</p>
+            <p className="text-2xl font-bold">{teamSnapshot.totalStaff}</p>
             <p className="text-xs text-white/70">Total Staff</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold">{morningBrief.teamSnapshot.onLeave}</p>
+            <p className="text-2xl font-bold">{teamSnapshot.onLeave}</p>
             <p className="text-xs text-white/70">On Leave</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold">{morningBrief.teamSnapshot.pendingTasks}</p>
+            <p className="text-2xl font-bold">{teamSnapshot.pendingTasks}</p>
             <p className="text-xs text-white/70">Pending Tasks</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold">{morningBrief.teamSnapshot.completedToday}</p>
+            <p className="text-2xl font-bold">{teamSnapshot.completedToday}</p>
             <p className="text-xs text-white/70">Completed</p>
           </div>
         </div>
@@ -117,7 +240,7 @@ export default function AssistantPage() {
 
       {/* Alerts Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {morningBrief.alerts.map((alert, index) => (
+        {alerts.map((alert, index) => (
           <div
             key={index}
             className={`p-4 rounded-lg border ${

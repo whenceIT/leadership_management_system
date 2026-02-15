@@ -133,7 +133,7 @@ function AddKpiModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-[999999] flex items-end justify-center sm:items-center">
       {/* Backdrop */}
       <div 
         className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${
@@ -316,7 +316,7 @@ function EditKpiModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
+    <div className="fixed inset-0 z-[999999] flex items-end justify-center sm:items-center">
       {/* Backdrop */}
       <div 
         className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${
