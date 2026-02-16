@@ -21,7 +21,7 @@ export default function KPIDashboard() {
     isLoading: isLoadingKPI, 
     error: kpiError, 
     userId,
-    positionId,
+    jobPosition,
     refresh: refreshKPI,
     getOverallScore,
     getCategories 
@@ -188,7 +188,7 @@ export default function KPIDashboard() {
           </h1>
           <p className="mt-1 text-gray-500 dark:text-gray-400">
             {useRealtimeData 
-              ? `Real-time data | User ID: ${userId} | Position ID: ${positionId}`
+              ? `Real-time data | User ID: ${userId} | Position ID: ${jobPosition}`
               : `${kpiConfig.description} | Position: ${position}`
             }
             {isLoadingKPI && <span className="ml-2 text-blue-500">(Loading...)</span>}
@@ -222,7 +222,7 @@ export default function KPIDashboard() {
         </span>
         {userId && (
           <span className="text-gray-500 dark:text-gray-400">
-            User ID: {userId} | Position ID: {positionId}
+            User ID: {userId} | Position ID: {jobPosition}
           </span>
         )}
       </div>

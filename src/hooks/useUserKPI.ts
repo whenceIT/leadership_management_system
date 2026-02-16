@@ -40,28 +40,28 @@ export function useUserKPI() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
-  const [positionId, setPositionId] = useState<number | null>(null);
+  const [jobPosition, setJobPosition] = useState<number | null>(null);
 
   // Get user ID and position ID from localStorage
-  const getUserData = useCallback((): { id: number | null; position_id: number | null } => {
+  const getUserData = useCallback((): { id: number | null; job_position: number | null } => {
     if (typeof window === 'undefined') {
-      return { id: null, position_id: null };
+      return { id: null, job_position: null };
     }
 
     const storedUser = localStorage.getItem('thisUser');
     if (!storedUser) {
-      return { id: null, position_id: null };
+      return { id: null, job_position: null };
     }
 
     try {
       const user = JSON.parse(storedUser);
       return { 
         id: user.id || null,
-        position_id: user.position_id || null
+        job_position: user.job_position || user.position_id || null
       };
     } catch (e) {
       console.error('Error parsing user data:', e);
-      return { id: null, position_id: null };
+      return { id: null, job_position: null };
     }
   }, []);
 
@@ -110,15 +110,13 @@ export function useUserKPI() {
   }, []);
 
   // Fetch KPI scores from API
-  const fetchKPIScores = useCallback(async (uid: number, pid: number | null) => {
+  const fetchKPIScores = useCallback(async (uid: number, pid: number) => {
     setIsLoading(true);
     setError(null);
 
     try {
       // Use the API with both user_id and position_id
-      const url = pid 
-        ? `https://smartbackend.whencefinancesystem.com/smart-kpi-scores/${uid}/${pid}`
-        : `https://smartbackend.whencefinancesystem.com/smart-kpi-scores/${uid}`;
+      const url = `https://smartbackend.whencefinancesystem.com/smart-kpi-scores/${uid}/${pid}`;
       
       const response = await fetch(url);
       
@@ -150,8 +148,9 @@ export function useUserKPI() {
     const userData = getUserData();
     if (userData.id) {
       setUserId(userData.id);
-      setPositionId(userData.position_id);
-      fetchKPIScores(userData.id, userData.position_id);
+      const jobPos = userData.job_position || 5; // Default to position 5 if null
+      setJobPosition(jobPos);
+      fetchKPIScores(userData.id, jobPos);
     }
   }, [getUserData, fetchKPIScores]);
 
@@ -160,8 +159,9 @@ export function useUserKPI() {
     const userData = getUserData();
     if (userData.id) {
       setUserId(userData.id);
-      setPositionId(userData.position_id);
-      fetchKPIScores(userData.id, userData.position_id);
+      const jobPos = userData.job_position || 5; // Default to position 5 if null
+      setJobPosition(jobPos);
+      fetchKPIScores(userData.id, jobPos);
     } else {
       setIsLoading(false);
     }
@@ -215,7 +215,7 @@ export function useUserKPI() {
     isLoading,
     error,
     userId,
-    positionId,
+    jobPosition,
     refresh,
     getOverallScore,
     getKPIsByCategory,

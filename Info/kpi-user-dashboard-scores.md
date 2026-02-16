@@ -1,5 +1,5 @@
 GET https://smartbackend.whencefinancesystem.com/smart-kpi-scores/2706/4
-GET https://smartbackend.whencefinancesystem.com/smart-kpi-scores/{user_id}/{position_id}
+Which is GET https://smartbackend.whencefinancesystem.com/smart-kpi-scores/{user_id}/{position_id}
 Content-Type : application/json
 
 response sample:
