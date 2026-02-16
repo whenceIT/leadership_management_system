@@ -379,7 +379,7 @@ export const workflowEngine = new WorkflowEngine();
 // ============================================
 
 export function useWorkflowEngine() {
-  const { position: currentPosition, isLoading } = useUserPosition();
+  const { positionName: currentPosition, isLoading } = useUserPosition();
   const [workflows, setWorkflows] = useState<WorkflowInstance[]>([]);
   const [events, setEvents] = useState<WorkflowEvent[]>([]);
   const [escalations, setEscalations] = useState<WorkflowInstance[]>([]);
