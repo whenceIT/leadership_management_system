@@ -4,6 +4,7 @@
 export const POSITION_DASHBOARDS = {
   // Core Management Positions
   'Branch Manager': () => import('./BranchManagerDashboard'),
+  'Loan Consultant': () => import('./LoanConsultantDashboard'),
   'District Manager': () => import('./DistrictManagerDashboard'),
   'District Regional Manager': () => import('./DistrictRegionalManagerDashboard'),
   'Provincial Manager': () => import('./ProvincialManagerDashboard'),

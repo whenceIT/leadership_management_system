@@ -401,6 +401,7 @@ export function getPositionNameByIdStatic(id: number): string {
     18: 'Creative Artwork & Marketing Representative Manager',
     19: 'Administration',
     20: 'Super Seer',
+    21: 'Loan Consultant',
   };
   
   return defaultPositions[id] || 'Branch Manager';
@@ -462,6 +463,7 @@ export const AVAILABLE_POSITIONS = [
   'Creative Artwork & Marketing Representative Manager',
   'Administration',
   'Super Seer',
+  'Loan Consultant',
 ] as const;
 
 export type PositionType = typeof AVAILABLE_POSITIONS[number];

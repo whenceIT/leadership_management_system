@@ -2,6 +2,7 @@
 
 // Core Management Dashboards
 export { default as BranchManagerDashboard } from './BranchManagerDashboard';
+export { default as LoanConsultantDashboard } from './LoanConsultantDashboard';
 export { default as DistrictManagerDashboard } from './DistrictManagerDashboard';
 export { default as DistrictRegionalManagerDashboard } from './DistrictRegionalManagerDashboard';
 export { default as ProvincialManagerDashboard } from './ProvincialManagerDashboard';

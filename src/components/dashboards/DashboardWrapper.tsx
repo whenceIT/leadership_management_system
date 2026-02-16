@@ -104,6 +104,11 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'Super Seer': dynamic(() => import('@/components/dashboards/GOMDashboard'), { 
     loading: () => <DashboardLoading />
   }),
+  
+  // Loan Consultant
+  'Loan Consultant': dynamic(() => import('@/components/dashboards/LoanConsultantDashboard'), { 
+    loading: () => <DashboardLoading />
+  }),
 };
 
 /**

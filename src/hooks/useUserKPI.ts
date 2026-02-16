@@ -32,7 +32,7 @@ export interface ProcessedKPI {
 /**
  * useUserKPI Hook
  * Fetches real-time KPI scores from the API for the current user
- * API: GET https://smartbackend.whencefinancesystem.com/smart-kpi-scores/{user_id}
+ * API: GET https://smartbackend.whencefinancesystem.com/smart-kpi-scores/{user_id}/{position_id}
  */
 export function useUserKPI() {
   const [kpiScores, setKpiScores] = useState<UserKPIScore[]>([]);
@@ -40,24 +40,28 @@ export function useUserKPI() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
+  const [positionId, setPositionId] = useState<number | null>(null);
 
-  // Get user ID from localStorage
-  const getUserId = useCallback((): number | null => {
+  // Get user ID and position ID from localStorage
+  const getUserData = useCallback((): { id: number | null; position_id: number | null } => {
     if (typeof window === 'undefined') {
-      return null;
+      return { id: null, position_id: null };
     }
 
     const storedUser = localStorage.getItem('thisUser');
     if (!storedUser) {
-      return null;
+      return { id: null, position_id: null };
     }
 
     try {
       const user = JSON.parse(storedUser);
-      return user.id || null;
+      return { 
+        id: user.id || null,
+        position_id: user.position_id || null
+      };
     } catch (e) {
       console.error('Error parsing user data:', e);
-      return null;
+      return { id: null, position_id: null };
     }
   }, []);
 
@@ -106,12 +110,17 @@ export function useUserKPI() {
   }, []);
 
   // Fetch KPI scores from API
-  const fetchKPIScores = useCallback(async (uid: number) => {
+  const fetchKPIScores = useCallback(async (uid: number, pid: number | null) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`https://smartbackend.whencefinancesystem.com/smart-kpi-scores/${uid}`);
+      // Use the API with both user_id and position_id
+      const url = pid 
+        ? `https://smartbackend.whencefinancesystem.com/smart-kpi-scores/${uid}/${pid}`
+        : `https://smartbackend.whencefinancesystem.com/smart-kpi-scores/${uid}`;
+      
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch KPIs: ${response.status}`);
@@ -138,23 +147,25 @@ export function useUserKPI() {
 
   // Refresh KPI data
   const refresh = useCallback(() => {
-    const uid = getUserId();
-    if (uid) {
-      setUserId(uid);
-      fetchKPIScores(uid);
+    const userData = getUserData();
+    if (userData.id) {
+      setUserId(userData.id);
+      setPositionId(userData.position_id);
+      fetchKPIScores(userData.id, userData.position_id);
     }
-  }, [getUserId, fetchKPIScores]);
+  }, [getUserData, fetchKPIScores]);
 
   // Initial fetch on mount
   useEffect(() => {
-    const uid = getUserId();
-    if (uid) {
-      setUserId(uid);
-      fetchKPIScores(uid);
+    const userData = getUserData();
+    if (userData.id) {
+      setUserId(userData.id);
+      setPositionId(userData.position_id);
+      fetchKPIScores(userData.id, userData.position_id);
     } else {
       setIsLoading(false);
     }
-  }, [getUserId, fetchKPIScores]);
+  }, [getUserData, fetchKPIScores]);
 
   // Calculate overall score
   const getOverallScore = useCallback((): number => {
@@ -204,6 +215,7 @@ export function useUserKPI() {
     isLoading,
     error,
     userId,
+    positionId,
     refresh,
     getOverallScore,
     getKPIsByCategory,

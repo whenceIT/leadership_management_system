@@ -506,7 +506,7 @@ export function getKPIsByPosition(position: PositionType): KpiMetric[] {
     'Creative Artwork & Marketing Representative Manager': getGOMKPIs,
     'Manager Administration': getGOMKPIs,
     'Administration': getGOMKPIs,
-    'General Operations Manager': getGOMKPIs,
+    'Loan Consultant': getBranchManagerKPIs,
   };
   
   const getter = kpiMap[position];

@@ -93,6 +93,7 @@ function normalizePosition(position: string): Position {
     'Risk Manager': 'Risk Manager',
     'District Regional Manager': 'District Regional Manager',
     'Super Seer': 'Super Seer',
+    'Loan Consultant': 'Loan Consultant',
   };
 
   // If position exists in AVAILABLE_POSITIONS, use it directly
@@ -1138,6 +1139,7 @@ function getPositionConfig(position: Position | null): PositionReviewConfig {
     'R&D Coordinator': getRDCoordinatorConfig,
     'Creative Artwork & Marketing Representative Manager': getCreativeArtworkManagerConfig,
     'Super Seer': getGOMConfig, // Super Seer uses GOM config as placeholder
+    'Loan Consultant': getBranchManagerConfig, // Loan Consultant uses Branch Manager config
   };
 
   const configFn = configMap[position];
