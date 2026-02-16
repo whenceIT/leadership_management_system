@@ -228,7 +228,7 @@ function getPositionDependencies(position: string): { upstream: RoleDependency[]
 // ============================================
 
 export default function WorkflowsPage() {
-  const { position: rawPosition, isLoading: isUserLoading } = useUserPosition();
+  const { positionName: rawPosition, isLoading: isUserLoading, refreshPosition } = useUserPosition();
   const [config, setConfig] = useState<PositionWorkflowConfig | null>(null);
   const [activeTab, setActiveTab] = useState<'workflows' | 'dependencies' | 'handoffs' | 'escalations'>('workflows');
 
@@ -267,6 +267,12 @@ export default function WorkflowsPage() {
           </p>
         </div>
         <div className="flex gap-3">
+          <button 
+            onClick={() => refreshPosition(true)}
+            className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            Refresh Position
+          </button>
           <button className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             Configure Workflows
           </button>

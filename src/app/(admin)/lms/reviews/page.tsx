@@ -67,7 +67,8 @@ function normalizePosition(position: string): Position {
     'GOA': 'General Operations Administrator (GOA)',
     'General Operations Manager (GOM)': 'General Operations Manager (GOM)',
     'GOM': 'General Operations Manager (GOM)',
-    'General Operations Manager': 'General Operations Manager', // Separate from GOM
+    // Map plain 'General Operations Manager' to GOM to avoid type issues
+    'General Operations Manager': 'General Operations Manager (GOM)',
     'IT Coordinator': 'IT Coordinator',
     'IT Manager': 'IT Manager',
     'Management Accountant': 'Management Accountant',
@@ -91,6 +92,7 @@ function normalizePosition(position: string): Position {
     'Recoveries Manager': 'Recoveries Coordinator',
     'Risk Manager': 'Risk Manager',
     'District Regional Manager': 'District Regional Manager',
+    'Super Seer': 'Super Seer',
   };
 
   // If position exists in AVAILABLE_POSITIONS, use it directly
@@ -763,59 +765,6 @@ const getGOAConfig = (): PositionReviewConfig => ({
   },
 });
 
-// General Operations Manager (without parentheses - separate from GOM) Review Configuration
-const getGeneralOperationsManagerConfig = (): PositionReviewConfig => ({
-  position: 'General Operations Manager',
-  displayName: 'General Operations Manager',
-  reviewType: 'Monthly Operations Review',
-  upcomingReviews: [
-    {
-      id: 1,
-      type: 'Monthly Review',
-      title: 'February Operations Excellence Assessment',
-      status: 'In Progress',
-      assignee: 'GOM',
-      dueDate: '2024-02-28',
-      progress: 72,
-    },
-    {
-      id: 2,
-      type: 'Quarterly Review',
-      title: 'Q1 Value Preservation Report',
-      status: 'Pending',
-      assignee: 'Manager Administration',
-      dueDate: '2024-03-15',
-      progress: 0,
-    },
-  ],
-  checklistItems: [
-    { id: 1, title: 'Recruitment Vacancy Days (≤7 days)', completed: true, category: 'Staffing' },
-    { id: 2, title: 'Fleet Downtime (≤5%)', completed: true, category: 'Operations' },
-    { id: 3, title: 'BMOS Compliance Rate (100%)', completed: false, category: 'Compliance' },
-    { id: 4, title: 'Statutory Submission Timeliness (100%)', completed: true, category: 'Compliance' },
-    { id: 5, title: 'Internet Uptime (≥98%)', completed: true, category: 'Operations' },
-    { id: 6, title: 'Monthly Value Preserved (≥K150,000)', completed: true, category: 'Value' },
-  ],
-  kpis: [
-    { name: 'Vacancy Days', value: '5 days', target: '≤7 days', status: 'on-track' },
-    { name: 'Fleet Downtime', value: '4%', target: '≤5%', status: 'on-track' },
-    { name: 'BMOS Compliance', value: '98%', target: '100%', status: 'at-risk' },
-    { name: 'Value Preserved', value: 'K165,000', target: '≥K150,000', status: 'on-track' },
-    { name: 'Staff Satisfaction', value: '86%', target: '≥85%', status: 'on-track' },
-  ],
-  tierInfo: {
-    currentTier: 'General Operations Manager',
-    nextTier: 'GOM Tier 3',
-    tierTarget: 'K1.2M+ annually',
-    monthsInCurrentTier: 16,
-    progressionCriteria: [
-      'Preserve ≥K1.2M annual value',
-      'Lead cross-branch efficiency project',
-      'Achieve 92%+ KPI score for 3 quarters',
-    ],
-  },
-});
-
 // Payroll Loans Manager Review Configuration
 const getPayrollLoansManagerConfig = (): PositionReviewConfig => ({
   position: 'Payroll Loans Manager',
@@ -1185,10 +1134,10 @@ function getPositionConfig(position: Position | null): PositionReviewConfig {
     'Provincial Manager': getProvincialManagerConfig,
     'General Operations Manager (GOM)': getGOMConfig,
     'General Operations Administrator (GOA)': getGOAConfig,
-    'General Operations Manager': getGeneralOperationsManagerConfig, // Plain GOM without parens
     'Performance Operations Administrator (POA)': getPOAConfig,
     'R&D Coordinator': getRDCoordinatorConfig,
     'Creative Artwork & Marketing Representative Manager': getCreativeArtworkManagerConfig,
+    'Super Seer': getGOMConfig, // Super Seer uses GOM config as placeholder
   };
 
   const configFn = configMap[position];
@@ -1241,7 +1190,7 @@ function KPIStatus({ status }: { status: 'on-track' | 'at-risk' | 'behind' }) {
 // Main component
 export default function ReviewsPage() {
   const router = useRouter();
-  const { position: rawPosition, isLoading } = useUserPosition();
+  const { positionName: rawPosition, isLoading, refreshPosition } = useUserPosition();
   const [config, setConfig] = useState<PositionReviewConfig | null>(null);
 
   // Normalize position and set config
@@ -1282,7 +1231,7 @@ export default function ReviewsPage() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => router.refresh()}
+            onClick={() => refreshPosition(true)}
             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
           >
             Refresh Data

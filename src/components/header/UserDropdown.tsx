@@ -5,6 +5,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
+import { getOfficeNameById } from "@/hooks/useOffice";
+import { useUserPosition } from "@/hooks/useUserPosition";
 
 interface User {
   id: number;
@@ -57,6 +59,17 @@ export default function UserDropdown() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  
+  // Get user position from useUserPosition hook
+  const { positionName } = useUserPosition();
+  
+  // Get office name from user's office_id
+  const getOfficeName = (): string => {
+    if (user?.office_id) {
+      return getOfficeNameById(user.office_id) || `Office #${user.office_id}`;
+    }
+    return "Not assigned";
+  };
 
   useEffect(() => {
     async function fetchUser() {
@@ -184,6 +197,17 @@ export default function UserDropdown() {
           <span className="mt-0.5 block text-theme-xs text-gray-500 dark:text-gray-400">
             {displayEmail}
           </span>
+          {/* Position and Office Info */}
+          <div className="mt-1 flex flex-wrap gap-1">
+            {positionName && (
+              <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                {positionName}
+              </span>
+            )}
+            <span className="inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+              {getOfficeName()}
+            </span>
+          </div>
           {user?.status && (
             <span className="mt-1 inline-block px-2 py-0.5 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
               {user.status}

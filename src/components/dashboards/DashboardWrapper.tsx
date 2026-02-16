@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { DashboardLoading } from '@/components/dashboards/DashboardBase';
-import { getUserPosition } from '@/hooks/useUserPosition';
+import { useUserPosition } from '@/hooks/useUserPosition';
+import { getPositionNameByIdStatic } from '@/hooks/useUserPosition';
 
 // Define dashboard components map
 const DASHBOARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
@@ -98,61 +99,39 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
   'Marketing Manager': dynamic(() => import('@/components/dashboards/MarketingManagerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
+  
+  // Super Seer - has access to all dashboards (currently uses GOM Dashboard as placeholder)
+  'Super Seer': dynamic(() => import('@/components/dashboards/GOMDashboard'), { 
+    loading: () => <DashboardLoading />
+  }),
 };
 
 /**
  * DashboardWrapper Component
  * Client-side wrapper that listens for position changes (impersonation)
  * and re-renders the appropriate dashboard
+ * Uses useUserPosition hook to fetch dynamic position from API using job_position
  */
 export default function DashboardWrapper() {
-  const [position, setPosition] = useState<string>('Branch Manager');
   const [isClient, setIsClient] = useState(false);
+  
+  // Use the useUserPosition hook which fetches position dynamically from API
+  const { positionId, positionName, isLoading, refreshPosition } = useUserPosition();
 
   useEffect(() => {
     // Set client flag
     setIsClient(true);
     
-    // Get initial position
-    setPosition(getUserPosition());
+    // Refresh position from API
+    refreshPosition(true);
+  }, [refreshPosition]);
 
-    // Listen for storage changes (impersonation changes)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'thisUser') {
-        const newPosition = getUserPosition();
-        setPosition(newPosition);
-      }
-    };
+  // Get dashboard component based on position name
+  const DashboardComponent = DASHBOARD_COMPONENTS[positionName] || DASHBOARD_COMPONENTS['Branch Manager'];
 
-    // Listen for custom position change events
-    const handlePositionChange = () => {
-      setPosition(getUserPosition());
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('positionChanged', handlePositionChange);
-
-    // Also poll for changes (for same-tab updates)
-    const pollInterval = setInterval(() => {
-      const currentPosition = getUserPosition();
-      if (currentPosition !== position) {
-        setPosition(currentPosition);
-      }
-    }, 1000);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('positionChanged', handlePositionChange);
-      clearInterval(pollInterval);
-    };
-  }, [position]);
-
-  // Get dashboard component based on position
-  const DashboardComponent = DASHBOARD_COMPONENTS[position] || DASHBOARD_COMPONENTS['Branch Manager'];
-
-  if (!isClient) {
+  if (!isClient || isLoading) {
     return <DashboardLoading />;
   }
 
-  return <DashboardComponent position={position} />;
+  return <DashboardComponent position={positionName} />;
 }

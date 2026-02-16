@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import PriorityActionService, { PriorityAction } from '@/services/PriorityActionService';
 import { useUserData } from '@/hooks/useUserSync';
 import { useLoanUpdates } from '@/hooks/useLoanUpdates';
+import { useOffice } from '@/hooks/useOffice';
 
 // Static alerts that don't change
 const alerts = [
@@ -43,6 +44,9 @@ export default function AssistantPage() {
 
   // Get user data hook
   const { getUserData } = useUserData();
+  
+  // Get office hook for office name lookup
+  const { getOfficeName } = useOffice();
 
   // Helper function to get user's full name
   const getUserName = () => {
@@ -94,6 +98,11 @@ export default function AssistantPage() {
         ...prev,
         pendingTasks: updatedActions.length,
       }));
+    });
+
+    // Check for stale loans (pending > 3 days) and add to priority actions
+    service.checkStaleLoans().then((count) => {
+      console.log('📋 AssistantPage: Added', count, 'stale loan actions');
     });
 
     // Cleanup subscription on unmount

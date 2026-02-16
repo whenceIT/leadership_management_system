@@ -430,6 +430,26 @@ export const kpiDataByPosition: Record<string, PositionKPIConfig> = {
       { type: 'warning', title: 'Lead Generation', message: 'Lead generation below target. Campaign refresh needed.' },
     ],
   },
+  'Super Seer': {
+    title: 'Super Seer Dashboard',
+    description: 'Executive overview - All positions and system-wide metrics',
+    kpiCategories: [
+      {
+        name: 'Executive Overview KPIs',
+        metrics: [
+          { name: 'Total Disbursement', value: 15000000, target: 18000000, unit: 'currency', format: 'currency', weight: 20 },
+          { name: 'Overall Default Rate', value: 2.4, target: 2.0, unit: 'percent', format: 'percent', weight: 20, lowerIsBetter: true },
+          { name: 'System Recovery Rate', value: 96.5, target: 98, unit: 'percent', format: 'percent', weight: 15 },
+          { name: 'Portfolio Health Score', value: 88, target: 92, unit: 'percent', format: 'percent', weight: 15 },
+          { name: 'Employee Satisfaction', value: 4.2, target: 4.5, unit: 'rating', format: 'rating', weight: 15 },
+          { name: 'System Uptime', value: 99.5, target: 99.9, unit: 'percent', format: 'percent', weight: 15 },
+        ],
+      },
+    ],
+    alerts: [
+      { type: 'info', title: 'Executive View', message: 'You have access to all position KPIs. Use impersonation to view specific dashboards.' },
+    ],
+  },
 };
 
 // Helper function to get position from localStorage
@@ -445,12 +465,49 @@ export function getCurrentUserPosition(): string {
   
   try {
     const user = JSON.parse(storedUser);
-    const position = user.position?.trim();
-    return position || 'Branch Manager';
+    // First try position string, then job_position (from API), then position_id
+    const positionStr = user.position?.trim();
+    if (positionStr) {
+      return positionStr;
+    }
+    // Check job_position (from API) or position_id
+    const positionId = user.job_position || user.position_id;
+    if (positionId) {
+      // Map position ID to name
+      return getPositionNameByIdStatic(positionId);
+    }
+    return 'Branch Manager';
   } catch (e) {
     console.error('Error parsing user data:', e);
     return 'Branch Manager';
   }
+}
+
+// Map position ID to name (same as useUserPosition)
+function getPositionNameByIdStatic(id: number): string {
+  const positionMap: Record<number, string> = {
+    1: 'General Operations Manager (GOM)',
+    2: 'Provincial Manager',
+    3: 'District Regional Manager',
+    4: 'District Manager',
+    5: 'Branch Manager',
+    6: 'IT Manager',
+    7: 'Risk Manager',
+    8: 'Management Accountant',
+    9: 'Motor Vehicles Manager',
+    10: 'Payroll Loans Manager',
+    11: 'Policy & Training Manager',
+    12: 'Manager Administration',
+    13: 'R&D Coordinator',
+    14: 'Recoveries Coordinator',
+    15: 'IT Coordinator',
+    16: 'General Operations Administrator (GOA)',
+    17: 'Performance Operations Administrator (POA)',
+    18: 'Creative Artwork & Marketing Representative Manager',
+    19: 'Administration',
+    20: 'Super Seer',
+  };
+  return positionMap[id] || 'Branch Manager';
 }
 
 // Helper function to calculate overall KPI score

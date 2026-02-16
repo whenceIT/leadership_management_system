@@ -1,6 +1,7 @@
 'use client';
 
 import { LoanData } from '@/hooks/useLoanUpdates';
+import { getOfficeNameById } from '@/hooks/useOffice';
 
 export interface PriorityAction {
   action: string;
@@ -30,6 +31,7 @@ const LOAN_COUNT_KEY = 'loan_count';
 export class PriorityActionService {
   private static instance: PriorityActionService;
   private priorityActions: PriorityAction[] = [];
+  private newActions: PriorityAction[] = []; // Global array for both processNewLoan and checkStaleLoans
   private loanCount: number = 0;
   private subscribers: Set<PriorityActionCallback> = new Set();
   private isInitialized: boolean = false;
@@ -130,6 +132,133 @@ export class PriorityActionService {
   }
 
   /**
+   * Fetch loans pending for more than specified days from API
+   * @param days - Number of days to consider a loan as stale (default: 3)
+   * @returns Array of stale loan data
+   */
+  private async fetchStaleLoans(days: number = 3): Promise<LoanData[]> {
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smartbackend.whencefinancesystem.com';
+      const response = await fetch(`${API_BASE_URL}/smart-loans?status=pending&days=${days}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('📋 PriorityActionService: Failed to fetch stale loans:', response.status);
+        return [];
+      }
+
+      const data = await response.json();
+      console.log('📋 PriorityActionService: Fetched stale loans:', data.length || 0);
+      return data;
+    } catch (error) {
+      console.error('📋 PriorityActionService: Error fetching stale loans:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Add priority actions for loans that have been pending for more than 3 days
+   * This function is called to proactively identify stale loans
+   */
+  public async checkStaleLoans(): Promise<number> {
+    const staleLoans = await this.fetchStaleLoans(3);
+    
+    if (staleLoans.length === 0) {
+      return 0;
+    }
+
+    // Group loans by days pending
+    const staleByDays: { [days: number]: { count: number; totalAmount: number } } = {};
+    
+    for (const loan of staleLoans) {
+      // Calculate days pending
+      const createdAt = loan.created_at ? new Date(loan.created_at) : new Date();
+      const now = new Date();
+      const daysPending = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Handle amount
+      let amount = 0;
+      if (typeof loan.amount === 'string') {
+        amount = parseFloat(loan.amount) || 0;
+      } else if (typeof loan.amount === 'number') {
+        amount = loan.amount;
+      }
+
+      if (!staleByDays[daysPending]) {
+        staleByDays[daysPending] = { count: 0, totalAmount: 0 };
+      }
+      staleByDays[daysPending].count++;
+      staleByDays[daysPending].totalAmount += amount;
+    }
+
+    // Check for existing stale loan action to avoid duplicates
+    const existingStaleAction = this.priorityActions.find(
+      (action) => action.action.includes('loans have been pending')
+    );
+    
+    // Remove existing stale action if found
+    if (existingStaleAction) {
+      const index = this.priorityActions.indexOf(existingStaleAction);
+      if (index > -1) {
+        this.priorityActions.splice(index, 1);
+      }
+    }
+
+    // Generate combined action message based on groups
+    const daysGroups = Object.keys(staleByDays).map(Number).sort((a, b) => b - a);
+    
+    if (daysGroups.length === 1) {
+      const days = daysGroups[0];
+      const { count, totalAmount } = staleByDays[days];
+      const urgent = days >= 7;
+      
+      this.newActions.push({
+        action: `⏰ ${count} loan${count > 1 ? 's' : ''} have been pending for more than ${days} day${days > 1 ? 's' : ''}`,
+        due: `Total amount: ${totalAmount.toLocaleString()} • Review required`,
+        urgent,
+      });
+    } else {
+      // Multiple groups - show summary
+      const totalStale = staleLoans.length;
+      const maxDays = Math.max(...daysGroups);
+      const totalAmount = Object.values(staleByDays).reduce((sum, g) => sum + g.totalAmount, 0);
+      
+      this.newActions.push({
+        action: `⏰ ${totalStale} loans have been pending for more than 3 days`,
+        due: `Longest: ${maxDays} days • Total amount: ${totalAmount.toLocaleString()} • Urgent review required`,
+        urgent: true,
+      });
+    }
+
+    // Add new actions to priority actions
+    const newActionsCount = this.newActions.length;
+    this.priorityActions = [...this.newActions, ...this.priorityActions];
+    
+    // Clear the global newActions array after processing
+    this.newActions = [];
+
+    // Keep the list manageable - max 10 actions
+    if (this.priorityActions.length > 10) {
+      this.priorityActions = this.priorityActions.slice(0, 10);
+    }
+
+    // Save to localStorage
+    this.saveToStorage();
+
+    // Notify subscribers
+    if (newActionsCount > 0) {
+      this.notifySubscribers();
+    }
+
+    console.log('📋 PriorityActionService: Added', newActionsCount, 'stale loan actions');
+    return newActionsCount;
+  }
+
+  /**
    * Process a new loan and generate relevant priority actions
    * Analyzes loan data and provides helpful, human-readable assistant messages
    * @param loanData - The newly created loan data
@@ -137,7 +266,8 @@ export class PriorityActionService {
    */
   public processNewLoan(loanData: LoanData): PriorityActionResult {
     this.loanCount++;
-    const newActions: PriorityAction[] = [];
+    // Use the global newActions array instead of declaring locally
+    this.newActions = [];
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     
@@ -171,8 +301,8 @@ export class PriorityActionService {
     // Generate human-readable, assistant-style messages
     
     // Main notification about new loan
-    newActions.push({
-      action: `💰 New ${loanType} received from ${borrowerName}`,
+    this.newActions.push({
+      action: `💰 ${loanType} received from ${borrowerName}`,
       due: `Amount: ${amount.toLocaleString()} • Submitted by ${createdBy} • ${timeStr}`,
       urgent: amount >= 50000,
     });
@@ -182,7 +312,7 @@ export class PriorityActionService {
       const recommendation = amount >= 100000 
         ? "This is a significant amount. Consider escalating to senior management."
         : "Review collateral requirements and verify borrower credit history.";
-      newActions.push({
+      this.newActions.push({
         action: `🚨 High-value loan requires your attention`,
         due: `${amount.toLocaleString()} • ${recommendation}`,
         urgent: true,
@@ -191,7 +321,7 @@ export class PriorityActionService {
 
     // Large loan amount - needs supervisory approval (>= 100000)
     if (amount >= 100000) {
-      newActions.push({
+      this.newActions.push({
         action: `⚠️ Large loan - Senior Management Approval Required`,
         due: "This loan exceeds the approval threshold. Please prepare escalation memo.",
         urgent: true,
@@ -200,17 +330,20 @@ export class PriorityActionService {
 
     // Pending status loans - need follow-up
     if (status === 'pending' || status === 'under_review') {
-      newActions.push({
+      this.newActions.push({
         action: `📋 Loan awaiting review - Follow up needed`,
         due: `${borrowerName}'s application is ${status.replace('_', ' ')}. Schedule review meeting.`,
         urgent: false,
       });
     }
 
-    // Office-specific reminder
+    // Office-specific reminder - get actual office name
     if (officeId > 0) {
-      newActions.push({
-        action: `🏢 New application from Office #${officeId}`,
+      // Get office name from standalone function
+      const officeName = getOfficeNameById(officeId) || `Office #${officeId}`;
+      
+      this.newActions.push({
+        action: `🏢 New application from ${officeName}`,
         due: `Track ${loanType.toLowerCase()} submissions for this branch today.`,
         urgent: false,
       });
@@ -218,7 +351,7 @@ export class PriorityActionService {
 
     // First loan of the day
     if (this.loanCount === 1) {
-      newActions.push({
+      this.newActions.push({
         action: `🌅 Good start! First loan of the day received`,
         due: "Review all pending applications to maintain turnaround time targets.",
         urgent: false,
@@ -226,7 +359,7 @@ export class PriorityActionService {
     }
 
     // Add new actions to the beginning of the list (most recent first)
-    this.priorityActions = [...newActions, ...this.priorityActions];
+    this.priorityActions = [...this.newActions, ...this.priorityActions];
 
     // Keep the list manageable - max 10 actions
     if (this.priorityActions.length > 10) {
@@ -245,12 +378,12 @@ export class PriorityActionService {
       amount,
       loanType,
       createdBy,
-      newActionsGenerated: newActions.length,
+      newActionsGenerated: this.newActions.length,
     });
 
     return {
       priorityActions: this.priorityActions,
-      newActionsAdded: newActions.length,
+      newActionsAdded: this.newActions.length,
     };
   }
 

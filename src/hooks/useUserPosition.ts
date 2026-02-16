@@ -7,7 +7,8 @@ interface UserData {
   email: string;
   first_name: string;
   last_name: string;
-  position_id?: number;
+  job_position?: number; // Primary position field from API
+  position_id?: number; // Fallback field
   position?: string; // Keep for backward compatibility
   office_id?: number;
   status?: string;
@@ -122,7 +123,7 @@ export function useUserPosition() {
             setUser(mergedUser);
             
             // Use position_id if available, otherwise fall back to position string
-            const newPositionId = mergedUser.position_id || mergedUser.position_id || 5;
+            const newPositionId = mergedUser.job_position || mergedUser.position_id || 5;
             setPositionId(newPositionId);
             setPositionName(mergedUser.position || getPositionNameById(newPositionId));
             
@@ -353,6 +354,7 @@ export function useUserPosition() {
 /**
  * getUserPosition utility function
  * Gets user position_id synchronously from localStorage
+ * Checks both job_position and position_id fields
  */
 export function getUserPositionId(): number {
   if (typeof window === 'undefined') {
@@ -366,7 +368,8 @@ export function getUserPositionId(): number {
     }
 
     const user = JSON.parse(storedUser);
-    return user.position_id || 5;
+    // Check job_position first (from API), then fall back to position_id
+    return user.job_position || user.position_id || 5;
   } catch (e) {
     return 5;
   }
@@ -397,6 +400,7 @@ export function getPositionNameByIdStatic(id: number): string {
     17: 'Performance Operations Administrator (POA)',
     18: 'Creative Artwork & Marketing Representative Manager',
     19: 'Administration',
+    20: 'Super Seer',
   };
   
   return defaultPositions[id] || 'Branch Manager';
@@ -418,12 +422,14 @@ export function getUserPosition(): string {
     }
 
     const user = JSON.parse(storedUser);
-    // First try position string, then fallback to position_id lookup
+    // First try position string, then job_position, then position_id lookup
     if (user.position) {
       return user.position;
     }
-    if (user.position_id) {
-      return getPositionNameByIdStatic(user.position_id);
+    // Check job_position (from API) or position_id
+    const positionId = user.job_position || user.position_id;
+    if (positionId) {
+      return getPositionNameByIdStatic(positionId);
     }
     return 'Branch Manager';
   } catch (e) {
@@ -455,6 +461,7 @@ export const AVAILABLE_POSITIONS = [
   'Performance Operations Administrator (POA)',
   'Creative Artwork & Marketing Representative Manager',
   'Administration',
+  'Super Seer',
 ] as const;
 
 export type PositionType = typeof AVAILABLE_POSITIONS[number];
