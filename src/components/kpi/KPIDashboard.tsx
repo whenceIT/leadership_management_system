@@ -3,6 +3,7 @@
 import React from 'react';
 import { kpiDataByPosition, defaultKPIData, getCurrentUserPosition, calculateOverallScore, PositionKPIConfig, KPICategory, KSIMetric } from '@/data/kpi-data';
 import { useUserKPI, ProcessedKPI } from '@/hooks/useUserKPI';
+import { IMPERSONATION_STARTED_EVENT, IMPERSONATION_ENDED_EVENT } from '@/hooks/useUserPosition';
 
 /**
  * KPI Dashboard Component
@@ -27,7 +28,8 @@ export default function KPIDashboard() {
     getCategories 
   } = useUserKPI();
 
-  React.useEffect(() => {
+  // Update position and config
+  const updatePositionAndConfig = React.useCallback(() => {
     // Get user position from localStorage
     const userPosition = getCurrentUserPosition();
     setPosition(userPosition);
@@ -41,6 +43,27 @@ export default function KPIDashboard() {
       setKpiConfig(defaultKPIData);
     }
   }, []);
+
+  React.useEffect(() => {
+    updatePositionAndConfig();
+
+    // Listen for impersonation events to update position
+    const handleImpersonationChange = () => {
+      updatePositionAndConfig();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange);
+      window.addEventListener(IMPERSONATION_ENDED_EVENT, handleImpersonationChange);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange);
+        window.removeEventListener(IMPERSONATION_ENDED_EVENT, handleImpersonationChange);
+      }
+    };
+  }, [updatePositionAndConfig]);
 
   // Check if we should use real-time data
   React.useEffect(() => {

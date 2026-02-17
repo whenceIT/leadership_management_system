@@ -271,6 +271,7 @@ export class PriorityActionService {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     
+    console.log("Incoming:*****", loanData, "*******");
     // Handle amount as either number or string
     let amount = 0;
     if (typeof loanData.amount === 'string') {
@@ -301,6 +302,7 @@ export class PriorityActionService {
     // Generate human-readable, assistant-style messages
     
     // Main notification about new loan
+    console.log(borrowerName)
     this.newActions.push({
       action: `💰 ${loanType} received from ${borrowerName}`,
       due: `Amount: ${amount.toLocaleString()} • Submitted by ${createdBy} • ${timeStr}`,

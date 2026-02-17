@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { IMPERSONATION_STARTED_EVENT, IMPERSONATION_ENDED_EVENT } from './useUserPosition';
 
 export interface UserKPIScore {
   score_id: number;
@@ -166,6 +167,26 @@ export function useUserKPI() {
       setIsLoading(false);
     }
   }, [getUserData, fetchKPIScores]);
+
+  // Listen for impersonation events and refresh KPI data
+  useEffect(() => {
+    const handleImpersonationChange = () => {
+      // Refresh KPI data when impersonation starts or ends
+      refresh();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange);
+      window.addEventListener(IMPERSONATION_ENDED_EVENT, handleImpersonationChange);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange);
+        window.removeEventListener(IMPERSONATION_ENDED_EVENT, handleImpersonationChange);
+      }
+    };
+  }, [refresh]);
 
   // Calculate overall score
   const getOverallScore = useCallback((): number => {

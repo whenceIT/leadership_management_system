@@ -2,6 +2,25 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+// Custom event names for impersonation sync
+export const IMPERSONATION_STARTED_EVENT = 'impersonation:started';
+export const IMPERSONATION_ENDED_EVENT = 'impersonation:ended';
+
+// LocalStorage keys for impersonation
+export const IMPERSONATION_STORAGE_KEY = 'impersonationData';
+export const ORIGINAL_USER_STORAGE_KEY = 'originalUserData';
+
+export interface ImpersonationData {
+  userId: number;
+  userName: string;
+  userEmail: string;
+  positionId: number;
+  positionName: string;
+  duration: number; // in minutes
+  startedAt: number; // timestamp
+  expiresAt: number; // timestamp
+}
+
 interface UserData {
   id: number;
   email: string;
@@ -256,6 +275,13 @@ export function useUserPosition() {
         cancelImpersonation();
       }, timeoutMs);
 
+      // Dispatch custom event to notify other components (like DashboardWrapper)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(IMPERSONATION_STARTED_EVENT, {
+          detail: { positionId: targetPositionId, positionName: targetPositionName }
+        }));
+      }
+
       return {
         success: true,
         message: `Now impersonating as ${targetPositionName}. Reverting in ${durationMinutes} minutes.`,
@@ -287,6 +313,8 @@ export function useUserPosition() {
       // Restore original user data
       localStorage.setItem('thisUser', JSON.stringify(originalUser));
       localStorage.removeItem('impersonatedFromUser');
+      localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
+      localStorage.removeItem(ORIGINAL_USER_STORAGE_KEY);
 
       // Update state
       setUser(originalUser);
@@ -294,12 +322,137 @@ export function useUserPosition() {
       setPositionId(originalPositionId);
       setPositionName(originalUser.position || getPositionNameById(originalPositionId));
 
+      // Dispatch custom event to notify other components (like DashboardWrapper)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(IMPERSONATION_ENDED_EVENT, {
+          detail: { positionId: originalPositionId, positionName: originalUser.position || getPositionNameById(originalPositionId) }
+        }));
+      }
+
       return true;
     } catch (error) {
       console.error('Error cancelling impersonation:', error);
       return false;
     }
   }, [getOriginalUser, clearImpersonationTimeout, getPositionNameById]);
+
+  /**
+   * Get current impersonation data
+   */
+  const getImpersonationData = useCallback((): ImpersonationData | null => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    try {
+      const stored = localStorage.getItem(IMPERSONATION_STORAGE_KEY);
+      if (!stored) return null;
+
+      const data = JSON.parse(stored) as ImpersonationData;
+      
+      // Check if expired
+      if (data.expiresAt && Date.now() > data.expiresAt) {
+        // Auto-expire
+        cancelImpersonation();
+        return null;
+      }
+
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }, [cancelImpersonation]);
+
+  /**
+   * Start full impersonation with user and position
+   * @param targetUser - The user to impersonate (mock user data)
+   * @param targetPositionId - The position_id to impersonate
+   * @param durationMinutes - How long to impersonate before reverting
+   * @returns Object with impersonation info
+   */
+  const startImpersonation = useCallback((
+    targetUser: { id: number; first_name: string; last_name: string; email: string },
+    targetPositionId: number,
+    durationMinutes: number = 60
+  ): { success: boolean; message: string } => {
+    if (typeof window === 'undefined') {
+      return { success: false, message: 'Not available on server' };
+    }
+
+    try {
+      const currentUser = getUserData();
+      if (!currentUser) {
+        return { success: false, message: 'No user logged in' };
+      }
+
+      // Store original user data
+      localStorage.setItem(ORIGINAL_USER_STORAGE_KEY, JSON.stringify(currentUser));
+      localStorage.setItem('impersonatedFromUser', JSON.stringify(currentUser));
+
+      // Create impersonation data
+      const targetPositionName = getPositionNameById(targetPositionId);
+      const now = Date.now();
+      const impersonationData: ImpersonationData = {
+        userId: targetUser.id,
+        userName: `${targetUser.first_name} ${targetUser.last_name}`,
+        userEmail: targetUser.email,
+        positionId: targetPositionId,
+        positionName: targetPositionName,
+        duration: durationMinutes,
+        startedAt: now,
+        expiresAt: now + (durationMinutes * 60 * 1000)
+      };
+
+      // Store impersonation data
+      localStorage.setItem(IMPERSONATION_STORAGE_KEY, JSON.stringify(impersonationData));
+
+      // Update thisUser with impersonated user data
+      const impersonatedUser = {
+        ...currentUser,
+        id: targetUser.id,
+        first_name: targetUser.first_name,
+        last_name: targetUser.last_name,
+        email: targetUser.email,
+        position_id: targetPositionId,
+        position: targetPositionName
+      };
+      localStorage.setItem('thisUser', JSON.stringify(impersonatedUser));
+
+      // Update state
+      setUser(impersonatedUser);
+      setPositionId(targetPositionId);
+      setPositionName(targetPositionName);
+
+      // Clear any existing timeout
+      clearImpersonationTimeout();
+
+      // Set timeout to auto-revert
+      const timeoutMs = durationMinutes * 60 * 1000;
+      impersonationTimeoutRef.current = setTimeout(() => {
+        cancelImpersonation();
+      }, timeoutMs);
+
+      // Dispatch custom event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(IMPERSONATION_STARTED_EVENT, {
+          detail: { 
+            positionId: targetPositionId, 
+            positionName: targetPositionName,
+            userId: targetUser.id,
+            userName: `${targetUser.first_name} ${targetUser.last_name}`
+          }
+        }));
+      }
+
+      return {
+        success: true,
+        message: `Now impersonating ${targetUser.first_name} ${targetUser.last_name} (${targetPositionName}). Reverting in ${durationMinutes} minutes.`
+      };
+    } catch (error) {
+      console.error('Error starting impersonation:', error);
+      return { success: false, message: 'Failed to start impersonation' };
+    }
+  }, [getUserData, getPositionNameById, clearImpersonationTimeout, cancelImpersonation]);
 
   /**
    * Permanently change a user's position_id (not temporary impersonation)
@@ -343,8 +496,10 @@ export function useUserPosition() {
     isLoading,
     refreshPosition: syncAndGetPosition,
     impersonatePosition,
+    startImpersonation,
     cancelImpersonation,
     isImpersonating,
+    getImpersonationData,
     setPositionPermanently,
     getOriginalUser,
     getPositionNameById

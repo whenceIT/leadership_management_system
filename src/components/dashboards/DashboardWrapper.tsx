@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { DashboardLoading } from '@/components/dashboards/DashboardBase';
-import { useUserPosition } from '@/hooks/useUserPosition';
+import { useUserPosition, IMPERSONATION_STARTED_EVENT, IMPERSONATION_ENDED_EVENT } from '@/hooks/useUserPosition';
 import { getPositionNameByIdStatic } from '@/hooks/useUserPosition';
 
 // Define dashboard components map
@@ -119,9 +119,18 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
  */
 export default function DashboardWrapper() {
   const [isClient, setIsClient] = useState(false);
+  const [forceUpdateKey, setForceUpdateKey] = useState(0);
   
   // Use the useUserPosition hook which fetches position dynamically from API
   const { positionId, positionName, isLoading, refreshPosition } = useUserPosition();
+
+  // Handle impersonation events
+  const handleImpersonationChange = useCallback((event: CustomEvent) => {
+    // Force a re-render by updating the key
+    setForceUpdateKey(prev => prev + 1);
+    // Also refresh position from localStorage
+    refreshPosition(true);
+  }, [refreshPosition]);
 
   useEffect(() => {
     // Set client flag
@@ -129,7 +138,17 @@ export default function DashboardWrapper() {
     
     // Refresh position from API
     refreshPosition(true);
-  }, [refreshPosition]);
+
+    // Listen for impersonation events
+    window.addEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange as EventListener);
+    window.addEventListener(IMPERSONATION_ENDED_EVENT, handleImpersonationChange as EventListener);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange as EventListener);
+      window.removeEventListener(IMPERSONATION_ENDED_EVENT, handleImpersonationChange as EventListener);
+    };
+  }, [refreshPosition, handleImpersonationChange]);
 
   // Get dashboard component based on position name
   const DashboardComponent = DASHBOARD_COMPONENTS[positionName] || DASHBOARD_COMPONENTS['Branch Manager'];
@@ -138,5 +157,5 @@ export default function DashboardWrapper() {
     return <DashboardLoading />;
   }
 
-  return <DashboardComponent position={positionName} />;
+  return <DashboardComponent key={forceUpdateKey} position={positionName} />;
 }

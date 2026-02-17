@@ -3,14 +3,64 @@ import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useSidebar } from "@/context/SidebarContext";
+import { useUserPosition, IMPERSONATION_STARTED_EVENT, IMPERSONATION_ENDED_EVENT, ImpersonationData } from "@/hooks/useUserPosition";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState ,useEffect,useRef} from "react";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
+  const [impersonationData, setImpersonationData] = useState<ImpersonationData | null>(null);
 
   const { isMobileOpen, toggleSidebar, toggleMobileSidebar } = useSidebar();
+  const { getImpersonationData, isImpersonating, cancelImpersonation } = useUserPosition();
+
+  // Check for impersonation on mount and listen for changes
+  useEffect(() => {
+    const checkImpersonation = () => {
+      if (isImpersonating()) {
+        const data = getImpersonationData();
+        setImpersonationData(data);
+      } else {
+        setImpersonationData(null);
+      }
+    };
+
+    // Check on mount
+    checkImpersonation();
+
+    // Listen for impersonation events
+    window.addEventListener(IMPERSONATION_STARTED_EVENT, checkImpersonation);
+    window.addEventListener(IMPERSONATION_ENDED_EVENT, checkImpersonation);
+
+    // Check periodically for expiration
+    const interval = setInterval(checkImpersonation, 1000);
+
+    return () => {
+      window.removeEventListener(IMPERSONATION_STARTED_EVENT, checkImpersonation);
+      window.removeEventListener(IMPERSONATION_ENDED_EVENT, checkImpersonation);
+      clearInterval(interval);
+    };
+  }, [isImpersonating, getImpersonationData]);
+
+  // Calculate remaining time
+  const getRemainingTime = (): string => {
+    if (!impersonationData) return '';
+    const remaining = impersonationData.expiresAt - Date.now();
+    if (remaining <= 0) return 'Expired';
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+    if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    }
+    return `${seconds}s`;
+  };
+
+  const handleCancelImpersonation = () => {
+    if (confirm('Are you sure you want to cancel impersonation?')) {
+      cancelImpersonation();
+    }
+  };
 
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
@@ -41,8 +91,38 @@ const AppHeader: React.FC = () => {
   }, []);
 
   return (
-    <header className="sticky top-0 flex w-full bg-white border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900 lg:border-b">
-      <div className="flex flex-col items-center justify-between grow lg:flex-row lg:px-6">
+    <>
+      {/* Impersonation Banner */}
+      {impersonationData && (
+        <div className="sticky top-0 z-[99998] bg-gradient-to-r from-orange-500 to-amber-500 text-white px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-2 bg-white/20 px-2 py-1 rounded text-sm font-medium">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              IMPERSONATING
+            </span>
+            <span className="text-sm">
+              <strong>{impersonationData.userName}</strong> ({impersonationData.positionName})
+            </span>
+            <span className="text-sm bg-white/20 px-2 py-0.5 rounded">
+              Time left: {getRemainingTime()}
+            </span>
+          </div>
+          <button
+            onClick={handleCancelImpersonation}
+            className="flex items-center gap-1 bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            End
+          </button>
+        </div>
+      )}
+      
+      <header className="sticky top-0 flex w-full bg-white border-gray-200 z-99999 dark:border-gray-800 dark:bg-gray-900 lg:border-b">
+        <div className="flex flex-col items-center justify-between grow lg:flex-row lg:px-6">
         <div className="flex items-center justify-between w-full gap-2 px-3 py-3 border-b border-gray-200 dark:border-gray-800 sm:gap-4 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-4">
           <button
             className="items-center justify-center w-10 h-10 text-gray-500 border-gray-200 rounded-lg z-99999 dark:border-gray-800 lg:flex dark:text-gray-400 lg:h-11 lg:w-11 lg:border"
@@ -167,6 +247,7 @@ const AppHeader: React.FC = () => {
         </div>
       </div>
     </header>
+    </>
   );
 };
 
