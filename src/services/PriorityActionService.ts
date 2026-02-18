@@ -1,12 +1,32 @@
 'use client';
 
 import { LoanData } from '@/hooks/useLoanUpdates';
-import { getOfficeNameById } from '@/hooks/useOffice';
+import { getPositionNameByIdStatic } from '@/hooks/useUserPosition';
+import {
+  POSITION_IDS,
+  LOAN_THRESHOLDS,
+  generatePositionSpecificActions,
+  generateStaleLoanSummaryAction,
+  LoanActionContext,
+} from '@/utils/loanActionGenerator';
+import { getUserContext, UserContext } from '@/utils/userContext';
+
+// Re-export POSITION_IDS and LOAN_THRESHOLDS for backward compatibility
+export { POSITION_IDS, LOAN_THRESHOLDS };
 
 export interface PriorityAction {
+  id?: number;
   action: string;
   due: string;
   urgent: boolean;
+  status?: number;
+  position_id?: number;
+  user_id?: number;
+  office_id?: number;
+  positionSpecific?: boolean;
+  targetPositionIds?: number[];
+  created_date?: string;
+  updated_at?: string;
 }
 
 export interface PriorityActionResult {
@@ -17,69 +37,216 @@ export interface PriorityActionResult {
 // Callback type for priority action updates
 export type PriorityActionCallback = (actions: PriorityAction[]) => void;
 
-// LocalStorage keys
-const STORAGE_KEY = 'priority_actions';
-const LOAN_EVENTS_KEY = 'loan_events';
-const LOAN_COUNT_KEY = 'loan_count';
-
 /**
- * PriorityActionService generates priority actions based on loan data
- * and current system state. This service is called when new loans are created
- * to populate the priority actions array in the Leadership Assistant.
- * All data is synced to localStorage for persistence and cross-component access.
+ * PriorityActionService manages priority actions for the Leadership Assistant.
+ * 
+ * DATA SOURCE:
+ * - Initializes from API: GET /smart-loans?status=pending&start_date=YYYY-MM-DD&end_date=YYYY-MM-DD
+ * - Real-time updates via WebSocket events (loan.created)
+ * 
+ * RESPONSIBILITY WORKFLOW:
+ * - Generates position-specific actions based on user's current position
+ * - Supports impersonation - uses impersonated position when active
+ * 
+ * Uses centralized loanActionGenerator for position-specific action logic
  */
 export class PriorityActionService {
   private static instance: PriorityActionService;
   private priorityActions: PriorityAction[] = [];
-  private newActions: PriorityAction[] = []; // Global array for both processNewLoan and checkStaleLoans
+  private newActions: PriorityAction[] = [];
   private loanCount: number = 0;
   private subscribers: Set<PriorityActionCallback> = new Set();
   private isInitialized: boolean = false;
+  private currentPositionId: number = 5; // Default to Branch Manager
+  private initializationPromise: Promise<void> | null = null;
+  private userContext: UserContext | null = null;
 
   private constructor() {
-    // Initialize with data from localStorage
-    this.initializeFromStorage();
+    // Get current position (including impersonation)
+    this.refreshCurrentPosition();
   }
 
   /**
-   * Initialize from localStorage for data consistency
+   * Refresh user context and position
    */
-  private initializeFromStorage(): void {
-    if (typeof window === 'undefined') return;
+  private refreshUserContext(): void {
+    this.userContext = getUserContext();
+    this.currentPositionId = this.userContext.positionId;
+    console.log('PriorityActionService: User context refreshed:', {
+      userId: this.userContext.userId,
+      officeId: this.userContext.officeId,
+      provinceId: this.userContext.provinceId,
+      positionId: this.currentPositionId,
+      positionName: this.userContext.positionName,
+      isImpersonating: this.userContext.isImpersonating,
+    });
+  }
 
+  /**
+   * Get current position ID from user context
+   */
+  private getCurrentPositionId(): number {
+    this.refreshUserContext();
+    return this.currentPositionId;
+  }
+
+  /**
+   * Refresh the current position ID (call when impersonation changes)
+   */
+  public refreshCurrentPosition(): void {
+    this.refreshUserContext();
+    console.log('PriorityActionService: Current position ID:', this.currentPositionId, 
+      `(${getPositionNameByIdStatic(this.currentPositionId)})`);
+  }
+
+  /**
+   * Format date as YYYY-MM-DD
+   */
+  private formatDate(date: Date): string {
+    return date.toISOString().split('T')[0];
+  }
+
+  /**
+   * Initialize from API - fetch priority actions for current user
+   * API: GET /smart-priority-actions?user_id=X&office_id=Y&province_id=Z&status=0
+   */
+  public async initializeFromAPI(): Promise<void> {
+    // If already initializing, return the existing promise
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    // If already initialized, return
+    if (this.isInitialized) {
+      return;
+    }
+
+    this.initializationPromise = this.doInitialize();
+    return this.initializationPromise;
+  }
+
+  /**
+   * Internal initialization method
+   */
+  private async doInitialize(): Promise<void> {
     try {
-      // Load priority actions from localStorage
-      const storedActions = localStorage.getItem(STORAGE_KEY);
-      if (storedActions) {
-        this.priorityActions = JSON.parse(storedActions);
-        console.log('📋 PriorityActionService: Loaded', this.priorityActions.length, 'actions from localStorage');
+      console.log('PriorityActionService: Initializing from API...');
+      
+      // Refresh user context first
+      this.refreshUserContext();
+      
+      if (!this.userContext) {
+        console.error('PriorityActionService: No user context available');
+        this.isInitialized = true;
+        return;
       }
 
-      // Load loan count from localStorage
-      const storedCount = localStorage.getItem(LOAN_COUNT_KEY);
-      if (storedCount) {
-        this.loanCount = parseInt(storedCount, 10);
-        console.log('📋 PriorityActionService: Loaded loan count:', this.loanCount);
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smartbackend.whencefinancesystem.com';
+      
+      // Get today's date for filtering
+      const today = new Date();
+      const todayStr = this.formatDate(today);
+      
+      // Build query parameters for pending loans (today's actions)
+      const loansParams = new URLSearchParams();
+      loansParams.append('status', 'pending');
+      loansParams.append('start_date', todayStr);
+      loansParams.append('end_date', todayStr);
+      
+      if (this.userContext.officeId) {
+        loansParams.append('office_id', String(this.userContext.officeId));
       }
+      if (this.userContext.provinceId) {
+        // loansParams.append('province_id', String(this.userContext.provinceId));
+      }
+      
+      // Fetch pending loans from API
+      const loansResponse = await fetch(
+        `${API_BASE_URL}/smart-loans?${loansParams.toString()}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      let pendingLoans: any[] = [];
+      if (loansResponse.ok) {
+        const loansData = await loansResponse.json();
+        if (loansData.success && Array.isArray(loansData.data)) {
+          pendingLoans = loansData.data;
+        } else if (Array.isArray(loansData)) {
+          pendingLoans = loansData;
+        } else if (loansData.data && Array.isArray(loansData.data)) {
+          pendingLoans = loansData.data;
+        }
+        console.log('PriorityActionService: Fetched', pendingLoans.length, 'pending loans from API');
+      } else {
+        console.error('PriorityActionService: Failed to fetch pending loans:', loansResponse.status);
+      }
+      
+      // Process pending loans through the centralized action generator
+      const allItems = pendingLoans;
+      console.log('PriorityActionService: Total items to process:', allItems.length);
+
+      // Process each item through the centralized action generator
+      // This ensures all actions flow through the RESPONSIBILITY WORKFLOW
+      this.priorityActions = [];
+      const context: LoanActionContext = {
+        currentPositionId: this.currentPositionId,
+        loanCount: 0,
+        isStaleLoan: false,
+      };
+
+      for (const item of allItems) {
+        // Convert API item to LoanData format for the generator
+        const loanData: LoanData = {
+          id: item.id || item.loan_id,
+          amount: item.amount || item.principal || 0,
+          client: item.client || item.borrower_name || 'Unknown Client',
+          borrower_name: item.borrower_name || item.client || 'Unknown Client',
+          loan_number: item.loan_number || item.external_id || `LOAN-${item.id}`,
+          status: item.status || 'pending',
+          created_by: item.created_by || item.created_by_id || 'Unknown',
+          office_id: item.office_id || 0,
+          type: item.type || item.loan_type || 'New Loan',
+          created_at: item.created_date || item.created_at,
+        };
+
+        // Use centralized action generator
+        const generatedActions = generatePositionSpecificActions(loanData, context);
+        
+        // Add the generated actions to our list
+        for (const action of generatedActions) {
+          this.priorityActions.push({
+            ...action,
+            id: item.id,
+            status: item.status,
+            position_id: item.position_id,
+            user_id: item.user_id,
+            office_id: item.office_id,
+            created_date: item.created_date || item.created_at,
+            updated_at: item.updated_at,
+          });
+        }
+        
+        // Increment loan count for context
+        context.loanCount++;
+      }
+
+      // Set loan count based on processed items
+      this.loanCount = allItems.length;
 
       this.isInitialized = true;
+      
+      // Notify subscribers
+      this.notifySubscribers();
+      
+      console.log('PriorityActionService: Initialized with', this.priorityActions.length, 'actions');
     } catch (error) {
-      console.error('📋 PriorityActionService: Error loading from localStorage:', error);
-    }
-  }
-
-  /**
-   * Save to localStorage
-   */
-  private saveToStorage(): void {
-    if (typeof window === 'undefined') return;
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.priorityActions));
-      localStorage.setItem(LOAN_COUNT_KEY, this.loanCount.toString());
-      console.log('📋 PriorityActionService: Saved to localStorage');
-    } catch (error) {
-      console.error('📋 PriorityActionService: Error saving to localStorage:', error);
+      console.error('PriorityActionService: Error initializing from API:', error);
+      this.isInitialized = true;
     }
   }
 
@@ -100,12 +267,12 @@ export class PriorityActionService {
    */
   public subscribe(callback: PriorityActionCallback): () => void {
     this.subscribers.add(callback);
-    console.log('📋 PriorityActionService: Subscriber added. Total:', this.subscribers.size);
+    console.log('PriorityActionService: Subscriber added. Total:', this.subscribers.size);
     
     // Return unsubscribe function
     return () => {
       this.subscribers.delete(callback);
-      console.log('📋 PriorityActionService: Subscriber removed. Total:', this.subscribers.size);
+      console.log('PriorityActionService: Subscriber removed. Total:', this.subscribers.size);
     };
   }
 
@@ -118,121 +285,110 @@ export class PriorityActionService {
       try {
         callback(currentActions);
       } catch (error) {
-        console.error('📋 PriorityActionService: Error notifying subscriber:', error);
+        console.error('PriorityActionService: Error notifying subscriber:', error);
       }
     });
-    console.log('📋 PriorityActionService: Notified', this.subscribers.size, 'subscribers');
-  }
-
-  /**
-   * Initialize with default priority actions
-   */
-  private initializeDefaultActions(): void {
-    this.priorityActions = [];
+    console.log('PriorityActionService: Notified', this.subscribers.size, 'subscribers');
   }
 
   /**
    * Fetch loans pending for more than specified days from API
-   * @param days - Number of days to consider a loan as stale (default: 3)
+   * @param daysOld - Minimum days a loan should be pending (default: 3)
    * @returns Array of stale loan data
    */
-  private async fetchStaleLoans(days: number = 3): Promise<LoanData[]> {
+  private async fetchStaleLoans(daysOld: number = 3): Promise<LoanData[]> {
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smartbackend.whencefinancesystem.com';
-      const response = await fetch(`${API_BASE_URL}/smart-loans?status=pending&days=${days}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      
+      // Calculate date range: loans created before (today - daysOld)
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - (daysOld + 30)); // Look back 30+ days
+      const endDate = new Date(today);
+      endDate.setDate(today.getDate() - daysOld);
+      
+      const startDateStr = this.formatDate(startDate);
+      const endDateStr = this.formatDate(endDate);
+      
+      const response = await fetch(
+        `${API_BASE_URL}/smart-loans?status=pending&start_date=${startDateStr}&end_date=${endDateStr}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       if (!response.ok) {
-        console.error('📋 PriorityActionService: Failed to fetch stale loans:', response.status);
+        console.error('PriorityActionService: Failed to fetch stale loans:', response.status);
         return [];
       }
 
-      const data = await response.json();
-      console.log('📋 PriorityActionService: Fetched stale loans:', data.length || 0);
-      return data;
+      const responseData = await response.json();
+      
+      // Handle different API response formats
+      let loans: LoanData[] = [];
+      if (Array.isArray(responseData)) {
+        loans = responseData;
+      } else if (responseData.data && Array.isArray(responseData.data)) {
+        loans = responseData.data;
+      } else if (responseData.loans && Array.isArray(responseData.loans)) {
+        loans = responseData.loans;
+      } else if (responseData.items && Array.isArray(responseData.items)) {
+        loans = responseData.items;
+      } else {
+        console.warn('PriorityActionService: Unexpected API response format:', typeof responseData);
+        return [];
+      }
+      
+      console.log('PriorityActionService: Fetched stale loans from API (pending > ' + daysOld + ' days):', loans.length);
+      
+      return loans;
     } catch (error) {
-      console.error('📋 PriorityActionService: Error fetching stale loans:', error);
+      console.error('PriorityActionService: Error fetching stale loans:', error);
       return [];
     }
   }
 
   /**
-   * Add priority actions for loans that have been pending for more than 3 days
-   * This function is called to proactively identify stale loans
+   * Add priority actions for loans that have been pending for more than specified days
+   * This function is called to proactively identify stale loans (e.g., when socket breaks)
+   * Uses centralized loanActionGenerator for position-specific actions
    */
   public async checkStaleLoans(): Promise<number> {
+    // Refresh position in case impersonation changed
+    this.refreshCurrentPosition();
+    
     const staleLoans = await this.fetchStaleLoans(3);
     
-    if (staleLoans.length === 0) {
+    if (!staleLoans || staleLoans.length === 0) {
       return 0;
     }
 
-    // Group loans by days pending
-    const staleByDays: { [days: number]: { count: number; totalAmount: number } } = {};
+    // Initialize newActions for this batch
+    this.newActions = [];
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     
+    console.log('PriorityActionService: Processing', staleLoans.length, 'stale loans through centralized action generator');
+
+    // Process each stale loan through the centralized RESPONSIBILITY WORKFLOW
     for (const loan of staleLoans) {
-      // Calculate days pending
-      const createdAt = loan.created_at ? new Date(loan.created_at) : new Date();
-      const now = new Date();
-      const daysPending = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
-
-      // Handle amount
-      let amount = 0;
-      if (typeof loan.amount === 'string') {
-        amount = parseFloat(loan.amount) || 0;
-      } else if (typeof loan.amount === 'number') {
-        amount = loan.amount;
-      }
-
-      if (!staleByDays[daysPending]) {
-        staleByDays[daysPending] = { count: 0, totalAmount: 0 };
-      }
-      staleByDays[daysPending].count++;
-      staleByDays[daysPending].totalAmount += amount;
-    }
-
-    // Check for existing stale loan action to avoid duplicates
-    const existingStaleAction = this.priorityActions.find(
-      (action) => action.action.includes('loans have been pending')
-    );
-    
-    // Remove existing stale action if found
-    if (existingStaleAction) {
-      const index = this.priorityActions.indexOf(existingStaleAction);
-      if (index > -1) {
-        this.priorityActions.splice(index, 1);
-      }
-    }
-
-    // Generate combined action message based on groups
-    const daysGroups = Object.keys(staleByDays).map(Number).sort((a, b) => b - a);
-    
-    if (daysGroups.length === 1) {
-      const days = daysGroups[0];
-      const { count, totalAmount } = staleByDays[days];
-      const urgent = days >= 7;
+      const context: LoanActionContext = {
+        currentPositionId: this.currentPositionId,
+        loanCount: this.loanCount,
+        isStaleLoan: true,
+      };
       
-      this.newActions.push({
-        action: `⏰ ${count} loan${count > 1 ? 's' : ''} have been pending for more than ${days} day${days > 1 ? 's' : ''}`,
-        due: `Total amount: ${totalAmount.toLocaleString()} • Review required`,
-        urgent,
-      });
-    } else {
-      // Multiple groups - show summary
-      const totalStale = staleLoans.length;
-      const maxDays = Math.max(...daysGroups);
-      const totalAmount = Object.values(staleByDays).reduce((sum, g) => sum + g.totalAmount, 0);
-      
-      this.newActions.push({
-        action: `⏰ ${totalStale} loans have been pending for more than 3 days`,
-        due: `Longest: ${maxDays} days • Total amount: ${totalAmount.toLocaleString()} • Urgent review required`,
-        urgent: true,
-      });
+      // Use centralized action generator
+      const loanActions = generatePositionSpecificActions(loan, context);
+      this.newActions.push(...loanActions);
     }
+
+    // Add summary action at the beginning
+    const summaryAction = generateStaleLoanSummaryAction(staleLoans, timeStr);
+    this.newActions.unshift(summaryAction as PriorityAction);
 
     // Add new actions to priority actions
     const newActionsCount = this.newActions.length;
@@ -241,124 +397,45 @@ export class PriorityActionService {
     // Clear the global newActions array after processing
     this.newActions = [];
 
-    // Keep the list manageable - max 10 actions
-    if (this.priorityActions.length > 10) {
-      this.priorityActions = this.priorityActions.slice(0, 10);
+    // Keep the list manageable - max 15 actions for stale loans
+    if (this.priorityActions.length > 15) {
+      this.priorityActions = this.priorityActions.slice(0, 15);
     }
-
-    // Save to localStorage
-    this.saveToStorage();
 
     // Notify subscribers
     if (newActionsCount > 0) {
       this.notifySubscribers();
     }
 
-    console.log('📋 PriorityActionService: Added', newActionsCount, 'stale loan actions');
+    console.log('PriorityActionService: Added', newActionsCount, 'stale loan actions through centralized generator');
     return newActionsCount;
   }
 
   /**
    * Process a new loan and generate relevant priority actions
-   * Analyzes loan data and provides helpful, human-readable assistant messages
+   * RESPONSIBILITY WORKFLOW: Uses centralized loanActionGenerator for position-specific actions
    * @param loanData - The newly created loan data
    * @returns The result containing generated priority actions
    */
   public processNewLoan(loanData: LoanData): PriorityActionResult {
     this.loanCount++;
-    // Use the global newActions array instead of declaring locally
+    // Refresh position in case impersonation changed
+    this.refreshCurrentPosition();
+    
     this.newActions = [];
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     
-    console.log("Incoming:*****", loanData, "*******");
-    // Handle amount as either number or string
-    let amount = 0;
-    if (typeof loanData.amount === 'string') {
-      amount = parseFloat(loanData.amount) || 0;
-    } else if (typeof loanData.amount === 'number') {
-      amount = loanData.amount;
-    }
+    console.log("Process New loan Event:", loanData);
     
-    // Get borrower name - check multiple possible field names
-    const clientField = loanData.client as string | undefined;
-    const borrowerNameField = loanData.borrower_name as string | undefined;
-    const borrowerName = clientField || borrowerNameField || 'Unknown Client';
+    // Create context for centralized action generator
+    const context: LoanActionContext = {
+      currentPositionId: this.currentPositionId,
+      loanCount: this.loanCount,
+      isStaleLoan: false,
+    };
     
-    const loanNumberField = loanData.loan_number as string | undefined;
-    const loanNumber = loanNumberField || `LOAN-${loanData.id}`;
-    
-    const statusField = loanData.status as string | undefined;
-    const status = (statusField || 'pending').toLowerCase();
-    
-    const createdByField = loanData.created_by as string | undefined;
-    const createdBy = createdByField || 'Unknown';
-    
-    const officeId = (loanData.office_id as number) || 0;
-    
-    const loanTypeField = loanData.type as string | undefined;
-    const loanType = loanTypeField || 'New Loan';
-
-    // Generate human-readable, assistant-style messages
-    
-    // Main notification about new loan
-    console.log(borrowerName)
-    this.newActions.push({
-      action: `💰 ${loanType} received from ${borrowerName}`,
-      due: `Amount: ${amount.toLocaleString()} • Submitted by ${createdBy} • ${timeStr}`,
-      urgent: amount >= 50000,
-    });
-
-    // High-value loan - requires immediate attention (>= 50000)
-    if (amount >= 50000) {
-      const recommendation = amount >= 100000 
-        ? "This is a significant amount. Consider escalating to senior management."
-        : "Review collateral requirements and verify borrower credit history.";
-      this.newActions.push({
-        action: `🚨 High-value loan requires your attention`,
-        due: `${amount.toLocaleString()} • ${recommendation}`,
-        urgent: true,
-      });
-    }
-
-    // Large loan amount - needs supervisory approval (>= 100000)
-    if (amount >= 100000) {
-      this.newActions.push({
-        action: `⚠️ Large loan - Senior Management Approval Required`,
-        due: "This loan exceeds the approval threshold. Please prepare escalation memo.",
-        urgent: true,
-      });
-    }
-
-    // Pending status loans - need follow-up
-    if (status === 'pending' || status === 'under_review') {
-      this.newActions.push({
-        action: `📋 Loan awaiting review - Follow up needed`,
-        due: `${borrowerName}'s application is ${status.replace('_', ' ')}. Schedule review meeting.`,
-        urgent: false,
-      });
-    }
-
-    // Office-specific reminder - get actual office name
-    if (officeId > 0) {
-      // Get office name from standalone function
-      const officeName = getOfficeNameById(officeId) || `Office #${officeId}`;
-      
-      this.newActions.push({
-        action: `🏢 New application from ${officeName}`,
-        due: `Track ${loanType.toLowerCase()} submissions for this branch today.`,
-        urgent: false,
-      });
-    }
-
-    // First loan of the day
-    if (this.loanCount === 1) {
-      this.newActions.push({
-        action: `🌅 Good start! First loan of the day received`,
-        due: "Review all pending applications to maintain turnaround time targets.",
-        urgent: false,
-      });
-    }
+    // Use centralized action generator for position-specific actions
+    const loanActions = generatePositionSpecificActions(loanData, context);
+    this.newActions.push(...loanActions as PriorityAction[]);
 
     // Add new actions to the beginning of the list (most recent first)
     this.priorityActions = [...this.newActions, ...this.priorityActions];
@@ -368,18 +445,12 @@ export class PriorityActionService {
       this.priorityActions = this.priorityActions.slice(0, 10);
     }
 
-    // Save to localStorage for persistence
-    this.saveToStorage();
-
     // Notify all subscribers about the update
     this.notifySubscribers();
 
-    console.log('📋 PriorityActionService: Processed new loan', {
-      loanNumber,
-      borrowerName,
-      amount,
-      loanType,
-      createdBy,
+    console.log('PriorityActionService: Processed new loan using centralized generator', {
+      currentPositionId: this.currentPositionId,
+      currentPositionName: getPositionNameByIdStatic(this.currentPositionId),
       newActionsGenerated: this.newActions.length,
     });
 
@@ -403,22 +474,6 @@ export class PriorityActionService {
   public clearPriorityActions(): void {
     this.priorityActions = [];
     this.loanCount = 0;
-    this.clearStorage();
-  }
-
-  /**
-   * Clear localStorage
-   */
-  private clearStorage(): void {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(LOAN_COUNT_KEY);
-      console.log('📋 PriorityActionService: Cleared localStorage');
-    } catch (error) {
-      console.error('📋 PriorityActionService: Error clearing localStorage:', error);
-    }
   }
 
   /**
@@ -427,7 +482,7 @@ export class PriorityActionService {
   public resetToDefaults(): void {
     this.priorityActions = [];
     this.loanCount = 0;
-    this.clearStorage();
+    this.isInitialized = false;
   }
 
   /**
@@ -438,16 +493,32 @@ export class PriorityActionService {
   }
 
   /**
+   * Check if service is initialized
+   */
+  public isReady(): boolean {
+    return this.isInitialized;
+  }
+
+  /**
+   * Reset initialization state (call when user context changes, e.g., impersonation)
+   * This allows the service to re-fetch from API with new user context
+   */
+  public resetInitialization(): void {
+    this.isInitialized = false;
+    this.initializationPromise = null;
+    this.priorityActions = [];
+    this.loanCount = 0;
+    console.log('PriorityActionService: Initialization state reset');
+  }
+
+  /**
    * Mark a priority action as completed (removes it from the list)
    * @param index - The index of the action to mark as completed
    */
   public markAsCompleted(index: number): void {
     if (index >= 0 && index < this.priorityActions.length) {
       const completed = this.priorityActions.splice(index, 1);
-      console.log('✅ PriorityActionService: Marked action as completed:', completed[0]?.action);
-      
-      // Save to localStorage
-      this.saveToStorage();
+      console.log('PriorityActionService: Marked action as completed:', completed[0]?.action);
 
       // Notify all subscribers about the update
       this.notifySubscribers();
@@ -474,21 +545,26 @@ export class PriorityActionService {
     if (hour >= 12 && hour < 17) greeting = 'Good afternoon';
     else if (hour >= 17) greeting = 'Good evening';
 
-    // Try to get user name from localStorage
+    // Get user name from context
     let userName = 'User';
-    if (typeof window !== 'undefined') {
-      try {
-        const storedUser = localStorage.getItem('thisUser');
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          if (user.first_name && user.last_name) {
-            userName = `${user.first_name} ${user.last_name}`;
-          } else if (user.name) {
-            userName = user.name;
+    if (this.userContext) {
+      userName = `${this.userContext.firstName} ${this.userContext.lastName}`.trim() || 'User';
+    } else {
+      // Fallback to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          const storedUser = localStorage.getItem('thisUser');
+          if (storedUser) {
+            const user = JSON.parse(storedUser);
+            if (user.first_name && user.last_name) {
+              userName = `${user.first_name} ${user.last_name}`;
+            } else if (user.name) {
+              userName = user.name;
+            }
           }
+        } catch (e) {
+          console.error('Error getting user name:', e);
         }
-      } catch (e) {
-        console.error('Error getting user name:', e);
       }
     }
 

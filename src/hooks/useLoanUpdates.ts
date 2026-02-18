@@ -12,11 +12,40 @@ export interface LoanData {
   amount?: number | string; // Can be number or string
   amount_formatted?: string;
   status?: string;
-  type?: string; // Loan type (New Loan, Top-up, etc.)
+  type?: string; // Loan type (New Loan, Top-up, part_payment, etc.)
   created_by?: string;
   office_id?: number;
   created_at?: string;
   updated_at?: string;
+  // Nested loan object from WebSocket event
+  loan?: {
+    id?: number;
+    principal?: string | number;
+    applied_amount?: string | number;
+    approved_amount?: string | number;
+    status?: string;
+    loan_product_id?: number;
+    loan_product?: {
+      id?: number;
+      name?: string;
+      short_name?: string;
+    };
+    office_id?: number;
+    client_id?: number;
+    created_at?: string;
+    updated_at?: string;
+    [key: string]: unknown;
+  };
+  // Nested transaction object from WebSocket event
+  transaction?: {
+    id?: number;
+    loan_id?: number;
+    transaction_type?: string;
+    credit?: string | number;
+    date?: string;
+    created_at?: string;
+    [key: string]: unknown;
+  };
   [key: string]: unknown;
 }
 
@@ -50,7 +79,7 @@ export const useLoanUpdatesWithHistory = (
   const priorityActionService = PriorityActionService.getInstance();
 
   const handleLoanCreated = useCallback((data: LoanData) => {
-    console.log('💰 New loan created:', data);
+    // console.log('💰 New loan created:', data);
     setLatestLoan(data);
     setLoanHistory(prev => {
       const updated = [data, ...prev];
@@ -59,8 +88,8 @@ export const useLoanUpdatesWithHistory = (
     });
 
     // Process new loan through PriorityActionService
-    const priorityResult = priorityActionService.processNewLoan(data);
-    console.log('📋 Priority actions updated:', priorityResult.newActionsAdded, 'new actions');
+    // const priorityResult = priorityActionService.processNewLoan(data);
+    // console.log('📋 Priority actions updated:', priorityResult.newActionsAdded, 'new actions');
 
     if (onNewLoan) {
       onNewLoan(data);
@@ -139,7 +168,7 @@ export const useLoanUpdates = (): UseLoanUpdatesReturn => {
   const priorityActionService = PriorityActionService.getInstance();
 
   const handleLoanCreated = useCallback((data: LoanData) => {
-    console.log('💰 New loan created:', data);
+    // console.log('💰 New loan created:', data);
     setLatestLoan(data);
     setLoans(prev => [data, ...prev]);
 

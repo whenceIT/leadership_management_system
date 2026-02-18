@@ -1,6 +1,22 @@
 Sample request:
 
 GET http://localhost:5000/staffbyPosition?position_id=5
+
+Sample requests:
+
+# Get all active staff (no filters)
+GET http://localhost:5000/staff
+
+# Filter by office_id
+GET http://localhost:5000/staff?office_id=3
+
+# Filter by province_id
+GET http://localhost:5000/staff?province_id=2
+
+# Filter by both
+GET http://localhost:5000/staff?office_id=3&province_id=2
+
+
 Response:
 
 [

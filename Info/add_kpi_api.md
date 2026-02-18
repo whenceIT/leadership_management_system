@@ -1,4 +1,4 @@
-POST  https://smartbackend.whencefinancesystem.com/kpi
+POS
 Content-Type : application/json
 
 JSON sample request:

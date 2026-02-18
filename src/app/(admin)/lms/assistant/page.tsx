@@ -2,16 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import PriorityActionService, { PriorityAction } from '@/services/PriorityActionService';
+import AlertService, { Alert, AlertType } from '@/services/AlertService';
 import { useUserData } from '@/hooks/useUserSync';
 import { useLoanUpdates } from '@/hooks/useLoanUpdates';
 import { useOffice } from '@/hooks/useOffice';
-
-// Static alerts that don't change
-const alerts = [
-  { type: "warning", message: "Branch B showing rising Month-1 defaults - investigation suggested" },
-  { type: "info", message: "Staff training completion rate below target - intervention needed" },
-  { type: "success", message: "Cross-branch best practice sharing opportunity identified" },
-];
+import { IMPERSONATION_STARTED_EVENT, IMPERSONATION_ENDED_EVENT } from '@/hooks/useUserPosition';
 
 // Static decision support data
 const decisionSupport = [
@@ -29,6 +24,7 @@ const decisionSupport = [
 
 export default function AssistantPage() {
   const [priorityActions, setPriorityActions] = useState<PriorityAction[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [teamSnapshot, setTeamSnapshot] = useState({
     totalStaff: 24,
     onLeave: 2,
@@ -81,14 +77,18 @@ export default function AssistantPage() {
       day: 'numeric',
     }));
 
-    // Get PriorityActionService instance and load initial priority actions
+    // Get PriorityActionService instance
     const service = PriorityActionService.getInstance();
-    const actions = service.getPriorityActions();
-    setPriorityActions(actions);
-    setTeamSnapshot(prev => ({
-      ...prev,
-      pendingTasks: actions.length,
-    }));
+
+    // Initialize from API (fetch today's pending loans)
+    service.initializeFromAPI().then(() => {
+      const actions = service.getPriorityActions();
+      setPriorityActions(actions);
+      setTeamSnapshot(prev => ({
+        ...prev,
+        pendingTasks: actions.length,
+      }));
+    });
 
     // Subscribe to real-time priority action updates
     const unsubscribeFn = service.subscribe((updatedActions) => {
@@ -100,9 +100,19 @@ export default function AssistantPage() {
       }));
     });
 
-    // Check for stale loans (pending > 3 days) and add to priority actions
-    service.checkStaleLoans().then((count) => {
-      console.log('📋 AssistantPage: Added', count, 'stale loan actions');
+    // Get AlertService instance and subscribe to alerts
+    const alertService = AlertService.getInstance();
+    
+    // Initialize alerts from API
+    alertService.initializeFromAPI().then(() => {
+      const currentAlerts = alertService.getAlerts();
+      setAlerts(currentAlerts);
+    });
+    
+    // Subscribe to alert updates
+    const unsubscribeAlerts = alertService.subscribe((updatedAlerts) => {
+      console.log('🔔 AssistantPage: Received alert update, count:', updatedAlerts.length);
+      setAlerts(updatedAlerts);
     });
 
     // Cleanup subscription on unmount
@@ -110,6 +120,42 @@ export default function AssistantPage() {
       if (unsubscribeFn) {
         unsubscribeFn();
       }
+      if (unsubscribeAlerts) {
+        unsubscribeAlerts();
+      }
+    };
+  }, []);
+
+  // Listen for impersonation changes and re-fetch from API with new user context
+  useEffect(() => {
+    const handleImpersonationChange = async () => {
+      console.log('📋 AssistantPage: Impersonation changed, re-fetching from API with new user context');
+      const service = PriorityActionService.getInstance();
+      
+      // Reset initialization state to allow re-fetch from API
+      service.resetInitialization();
+      
+      // Re-initialize from API with new user context
+      await service.initializeFromAPI();
+      
+      const actions = service.getPriorityActions();
+      setPriorityActions(actions);
+      setTeamSnapshot(prev => ({
+        ...prev,
+        pendingTasks: actions.length,
+      }));
+      
+      // Also reset and re-fetch alerts for the new position
+      const alertService = AlertService.getInstance();
+      await alertService.reset();
+    };
+
+    window.addEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange);
+    window.addEventListener(IMPERSONATION_ENDED_EVENT, handleImpersonationChange);
+
+    return () => {
+      window.removeEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange);
+      window.removeEventListener(IMPERSONATION_ENDED_EVENT, handleImpersonationChange);
     };
   }, []);
 
@@ -249,41 +295,63 @@ export default function AssistantPage() {
 
       {/* Alerts Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {alerts.map((alert, index) => (
-          <div
-            key={index}
-            className={`p-4 rounded-lg border ${
-              alert.type === 'warning'
-                ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
-                : alert.type === 'success'
-                ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-                : 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
-            }`}
-          >
-            <div className="flex items-start gap-2">
-              <svg
-                className={`w-5 h-5 flex-shrink-0 ${
-                  alert.type === 'warning'
-                    ? 'text-yellow-600'
-                    : alert.type === 'success'
-                    ? 'text-green-600'
-                    : 'text-blue-600'
-                }`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <p className="text-sm">{alert.message}</p>
-            </div>
+        {alerts.length === 0 ? (
+          <div className="col-span-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400">No active alerts</p>
           </div>
-        ))}
+        ) : (
+          alerts.map((alert) => (
+            <div
+              key={alert.id}
+              className={`p-4 rounded-lg border ${
+                alert.type === 'warning'
+                  ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800'
+                  : alert.type === 'success'
+                  ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                  : alert.type === 'error'
+                  ? 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+                  : 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
+              }`}
+            >
+              <div className="flex items-start gap-2">
+                <svg
+                  className={`w-5 h-5 flex-shrink-0 ${
+                    alert.type === 'warning'
+                      ? 'text-yellow-600'
+                      : alert.type === 'success'
+                      ? 'text-green-600'
+                      : alert.type === 'error'
+                      ? 'text-red-600'
+                      : 'text-blue-600'
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div className="flex-1">
+                  {alert.title && (
+                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                      {alert.title}
+                    </p>
+                  )}
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{alert.message}</p>
+                  {alert.category && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Category: {alert.category}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Decision Support */}
