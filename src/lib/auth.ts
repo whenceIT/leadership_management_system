@@ -4,7 +4,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from './db';
 
 const SESSION_EXPIRY_HOURS = 24;
 
@@ -168,16 +167,16 @@ export function verifyPassword(password: string, hashedPassword: string): boolea
 }
 
 /**
- * Get user by ID from database
+ * Get user by ID from API
  */
 export async function getUserById(userId: number): Promise<any> {
   try {
-    const user = await queryOne(
-      `SELECT id, email, first_name, last_name, status, phone, gender, office_id, enable_google2fa, permissions, last_login, blocked 
-       FROM users WHERE id = ?`,
-      [userId]
-    );
-    return user;
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('Error getting user by ID:', error);
     return null;

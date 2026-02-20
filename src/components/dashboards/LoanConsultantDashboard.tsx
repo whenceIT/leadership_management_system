@@ -1,14 +1,36 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { DashboardBase, KPICard, AlertCard, CollapsibleCard, KPIMetricsCard } from './DashboardBase';
 import { roleCardsData } from '@/data/role-cards-data';
+import { useUserTier } from '@/hooks/useUserTier';
+import { getUserOfficeName } from '@/hooks/useOffice';
+import { useLoanConsultantStats } from '@/hooks/useLoanConsultantStats';
+import PriorityActionService from '@/services/PriorityActionService';
+import { PriorityAction } from '@/services/PriorityActionService';
+import LoanConsultantMetricsService from '@/services/LoanConsultantMetricsService';
+import { LoanConsultantMetrics } from '@/services/LoanConsultantMetricsService';
 
 interface LoanConsultantDashboardProps {
   position?: string;
 }
 
 export default function LoanConsultantDashboard({ position = 'Loan Consultant' }: LoanConsultantDashboardProps) {
+  const { data: userTierData, isLoading, error } = useUserTier();
+  const { 
+    data: loanStats, 
+    circleStats,
+    isLoading: isLoadingStats, 
+    error: errorStats,
+    getCircleDateRanges 
+  } = useLoanConsultantStats();
+  
+  const [priorityActions, setPriorityActions] = useState<PriorityAction[]>([]);
+  const [metrics, setMetrics] = useState<LoanConsultantMetrics | null>(null);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
+  const priorityActionService = PriorityActionService.getInstance();
+  const metricsService = LoanConsultantMetricsService.getInstance();
+  
   const roleCard = roleCardsData[position] || roleCardsData['Branch Manager'] || {
     department: 'TBD',
     reportsTo: 'TBD',
@@ -17,6 +39,73 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
     jobPurpose: 'TBD',
     kpis: []
   };
+
+  // Calculate changes from previous circle
+  const calculateChange = (current: number, previous: number): { value: number; percentage: number; isPositive: boolean } => {
+    const diff = current - previous;
+    const percentage = previous > 0 ? ((diff / previous) * 100) : 0;
+    return {
+      value: diff,
+      percentage: Math.abs(percentage),
+      isPositive: diff >= 0
+    };
+  };
+
+  // Get circle date ranges for display
+  const dateRanges = getCircleDateRanges();
+  const formatDisplayDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Subscribe to priority actions
+  useEffect(() => {
+    const unsubscribe = priorityActionService.subscribe((updatedActions) => {
+      setPriorityActions(updatedActions);
+    });
+
+    // Initialize priority actions from API
+    priorityActionService.initializeFromAPI();
+
+    return unsubscribe;
+  }, []);
+
+  // Fetch loan consultant metrics
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      setIsLoadingMetrics(true);
+      try {
+        // Get current user ID from localStorage
+        let userId = 1907; // Default to sample user
+        if (typeof window !== 'undefined') {
+          const storedUser = localStorage.getItem('thisUser');
+          if (storedUser) {
+            const user = JSON.parse(storedUser);
+            if (user.id) {
+              userId = user.id;
+            }
+          }
+        }
+
+        // Get current circle date range
+        const dateRanges = getCircleDateRanges();
+        
+        const metricsData = await metricsService.fetchLoanConsultantMetrics(
+          userId,
+          dateRanges.current.start_date,
+          dateRanges.current.end_date
+        );
+
+        setMetrics(metricsData);
+      } catch (error) {
+        console.error('Error fetching loan consultant metrics:', error);
+      } finally {
+        setIsLoadingMetrics(false);
+      }
+    };
+
+    fetchMetrics();
+  }, []);
 
   return (
     <DashboardBase
@@ -35,11 +124,13 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
           <p className="text-xs text-gray-500 dark:text-gray-400">Location</p>
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">{roleCard.location}</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">{getUserOfficeName()}</p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
           <p className="text-xs text-gray-500 dark:text-gray-400">Tier</p>
-          <p className="text-sm font-semibold text-brand-500">K50K+</p>
+          <p className="text-sm font-semibold text-brand-500">
+            {userTierData?.current_tier.name || 'Base'}
+          </p>
         </div>
       </div>
 
@@ -59,20 +150,19 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
         {/* KPI Cards - Personal Performance */}
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
-            title="Loans Disbursed"
-            value="47"
-            change="+8 this month"
-            changeType="positive"
+            title="Total Uncollected"
+            value={isLoadingMetrics ? '...' : `K${metrics?.total_uncollected}`}
+            change=""
+            changeType="negative"
             icon={
-              <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9V7a2 2 0 00-2-2H7a2 2 0 00-2 2v6a2 2 0 002 2h8m-2 4h2a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m10 0a2 2 0 002 2h2a2 2 0 002-2v-6a2 2 0 00-2-2h-2m-4-4V5a2 2 0 012-2h2a2 2 0 012 2v4m-6 0h6" />
               </svg>
             }
             expandable={true}
             expandedContent={
               <div className="space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-300">Target: 40 loans/month</p>
-                <p className="text-green-600 dark:text-green-400">✅ Exceeding Target</p>
+                <p className="text-gray-600 dark:text-gray-300">Amount yet to be collected</p>
               </div>
             }
           />
@@ -80,20 +170,19 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
 
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
-            title="Portfolio Value"
-            value="K2.3M"
-            change="+K320K from last month"
+            title="Total Collected"
+            value={isLoadingMetrics ? '...' : `K${metrics?.total_collected}`}
+            change=""
             changeType="positive"
             icon={
-              <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             }
             expandable={true}
             expandedContent={
               <div className="space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-300">Target: K2.0M</p>
-                <p className="text-green-600 dark:text-green-400">✅ Above Target</p>
+                <p className="text-gray-600 dark:text-gray-300">Total amount collected this period</p>
               </div>
             }
           />
@@ -101,20 +190,19 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
 
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
-            title="Collection Rate"
-            value="96.8%"
-            change="+1.2% improvement"
-            changeType="positive"
+            title="Still Uncollected"
+            value={isLoadingMetrics ? '...' : `K${metrics?.still_uncollected}`}
+            change=""
+            changeType={metrics && parseFloat(metrics.still_uncollected) < 0 ? 'negative' : 'positive'}
             icon={
-              <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg className="w-6 h-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             }
             expandable={true}
             expandedContent={
               <div className="space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-300">Target: ≥95%</p>
-                <p className="text-green-600 dark:text-green-400">✅ Exceeding Target</p>
+                <p className="text-gray-600 dark:text-gray-300">Difference between collected and uncollected</p>
               </div>
             }
           />
@@ -122,91 +210,168 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
 
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
-            title="Default Rate"
-            value="1.8%"
-            change="-0.3% from last month"
+            title="Given Out"
+            value={isLoadingMetrics ? '...' : `K${metrics?.given_out}`}
+            change=""
             changeType="positive"
             icon={
-              <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             }
             expandable={true}
             expandedContent={
               <div className="space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-300">Target: ≤2.5%</p>
-                <p className="text-green-600 dark:text-green-400">✅ Well Below Target</p>
+                <p className="text-gray-600 dark:text-gray-300">Total amount disbursed this period</p>
               </div>
             }
           />
         </div>
 
-        {/* Alerts Section */}
+        {/* Priority Actions Section */}
         <div className="col-span-12 lg:col-span-8">
-          <CollapsibleCard title="Priority Actions" defaultExpanded={true}>
+          <CollapsibleCard title="Priority Actions for Today" defaultExpanded={true}>
             <div className="space-y-4">
-              <AlertCard
-                title="Follow-up Required - 3 At-Risk Loans"
-                message="Review clients with payments 15+ days overdue. Action required by EOD."
-                type="warning"
-                action={
-                  <button className="text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:underline">
-                    Review Now →
-                  </button>
-                }
-                expandable={true}
-                expandedContent={
-                  <div className="space-y-2 text-sm">
-                    <p className="text-gray-600 dark:text-gray-300">Client #4521: K12,500 overdue (18 days)</p>
-                    <p className="text-gray-600 dark:text-gray-300">Client #4534: K8,200 overdue (15 days)</p>
-                    <p className="text-gray-600 dark:text-gray-300">Client #4541: K5,800 overdue (16 days)</p>
-                  </div>
-                }
-              />
-              <AlertCard
-                title="New Lead Assignments"
-                message="You have 5 new qualified leads from walk-ins and referrals."
-                type="info"
-                action={
-                  <button className="text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline">
-                    View Leads →
-                  </button>
-                }
-                expandable={true}
-                expandedContent={
-                  <div className="space-y-2 text-sm">
-                    <p className="text-gray-600 dark:text-gray-300">2 from walk-ins</p>
-                    <p className="text-gray-600 dark:text-gray-300">3 from referral program</p>
-                  </div>
-                }
-              />
+              {priorityActions.length > 0 ? (
+                priorityActions.map((action, index) => (
+                  <AlertCard
+                    key={index}
+                    title={action.action}
+                    message={`Due: ${action.due}`}
+                    type={action.urgent ? 'warning' : 'info'}
+                    action={
+                      <button className={`text-sm font-medium hover:underline ${
+                        action.urgent 
+                          ? 'text-yellow-700 dark:text-yellow-300' 
+                          : 'text-blue-700 dark:text-blue-300'
+                      }`}>
+                        Take Action →
+                      </button>
+                    }
+                    expandable={true}
+                    expandedContent={
+                      <div className="space-y-2 text-sm">
+                        <p className="text-gray-600 dark:text-gray-300">
+                          Status: {action.status === 0 ? 'Pending' : 'Completed'}
+                        </p>
+                        {action.positionSpecific && (
+                          <p className="text-gray-600 dark:text-gray-300">
+                            Position Specific: Yes
+                          </p>
+                        )}
+                        {action.office_id && (
+                          <p className="text-gray-600 dark:text-gray-300">
+                            Office ID: {action.office_id}
+                          </p>
+                        )}
+                      </div>
+                    }
+                  />
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <img 
+                    src="/images/error/success.svg" 
+                    alt="No priority actions" 
+                    className="w-20 h-14 mx-auto mb-4 opacity-50"
+                  />
+                  <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    No priority actions available
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    You're all caught up! Check back later for new tasks.
+                  </p>
+                </div>
+              )}
             </div>
           </CollapsibleCard>
         </div>
 
         {/* Quick Stats */}
         <div className="col-span-12 lg:col-span-4">
-          <CollapsibleCard title="This Month Summary" defaultExpanded={true}>
+          <CollapsibleCard title={`Current Circle (${formatDisplayDate(dateRanges.current.start_date)} - ${formatDisplayDate(dateRanges.current.end_date)})`} defaultExpanded={true}>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 dark:text-gray-400">Applications</span>
-                <span className="font-semibold text-gray-900 dark:text-white">62</span>
+                <div className="text-right">
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {isLoadingStats ? '...' : circleStats.current?.new_applications || 0}
+                  </span>
+                  {circleStats.previous && circleStats.current && (
+                    <span className={`ml-2 text-xs ${
+                      calculateChange(circleStats.current.new_applications, circleStats.previous.new_applications).isPositive 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {calculateChange(circleStats.current.new_applications, circleStats.previous.new_applications).isPositive ? '+' : ''}
+                      {calculateChange(circleStats.current.new_applications, circleStats.previous.new_applications).value}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 dark:text-gray-400">Approved</span>
-                <span className="font-semibold text-green-600 dark:text-green-400">47</span>
+                <div className="text-right">
+                  <span className="font-semibold text-green-600 dark:text-green-400">
+                    {isLoadingStats ? '...' : circleStats.current?.approved || 0}
+                  </span>
+                  {circleStats.previous && circleStats.current && (
+                    <span className={`ml-2 text-xs ${
+                      calculateChange(circleStats.current.approved, circleStats.previous.approved).isPositive 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-red-600 dark:text-red-400'
+                    }`}>
+                      {calculateChange(circleStats.current.approved, circleStats.previous.approved).isPositive ? '+' : ''}
+                      {calculateChange(circleStats.current.approved, circleStats.previous.approved).value}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 dark:text-gray-400">Pending</span>
-                <span className="font-semibold text-yellow-600 dark:text-yellow-400">8</span>
+                <div className="text-right">
+                  <span className="font-semibold text-yellow-600 dark:text-yellow-400">
+                    {isLoadingStats ? '...' : circleStats.current?.pending_loans || 0}
+                  </span>
+                  {circleStats.previous && circleStats.current && (
+                    <span className={`ml-2 text-xs ${
+                      calculateChange(circleStats.current.pending_loans, circleStats.previous.pending_loans).isPositive 
+                        ? 'text-yellow-600 dark:text-yellow-400' 
+                        : 'text-green-600 dark:text-green-400'
+                    }`}>
+                      {calculateChange(circleStats.current.pending_loans, circleStats.previous.pending_loans).isPositive ? '+' : ''}
+                      {calculateChange(circleStats.current.pending_loans, circleStats.previous.pending_loans).value}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 dark:text-gray-400">Declined</span>
-                <span className="font-semibold text-red-600 dark:text-red-400">7</span>
+                <div className="text-right">
+                  <span className="font-semibold text-red-600 dark:text-red-400">
+                    {isLoadingStats ? '...' : circleStats.current?.declined || 0}
+                  </span>
+                  {circleStats.previous && circleStats.current && (
+                    <span className={`ml-2 text-xs ${
+                      calculateChange(circleStats.current.declined, circleStats.previous.declined).isPositive 
+                        ? 'text-red-600 dark:text-red-400' 
+                        : 'text-green-600 dark:text-green-400'
+                    }`}>
+                      {calculateChange(circleStats.current.declined, circleStats.previous.declined).isPositive ? '+' : ''}
+                      {calculateChange(circleStats.current.declined, circleStats.previous.declined).value}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
                 <span className="text-gray-500 dark:text-gray-400">Conversion Rate</span>
-                <span className="font-semibold text-green-600 dark:text-green-400">75.8%</span>
+                <span className="font-semibold text-green-600 dark:text-green-400">
+                  {isLoadingStats || !circleStats.current ? '...' : 
+                    circleStats.current.new_applications > 0 
+                      ? `${((circleStats.current.approved / circleStats.current.new_applications) * 100).toFixed(1)}%`
+                      : '0%'
+                  }
+                </span>
               </div>
             </div>
           </CollapsibleCard>
@@ -215,27 +380,112 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
         {/* Loan Pipeline */}
         <div className="col-span-12">
           <CollapsibleCard title="Loan Pipeline" defaultExpanded={true}>
-            <div className="grid grid-cols-5 gap-4 text-center">
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <p className="text-sm text-blue-600 dark:text-blue-400">New Applications</p>
-                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">12</p>
+            <div className="relative overflow-hidden">
+              {/* Pipeline Container */}
+              <div className="flex items-center justify-between relative overflow-x-auto custom-scrollbar">
+                {/* Pipeline Stages */}
+                {[
+                  { 
+                    label: 'Pending Loans', 
+                    value: isLoadingStats ? '...' : loanStats?.pending_loans || 0, 
+                    color: 'blue' as const, 
+                    icon: '📥',
+                    gradient: 'from-blue-500 to-blue-600'
+                  },
+                  { 
+                    label: 'Pending Review', 
+                    value: isLoadingStats ? '...' : loanStats?.under_review || 0, 
+                    color: 'indigo' as const, 
+                    icon: '🔍',
+                    gradient: 'from-indigo-500 to-indigo-600'
+                  },
+                  { 
+                    label: 'Approved', 
+                    value: isLoadingStats ? '...' : loanStats?.approved || 0, 
+                    color: 'emerald' as const, 
+                    icon: '✅',
+                    gradient: 'from-emerald-500 to-emerald-600'
+                  },
+                  { 
+                    label: 'Disbursed', 
+                    value: isLoadingStats ? '...' : loanStats?.disbursed || 0, 
+                    color: 'violet' as const, 
+                    icon: '💸',
+                    gradient: 'from-violet-500 to-violet-600'
+                  },
+                  { 
+                    label: 'Delinquent', 
+                    value: isLoadingStats ? '...' : 0, 
+                    color: 'amber' as const, 
+                    icon: '⚠️',
+                    gradient: 'from-amber-500 to-amber-600'
+                  },
+                  { 
+                    label: 'Defaulted', 
+                    value: isLoadingStats ? '...' : 0, 
+                    color: 'rose' as const, 
+                    icon: '❌',
+                    gradient: 'from-rose-500 to-rose-600'
+                  },
+                  { 
+                    label: 'Collected', 
+                    value: isLoadingStats ? '...' : 0, 
+                    color: 'slate' as const, 
+                    icon: '💰',
+                    gradient: 'from-slate-500 to-slate-600'
+                  }
+                ].map((stage, index) => {
+                  // Determine color classes based on stage color
+                  const colorClasses = {
+                    blue: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-600',
+                    indigo: 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-indigo-600',
+                    emerald: 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-emerald-600',
+                    violet: 'bg-gradient-to-br from-violet-500 to-violet-600 text-white border-violet-600',
+                    amber: 'bg-gradient-to-br from-amber-500 to-amber-600 text-white border-amber-600',
+                    rose: 'bg-gradient-to-br from-rose-500 to-rose-600 text-white border-rose-600',
+                    slate: 'bg-gradient-to-br from-slate-500 to-slate-600 text-white border-slate-600'
+                  };
+
+                  // Determine connection color between stages
+                  const connectionColors = {
+                    blue: 'bg-gradient-to-r from-blue-500 to-blue-600',
+                    indigo: 'bg-gradient-to-r from-indigo-500 to-indigo-600',
+                    emerald: 'bg-gradient-to-r from-emerald-500 to-emerald-600',
+                    violet: 'bg-gradient-to-r from-violet-500 to-violet-600',
+                    amber: 'bg-gradient-to-r from-amber-500 to-amber-600',
+                    rose: 'bg-gradient-to-r from-rose-500 to-rose-600',
+                    slate: 'bg-gradient-to-r from-slate-500 to-slate-600'
+                  };
+
+                  return (
+                    <React.Fragment key={index}>
+                      {/* Pipeline Stage */}
+                      <div className="relative z-10 flex flex-col items-center min-w-24">
+                        <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mb-3 ${colorClasses[stage.color]} border-2 shadow-md transform transition-all duration-300 hover:scale-105 hover:shadow-lg`}>
+                          <span className="text-xl sm:text-2xl">{stage.icon}</span>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-1">{stage.label}</p>
+                          <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{stage.value}</p>
+                        </div>
+                      </div>
+
+                      {/* Connection Line (except after last stage) */}
+                      {index < 6 && (
+                        <div className="w-8 sm:flex-1 h-2 mx-2 sm:mx-4 relative">
+                          <div className={`absolute inset-0 ${connectionColors[stage.color]} rounded-full overflow-hidden`}>
+                            {/* Flowing Animation */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-70 animate-flow"></div>
+                          </div>
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </div>
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <p className="text-sm text-yellow-600 dark:text-yellow-400">Under Review</p>
-                <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">8</p>
-              </div>
-              <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                <p className="text-sm text-purple-600 dark:text-purple-400">Documents Pending</p>
-                <p className="text-xl font-bold text-purple-600 dark:text-purple-400">5</p>
-              </div>
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <p className="text-sm text-green-600 dark:text-green-400">Approved</p>
-                <p className="text-xl font-bold text-green-600 dark:text-green-400">15</p>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Disbursed</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">47</p>
-              </div>
+
+              {/* Pipeline Background */}
+              <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-700 transform -translate-y-1/2 rounded-full"></div>
             </div>
           </CollapsibleCard>
         </div>
@@ -246,32 +496,118 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
             <div className="space-y-4">
               <div>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600 dark:text-gray-400">Current: K50K+ Tier</span>
-                  <span className="font-medium text-brand-500">K2.3M / K2.5M to next tier</span>
+                  <span className="text-gray-600 dark:text-gray-400">
+                    Current: {userTierData?.current_tier.name || 'K50K+'}
+                  </span>
+                  <span className="font-medium text-brand-500">
+                    {userTierData?.portfolio_summary.current_formatted || 'K2.3M'} / 
+                    {userTierData?.portfolio_summary.required_formatted || 'K2.5M'} to next tier
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div className="bg-brand-500 h-2 rounded-full" style={{ width: '92%' }}></div>
+                  <div 
+                    className="bg-brand-500 h-2 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${userTierData?.portfolio_summary.progress_percentage || 0}%`
+                    }}
+                  ></div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">92% towards K80K+ tier</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {userTierData?.portfolio_summary.progress_percentage || 0}% towards {userTierData?.next_tier?.name || 'K80K+'}
+                </p>
               </div>
+              
               <div className="grid grid-cols-4 gap-2 text-center">
-                <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
-                  <p className="text-xs text-gray-500">Base</p>
-                  <p className="text-sm font-bold">K0-49K</p>
-                </div>
-                <div className="p-2 bg-brand-100 dark:bg-brand-900/30 rounded border border-brand-500">
-                  <p className="text-xs text-brand-600">Current</p>
-                  <p className="text-sm font-bold text-brand-600">K50K+</p>
-                </div>
-                <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
-                  <p className="text-xs text-gray-500">Next</p>
-                  <p className="text-sm font-bold">K80K+</p>
-                </div>
-                <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded">
-                  <p className="text-xs text-gray-500">Top</p>
-                  <p className="text-sm font-bold">K120K+</p>
-                </div>
+                {[
+                  { id: 1, name: 'Base', range: 'K0-49K', color: 'gray' },
+                  { id: 2, name: 'K50K+', range: 'K50K+', color: 'blue' },
+                  { id: 3, name: 'K80K+', range: 'K80K+', color: 'purple' },
+                  { id: 4, name: 'K120K+', range: 'K120K+', color: 'gold' }
+                ].map((tier) => {
+                  const isCurrent = userTierData?.current_tier.id === tier.id;
+                  const isNext = userTierData?.next_tier?.id === tier.id;
+                  
+                  // Determine tier colors based on color name
+                  const getTierColors = (color: string) => {
+                    switch (color) {
+                      case 'blue':
+                        return {
+                          bg: 'bg-blue-100 dark:bg-blue-900/30',
+                          border: 'border-blue-500',
+                          text: 'text-blue-600'
+                        };
+                      case 'purple':
+                        return {
+                          bg: 'bg-purple-100 dark:bg-purple-900/30',
+                          border: 'border-purple-500',
+                          text: 'text-purple-600'
+                        };
+                      case 'gold':
+                        return {
+                          bg: 'bg-yellow-100 dark:bg-yellow-900/30',
+                          border: 'border-yellow-500',
+                          text: 'text-yellow-600'
+                        };
+                      case 'gray':
+                      default:
+                        return {
+                          bg: 'bg-gray-100 dark:bg-gray-800',
+                          border: 'border-gray-500',
+                          text: 'text-gray-600'
+                        };
+                    }
+                  };
+                  
+                  const tierColors = getTierColors(tier.color);
+                  
+                  return (
+                    <div 
+                      key={tier.id}
+                      className={`p-2 rounded border transition-all duration-300 ${
+                        isCurrent 
+                          ? `${tierColors.bg} ${tierColors.border}`
+                          : 'bg-gray-100 dark:bg-gray-800'
+                      }`}
+                    >
+                      <p className={`text-xs ${
+                        isCurrent 
+                          ? tierColors.text 
+                          : 'text-gray-500'
+                      }`}>
+                        {isCurrent ? 'Current' : isNext ? 'Next' : 'Base'}
+                      </p>
+                      <p className={`text-sm font-bold ${
+                        isCurrent 
+                          ? tierColors.text 
+                          : 'text-gray-900 dark:text-white'
+                      }`}>
+                        {tier.range}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
+              
+              {/* Tier Benefits Display */}
+              {userTierData?.benefits && userTierData.benefits.length > 0 && (
+                <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    Current Tier Benefits
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    {userTierData.benefits.map((benefit, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-300">
+                          {benefit.description}:
+                        </span>
+                        <span className="font-semibold text-brand-500">
+                          {benefit.value}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </CollapsibleCard>
         </div>

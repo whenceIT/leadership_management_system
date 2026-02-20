@@ -3,6 +3,8 @@
  * Each position has specific job responsibilities, KPIs, and details
  */
 
+import { getOfficeNameById } from '@/hooks/useOffice';
+
 export const roleCardsData: Record<string, RoleCardConfig> = {
   'Branch Manager': {
     title: 'Branch Manager',
@@ -881,29 +883,79 @@ export const roleCardsData: Record<string, RoleCardConfig> = {
     reviewCycles: [
       { cycle: 'Monthly', description: 'Marketing performance review' }
     ]
+  },
+  'Loan Consultant': {
+    title: 'Loan Consultant',
+    department: 'Lending Operations',
+    reportsTo: 'Branch Manager',
+    directReports: 'Clients',
+    location: 'Branch Office',
+    jobPurpose: 'Achieve individual loan targets, maintain portfolio quality, and deliver excellent customer service. Responsible for the end-to-end loan process from origination to disbursement and collection.',
+    responsibilities: [
+      {
+        category: 'Loan Origination',
+        items: [
+          'Source and qualify new loan applications',
+          'Conduct client interviews and assess eligibility',
+          'Complete loan documentation and verification',
+          'Maintain strong client relationships and provide financial advice'
+        ]
+      },
+      {
+        category: 'Portfolio Management',
+        items: [
+          'Monitor and manage active loan portfolio',
+          'Track repayments and follow up on overdue accounts',
+          'Identify early warning signs of default and implement mitigation strategies',
+          'Maintain accurate records of all client interactions'
+        ]
+      },
+      {
+        category: 'Collections & Recovery',
+        items: [
+          'Follow up on overdue payments and arrange repayment plans',
+          'Implement collection strategies to minimize defaults',
+          'Escalate high-risk accounts to management',
+          'Maintain collection statistics and report on performance'
+        ]
+      },
+      {
+        category: 'Compliance',
+        items: [
+          'Ensure compliance with lending policies and regulatory requirements',
+          'Adhere to credit risk assessment guidelines',
+          'Maintain data privacy and security standards',
+          'Participate in compliance training and audits'
+        ]
+      }
+    ],
+    kpis: [
+      { name: 'Monthly Disbursement Volume', baseline: 'K250,000', target: 'K300,000+', weight: '30%' },
+      { name: 'Loan Approval Rate', baseline: '78%', target: '85%', weight: '20%' },
+      { name: 'Collection Rate', baseline: '94%', target: '96%+', weight: '25%' },
+      { name: 'Default Rate', baseline: '2.2%', target: '≤1.8%', weight: '15%' },
+      { name: 'Client Satisfaction Score', baseline: '4.2/5', target: '4.5/5', weight: '10%' }
+    ],
+    competencies: [
+      'Sales & Relationship Management',
+      'Financial Analysis',
+      'Communication & Negotiation',
+      'Compliance & Risk Management',
+      'Problem Solving'
+    ],
+    authority: {
+      loanApproval: 'Approval authority up to K5,000',
+      paymentPlans: 'Authority to arrange repayment plans',
+      clientInteraction: 'Direct client communication and relationship management'
+    },
+    reviewCycles: [
+      { cycle: 'Weekly', description: 'Performance review with Branch Manager' },
+      { cycle: 'Monthly', description: 'KPI dashboard review' },
+      { cycle: 'Quarterly', description: 'Formal performance evaluation' },
+      { cycle: 'Annual', description: 'Comprehensive review for tier advancement' }
+    ]
   }
 };
-
-// Helper function to get current user's position
-export function getCurrentUserPosition(): string {
-  if (typeof window === 'undefined') {
-    return 'Branch Manager';
-  }
-  
-  const storedUser = localStorage.getItem('thisUser');
-  if (!storedUser) {
-    return 'Branch Manager';
-  }
-  
-  try {
-    const user = JSON.parse(storedUser);
-    const position = user.position?.trim();
-    return position || 'Branch Manager';
-  } catch (e) {
-    console.error('Error parsing user data:', e);
-    return 'Branch Manager';
-  }
-}
 
 // Type definitions
 export interface RoleCardConfig {

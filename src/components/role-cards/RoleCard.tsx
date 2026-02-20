@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { roleCardsData, defaultRoleCard, getCurrentUserPosition, RoleCardConfig } from '@/data/role-cards-data';
+import { roleCardsData, defaultRoleCard, getCurrentUserPosition, getUserOfficeName, RoleCardConfig } from '@/data/role-cards-data';
 
 /**
  * RoleCard Component
@@ -74,7 +74,7 @@ export default function RoleCard() {
           </div>
           <div>
             <p className="text-brand-100 text-sm">Location</p>
-            <p className="font-semibold mt-1">{roleCard.location}</p>
+            <p className="font-semibold mt-1">{getUserOfficeName()}</p>
           </div>
         </div>
       </div>

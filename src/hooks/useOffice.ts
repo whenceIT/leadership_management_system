@@ -949,6 +949,33 @@ export function getOfficeNameById(officeId: string | number): string | undefined
   return office?.name;
 }
 
+export function getUserOfficeName(): string {
+  if (typeof window === 'undefined') {
+    return 'Branch Office';
+  }
+  
+  const storedUser = localStorage.getItem('thisUser');
+  if (!storedUser) {
+    return 'Branch Office';
+  }
+  
+  try {
+    const user = JSON.parse(storedUser);
+    // Try office_id first, then office_name, then office, then fall back to default
+    if (user.office_id) {
+      const officeName = getOfficeNameById(user.office_id);
+      if (officeName) {
+        return officeName;
+      }
+    }
+    
+    return user.office_name || user.office || 'Branch Office';
+  } catch (e) {
+    console.error('Error parsing user data:', e);
+    return 'Branch Office';
+  }
+}
+
 /**
  * Standalone function to get office by ID (works outside React context)
  * @param officeId - The office ID (numeric string or number)

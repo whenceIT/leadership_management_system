@@ -101,6 +101,38 @@ export function useUserPosition() {
   }, []);
 
   const syncAndGetPosition = useCallback(async (forceSync: boolean = false) => {
+    // Check for impersonation data FIRST - this takes priority
+    if (typeof window !== 'undefined') {
+      try {
+        const storedImpersonation = localStorage.getItem(IMPERSONATION_STORAGE_KEY);
+        if (storedImpersonation) {
+          const impData = JSON.parse(storedImpersonation) as ImpersonationData;
+          // Check if not expired
+          if (impData.expiresAt && Date.now() < impData.expiresAt) {
+            // Use impersonation data - don't fetch from API
+            setPositionId(impData.positionId);
+            setPositionName(impData.positionName);
+            
+            // Get the impersonated user from thisUser
+            const thisUser = getUserData();
+            if (thisUser) {
+              setUser(thisUser);
+            }
+            
+            setIsLoading(false);
+            return;
+          } else {
+            // Impersonation expired - clean up
+            localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
+            localStorage.removeItem('impersonatedFromUser');
+            localStorage.removeItem(ORIGINAL_USER_STORAGE_KEY);
+          }
+        }
+      } catch (e) {
+        console.error('Error checking impersonation data:', e);
+      }
+    }
+    
     // Prevent over-polling: skip if already synced and not forcing
     const currentUser = getUserData();
     if (!forceSync && hasSyncedRef.current && lastSyncedEmailRef.current === currentUser?.email) {

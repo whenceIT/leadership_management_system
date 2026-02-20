@@ -160,7 +160,7 @@ export class PriorityActionService {
         // loansParams.append('province_id', String(this.userContext.provinceId));
       }
       
-      // Fetch pending loans from API
+      // Fetch Today's pending loans from API
       const loansResponse = await fetch(
         `${API_BASE_URL}/smart-loans?${loansParams.toString()}`,
         {
