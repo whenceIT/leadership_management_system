@@ -389,50 +389,85 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
                     label: 'Pending Loans', 
                     value: isLoadingStats ? '...' : loanStats?.pending_loans || 0, 
                     color: 'blue' as const, 
-                    icon: '📥',
-                    gradient: 'from-blue-500 to-blue-600'
+                    icon: (
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                    ),
+                    gradient: 'from-blue-500 to-blue-600',
+                    description: 'New loan applications awaiting review'
                   },
                   { 
                     label: 'Pending Review', 
                     value: isLoadingStats ? '...' : loanStats?.under_review || 0, 
                     color: 'indigo' as const, 
-                    icon: '🔍',
-                    gradient: 'from-indigo-500 to-indigo-600'
+                    icon: (
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    ),
+                    gradient: 'from-indigo-500 to-indigo-600',
+                    description: 'Applications under review process'
                   },
                   { 
                     label: 'Approved', 
                     value: isLoadingStats ? '...' : loanStats?.approved || 0, 
                     color: 'emerald' as const, 
-                    icon: '✅',
-                    gradient: 'from-emerald-500 to-emerald-600'
+                    icon: (
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ),
+                    gradient: 'from-emerald-500 to-emerald-600',
+                    description: 'Loans approved for disbursement'
                   },
                   { 
                     label: 'Disbursed', 
                     value: isLoadingStats ? '...' : loanStats?.disbursed || 0, 
                     color: 'violet' as const, 
-                    icon: '💸',
-                    gradient: 'from-violet-500 to-violet-600'
+                    icon: (
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    ),
+                    gradient: 'from-violet-500 to-violet-600',
+                    description: 'Funds disbursed to clients'
                   },
                   { 
                     label: 'Delinquent', 
                     value: isLoadingStats ? '...' : 0, 
                     color: 'amber' as const, 
-                    icon: '⚠️',
-                    gradient: 'from-amber-500 to-amber-600'
+                    icon: (
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    ),
+                    gradient: 'from-amber-500 to-amber-600',
+                    description: 'Payments overdue but still collectible'
                   },
                   { 
                     label: 'Defaulted', 
                     value: isLoadingStats ? '...' : 0, 
                     color: 'rose' as const, 
-                    icon: '❌',
-                    gradient: 'from-rose-500 to-rose-600'
+                    icon: (
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    ),
+                    gradient: 'from-rose-500 to-rose-600',
+                    description: 'Loans in default status'
                   },
                   { 
                     label: 'Collected', 
                     value: isLoadingStats ? '...' : 0, 
                     color: 'slate' as const, 
-                    icon: '💰',
-                    gradient: 'from-slate-500 to-slate-600'
+                    icon: (
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    ),
+                    gradient: 'from-slate-500 to-slate-600',
+                    description: 'Loans fully collected'
                   }
                 ].map((stage, index) => {
                   // Determine color classes based on stage color
@@ -460,13 +495,16 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
                   return (
                     <React.Fragment key={index}>
                       {/* Pipeline Stage */}
-                      <div className="relative z-10 flex flex-col items-center min-w-24">
+                      <div className="relative z-10 flex flex-col items-center min-w-24 group">
                         <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mb-3 ${colorClasses[stage.color]} border-2 shadow-md transform transition-all duration-300 hover:scale-105 hover:shadow-lg`}>
-                          <span className="text-xl sm:text-2xl">{stage.icon}</span>
+                          {stage.icon}
+                          {/* Hover effect - glowing ring */}
+                          <div className="absolute inset-0 rounded-full border-2 border-transparent group-hover:border-white/30 transition-all duration-300"></div>
                         </div>
                         <div className="text-center">
                           <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-1">{stage.label}</p>
                           <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{stage.value}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stage.description}</p>
                         </div>
                       </div>
 
@@ -477,6 +515,9 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
                             {/* Flowing Animation */}
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-70 animate-flow"></div>
                           </div>
+                          {/* Decorative elements */}
+                          <div className="absolute top-1/2 left-0 w-2 h-2 bg-white rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+                          <div className="absolute top-1/2 right-0 w-2 h-2 bg-white rounded-full transform translate-x-1/2 -translate-y-1/2"></div>
                         </div>
                       )}
                     </React.Fragment>
@@ -486,6 +527,22 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
 
               {/* Pipeline Background */}
               <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-700 transform -translate-y-1/2 rounded-full"></div>
+              
+              {/* Floating particles */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {[...Array(10)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="absolute w-1 h-1 bg-white/30 rounded-full"
+                    style={{
+                      left: `${Math.random() * 100}%`,
+                      top: `${Math.random() * 100}%`,
+                      animation: `float ${2 + Math.random() * 3}s linear infinite`,
+                      animationDelay: `${Math.random() * 2}s`,
+                    }}
+                  ></div>
+                ))}
+              </div>
             </div>
           </CollapsibleCard>
         </div>

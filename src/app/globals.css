@@ -1007,3 +1007,20 @@ span.flatpickr-weekday,
 .animate-flow {
   animation: flow 2.5s linear infinite;
 }
+
+/* Floating Particles Animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px);
+  }
+}
