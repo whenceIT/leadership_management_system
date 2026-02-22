@@ -4,10 +4,10 @@ const API_BASE_URL = 'https://smart.whencefinancesystem.com';
 
 export async function GET(
   request: NextRequest, 
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const userId = params.id;
+    const { id: userId } = await params;
     
     // Proxy request to external API
     const response = await fetch(`${API_BASE_URL}/user-tiers/${userId}`);
