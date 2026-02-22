@@ -30,6 +30,7 @@ export default function ImpersonateProfilePage() {
     positionName: currentPositionName,
     positions,
     isLoading,
+    refreshPositions,
     startImpersonation,
     cancelImpersonation,
     isImpersonating,
@@ -103,6 +104,11 @@ export default function ImpersonateProfilePage() {
       }
     }
   }, [isImpersonating, getImpersonationData, getOriginalUser]);
+
+  // Refresh positions from API on mount to ensure we have the latest positions
+  useEffect(() => {
+    refreshPositions();
+  }, [refreshPositions]);
 
   // Fetch users when position changes
   useEffect(() => {

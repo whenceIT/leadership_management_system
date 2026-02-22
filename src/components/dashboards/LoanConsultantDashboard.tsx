@@ -151,9 +151,10 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="Total Uncollected"
-            value={isLoadingMetrics ? '...' : `K${metrics?.total_uncollected}`}
+            value={isLoadingMetrics ? '...' : metrics?.total_uncollected || '0'}
             change=""
             changeType="negative"
+            isMoney={true}
             icon={
               <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9V7a2 2 0 00-2-2H7a2 2 0 00-2 2v6a2 2 0 002 2h8m-2 4h2a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m10 0a2 2 0 002 2h2a2 2 0 002-2v-6a2 2 0 00-2-2h-2m-4-4V5a2 2 0 012-2h2a2 2 0 012 2v4m-6 0h6" />
@@ -171,9 +172,10 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="Total Collected"
-            value={isLoadingMetrics ? '...' : `K${metrics?.total_collected}`}
+            value={isLoadingMetrics ? '...' : metrics?.total_collected || '0'}
             change=""
             changeType="positive"
+            isMoney={true}
             icon={
               <svg className="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -191,9 +193,10 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="Still Uncollected"
-            value={isLoadingMetrics ? '...' : `K${metrics?.still_uncollected}`}
+            value={isLoadingMetrics ? '...' : metrics?.still_uncollected || '0'}
             change=""
             changeType={metrics && parseFloat(metrics.still_uncollected) < 0 ? 'negative' : 'positive'}
+            isMoney={true}
             icon={
               <svg className="w-6 h-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -211,9 +214,10 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="Given Out"
-            value={isLoadingMetrics ? '...' : `K${metrics?.given_out}`}
+            value={isLoadingMetrics ? '...' : metrics?.given_out || '0'}
             change=""
             changeType="positive"
+            isMoney={true}
             icon={
               <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -295,7 +299,7 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
                 <span className="text-gray-500 dark:text-gray-400">Applications</span>
                 <div className="text-right">
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {isLoadingStats ? '...' : circleStats.current?.new_applications || 0}
+                    {isLoadingStats ? '...' : circleStats.current?.new_applications}
                   </span>
                   {circleStats.previous && circleStats.current && (
                     <span className={`ml-2 text-xs ${
@@ -380,9 +384,9 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
         {/* Loan Pipeline */}
         <div className="col-span-12">
           <CollapsibleCard title="Loan Pipeline" defaultExpanded={true}>
-            <div className="relative overflow-hidden">
+            <div className="relative overflow-hidden py-8">
               {/* Pipeline Container */}
-              <div className="flex items-center justify-between relative overflow-x-auto custom-scrollbar">
+              <div className="flex items-center justify-between relative px-4">
                 {/* Pipeline Stages */}
                 {[
                   { 
@@ -390,160 +394,236 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
                     value: isLoadingStats ? '...' : loanStats?.pending_loans || 0, 
                     color: 'blue' as const, 
                     icon: (
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
                     ),
-                    gradient: 'from-blue-500 to-blue-600',
-                    description: 'New loan applications awaiting review'
+                    description: 'Awaiting review'
                   },
                   { 
-                    label: 'Pending Review', 
+                    label: 'Under Review', 
                     value: isLoadingStats ? '...' : loanStats?.under_review || 0, 
                     color: 'indigo' as const, 
                     icon: (
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                       </svg>
                     ),
-                    gradient: 'from-indigo-500 to-indigo-600',
-                    description: 'Applications under review process'
+                    description: 'In review'
                   },
                   { 
                     label: 'Approved', 
                     value: isLoadingStats ? '...' : loanStats?.approved || 0, 
                     color: 'emerald' as const, 
                     icon: (
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     ),
-                    gradient: 'from-emerald-500 to-emerald-600',
-                    description: 'Loans approved for disbursement'
+                    description: 'Ready for disbursement'
                   },
                   { 
                     label: 'Disbursed', 
                     value: isLoadingStats ? '...' : loanStats?.disbursed || 0, 
                     color: 'violet' as const, 
                     icon: (
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
                     ),
-                    gradient: 'from-violet-500 to-violet-600',
-                    description: 'Funds disbursed to clients'
+                    description: 'Funds released'
                   },
                   { 
                     label: 'Delinquent', 
                     value: isLoadingStats ? '...' : 0, 
                     color: 'amber' as const, 
                     icon: (
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
                     ),
-                    gradient: 'from-amber-500 to-amber-600',
-                    description: 'Payments overdue but still collectible'
+                    description: 'Overdue payments'
                   },
                   { 
                     label: 'Defaulted', 
                     value: isLoadingStats ? '...' : 0, 
                     color: 'rose' as const, 
                     icon: (
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 6L6 18M6 6l12 12" />
                       </svg>
                     ),
-                    gradient: 'from-rose-500 to-rose-600',
-                    description: 'Loans in default status'
+                    description: 'Default status'
                   },
                   { 
                     label: 'Collected', 
                     value: isLoadingStats ? '...' : 0, 
-                    color: 'slate' as const, 
+                    color: 'teal' as const, 
                     icon: (
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     ),
-                    gradient: 'from-slate-500 to-slate-600',
-                    description: 'Loans fully collected'
+                    description: 'Fully collected'
                   }
-                ].map((stage, index) => {
-                  // Determine color classes based on stage color
-                  const colorClasses = {
-                    blue: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-600',
-                    indigo: 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white border-indigo-600',
-                    emerald: 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-emerald-600',
-                    violet: 'bg-gradient-to-br from-violet-500 to-violet-600 text-white border-violet-600',
-                    amber: 'bg-gradient-to-br from-amber-500 to-amber-600 text-white border-amber-600',
-                    rose: 'bg-gradient-to-br from-rose-500 to-rose-600 text-white border-rose-600',
-                    slate: 'bg-gradient-to-br from-slate-500 to-slate-600 text-white border-slate-600'
+                ].map((stage, index, stages) => {
+                  // Enhanced color configuration
+                  const colorConfig = {
+                    blue: {
+                      bg: 'bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600',
+                      shadow: 'shadow-blue-500/30',
+                      ring: 'ring-blue-400/40',
+                      line: 'from-blue-400',
+                      text: 'text-blue-600 dark:text-blue-400'
+                    },
+                    indigo: {
+                      bg: 'bg-gradient-to-br from-indigo-400 via-indigo-500 to-indigo-600',
+                      shadow: 'shadow-indigo-500/30',
+                      ring: 'ring-indigo-400/40',
+                      line: 'from-indigo-400',
+                      text: 'text-indigo-600 dark:text-indigo-400'
+                    },
+                    emerald: {
+                      bg: 'bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600',
+                      shadow: 'shadow-emerald-500/30',
+                      ring: 'ring-emerald-400/40',
+                      line: 'from-emerald-400',
+                      text: 'text-emerald-600 dark:text-emerald-400'
+                    },
+                    violet: {
+                      bg: 'bg-gradient-to-br from-violet-400 via-violet-500 to-violet-600',
+                      shadow: 'shadow-violet-500/30',
+                      ring: 'ring-violet-400/40',
+                      line: 'from-violet-400',
+                      text: 'text-violet-600 dark:text-violet-400'
+                    },
+                    amber: {
+                      bg: 'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600',
+                      shadow: 'shadow-amber-500/30',
+                      ring: 'ring-amber-400/40',
+                      line: 'from-amber-400',
+                      text: 'text-amber-600 dark:text-amber-400'
+                    },
+                    rose: {
+                      bg: 'bg-gradient-to-br from-rose-400 via-rose-500 to-rose-600',
+                      shadow: 'shadow-rose-500/30',
+                      ring: 'ring-rose-400/40',
+                      line: 'from-rose-400',
+                      text: 'text-rose-600 dark:text-rose-400'
+                    },
+                    teal: {
+                      bg: 'bg-gradient-to-br from-teal-400 via-teal-500 to-teal-600',
+                      shadow: 'shadow-teal-500/30',
+                      ring: 'ring-teal-400/40',
+                      line: 'from-teal-400',
+                      text: 'text-teal-600 dark:text-teal-400'
+                    }
                   };
 
-                  // Determine connection color between stages
-                  const connectionColors = {
-                    blue: 'bg-gradient-to-r from-blue-500 to-blue-600',
-                    indigo: 'bg-gradient-to-r from-indigo-500 to-indigo-600',
-                    emerald: 'bg-gradient-to-r from-emerald-500 to-emerald-600',
-                    violet: 'bg-gradient-to-r from-violet-500 to-violet-600',
-                    amber: 'bg-gradient-to-r from-amber-500 to-amber-600',
-                    rose: 'bg-gradient-to-r from-rose-500 to-rose-600',
-                    slate: 'bg-gradient-to-r from-slate-500 to-slate-600'
-                  };
+                  const config = colorConfig[stage.color];
+                  const nextStage = stages[index + 1];
+                  const nextConfig = nextStage ? colorConfig[nextStage.color] : null;
 
                   return (
                     <React.Fragment key={index}>
-                      {/* Pipeline Stage */}
-                      <div className="relative z-10 flex flex-col items-center min-w-24 group">
-                        <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center mb-3 ${colorClasses[stage.color]} border-2 shadow-md transform transition-all duration-300 hover:scale-105 hover:shadow-lg`}>
-                          {stage.icon}
-                          {/* Hover effect - glowing ring */}
-                          <div className="absolute inset-0 rounded-full border-2 border-transparent group-hover:border-white/30 transition-all duration-300"></div>
+                      {/* Pipeline Stage Node */}
+                      <div className="relative z-10 flex flex-col items-center group">
+                        {/* Main Circle */}
+                        <div className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full ${config.bg} text-white flex items-center justify-center shadow-lg ${config.shadow} ring-4 ${config.ring} transform transition-all duration-300 group-hover:scale-110 group-hover:shadow-xl`}>
+                          {/* Inner highlight */}
+                          <div className="absolute inset-1 rounded-full bg-white/10"></div>
+                          
+                          {/* Icon */}
+                          <div className="relative z-10">
+                            {stage.icon}
+                          </div>
+                          
+                          {/* Pulse effect on hover */}
+                          <div className={`absolute inset-0 rounded-full ${config.bg} opacity-0 group-hover:opacity-20 animate-ping`}></div>
                         </div>
-                        <div className="text-center">
-                          <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-1">{stage.label}</p>
-                          <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">{stage.value}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stage.description}</p>
+                        
+                        {/* Value Badge */}
+                        <div className={`mt-3 px-3 py-1 rounded-full ${config.bg} text-white text-sm font-bold shadow-md`}>
+                          {stage.value}
                         </div>
+                        
+                        {/* Label */}
+                        <p className="mt-2 text-xs sm:text-sm font-semibold text-gray-900 dark:text-white text-center whitespace-nowrap">{stage.label}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center">{stage.description}</p>
                       </div>
 
-                      {/* Connection Line (except after last stage) */}
-                      {index < 6 && (
-                        <div className="w-8 sm:flex-1 h-2 mx-2 sm:mx-4 relative">
-                          <div className={`absolute inset-0 ${connectionColors[stage.color]} rounded-full overflow-hidden`}>
-                            {/* Flowing Animation */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-70 animate-flow"></div>
+                      {/* Animated Connection Line with Arrow */}
+                      {index < stages.length - 1 && nextConfig && (
+                        <div className="flex-1 mx-1 sm:mx-2 relative h-16 flex items-center">
+                          {/* Background Line */}
+                          <div className="absolute inset-x-0 top-1/2 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full transform -translate-y-1/2"></div>
+                          
+                          {/* Animated Gradient Line */}
+                          <div className={`absolute inset-x-0 top-1/2 h-1.5 bg-gradient-to-r ${config.line} ${nextConfig.line} rounded-full transform -translate-y-1/2 overflow-hidden`}>
+                            {/* Flowing Light Effect */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-flow-line"></div>
+                            
+                            {/* Moving Dots */}
+                            <div className="absolute inset-0 flex items-center">
+                              <div className="w-full h-0.5 relative overflow-hidden">
+                                {[...Array(3)].map((_, i) => (
+                                  <div
+                                    key={i}
+                                    className="absolute w-2 h-2 bg-white rounded-full shadow-sm animate-dot-flow"
+                                    style={{ animationDelay: `${i * 0.5}s` }}
+                                  ></div>
+                                ))}
+                              </div>
+                            </div>
                           </div>
-                          {/* Decorative elements */}
-                          <div className="absolute top-1/2 left-0 w-2 h-2 bg-white rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
-                          <div className="absolute top-1/2 right-0 w-2 h-2 bg-white rounded-full transform translate-x-1/2 -translate-y-1/2"></div>
+                          
+                          {/* Animated Arrow */}
+                          <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 z-20">
+                            <div className={`w-4 h-4 ${nextConfig.bg} rounded-full flex items-center justify-center shadow-md animate-arrow-pulse`}>
+                              <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </React.Fragment>
                   );
                 })}
               </div>
-
-              {/* Pipeline Background */}
-              <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-200 dark:bg-slate-700 transform -translate-y-1/2 rounded-full"></div>
-              
-              {/* Floating particles */}
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {[...Array(10)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute w-1 h-1 bg-white/30 rounded-full"
-                    style={{
-                      left: `${Math.random() * 100}%`,
-                      top: `${Math.random() * 100}%`,
-                      animation: `float ${2 + Math.random() * 3}s linear infinite`,
-                      animationDelay: `${Math.random() * 2}s`,
-                    }}
-                  ></div>
-                ))}
-              </div>
             </div>
+
+            {/* Custom CSS Animations */}
+            <style jsx>{`
+              @keyframes flow-line {
+                0% { transform: translateX(-100%); }
+                100% { transform: translateX(200%); }
+              }
+              
+              @keyframes dot-flow {
+                0% { left: -10%; opacity: 0; }
+                10% { opacity: 1; }
+                90% { opacity: 1; }
+                100% { left: 110%; opacity: 0; }
+              }
+              
+              @keyframes arrow-pulse {
+                0%, 100% { transform: translateX(50%) translateY(-50%) scale(1); }
+                50% { transform: translateX(50%) translateY(-50%) scale(1.15); }
+              }
+              
+              .animate-flow-line {
+                animation: flow-line 2s linear infinite;
+              }
+              
+              .animate-dot-flow {
+                animation: dot-flow 2s linear infinite;
+              }
+              
+              .animate-arrow-pulse {
+                animation: arrow-pulse 1.5s ease-in-out infinite;
+              }
+            `}</style>
           </CollapsibleCard>
         </div>
 

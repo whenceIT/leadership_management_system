@@ -225,6 +225,8 @@ export function useLoanConsultantStats() {
     error,
     refetch: fetchStats,
     fetchAllStats,
+    fetchCurrentCircleStats,
+    fetchPreviousCircleStats,
     getCircleDateRanges
   };
 }

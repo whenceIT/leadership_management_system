@@ -60,9 +60,10 @@ export function useUserPosition() {
   const lastSyncedEmailRef = useRef<string | null>(null);
   const positionsLoadedRef = useRef(false);
 
-  // Fetch all leadership positions from API (only once)
-  const fetchPositions = useCallback(async () => {
-    if (positionsLoadedRef.current) return;
+  // Fetch all leadership positions from API
+  const fetchPositions = useCallback(async (forceRefresh: boolean = false) => {
+    // Skip if already loaded and not forcing refresh
+    if (!forceRefresh && positionsLoadedRef.current) return;
     
     try {
       const response = await fetch('https://smartbackend.whencefinancesystem.com/leadership-positions');
@@ -75,6 +76,12 @@ export function useUserPosition() {
       console.error('Error fetching leadership positions:', error);
     }
   }, []);
+  
+  // Force refresh positions from API
+  const refreshPositions = useCallback(async () => {
+    positionsLoadedRef.current = false;
+    await fetchPositions(true);
+  }, [fetchPositions]);
 
   // Get position name from position_id
   const getPositionNameById = useCallback((id: number): string => {
@@ -527,6 +534,7 @@ export function useUserPosition() {
     positions,
     isLoading,
     refreshPosition: syncAndGetPosition,
+    refreshPositions,
     impersonatePosition,
     startImpersonation,
     cancelImpersonation,

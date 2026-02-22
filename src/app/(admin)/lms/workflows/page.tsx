@@ -10,6 +10,31 @@ import {
 } from '@/hooks/useWorkflowEngine';
 
 // ============================================
+// SCHEDULE REVIEW TYPES
+// ============================================
+
+interface ScheduleReviewData {
+  title: string;
+  reviewType: string;
+  description: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  duration: number;
+  participants: string[];
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  location: string;
+  notes: string;
+  reminderMinutes: number;
+}
+
+interface ScheduleReviewModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: ScheduleReviewData) => Promise<void>;
+  position: PositionType | null;
+}
+
+// ============================================
 // POSITION-SPECIFIC WORKFLOW CONFIGURATIONS
 // ============================================
 
@@ -224,6 +249,407 @@ function getPositionDependencies(position: string): { upstream: RoleDependency[]
 }
 
 // ============================================
+// SCHEDULE REVIEW MODAL COMPONENT
+// ============================================
+
+const REVIEW_TYPES = [
+  { value: 'performance', label: 'Performance Review' },
+  { value: 'loan_approval', label: 'Loan Approval Review' },
+  { value: 'collection', label: 'Collection Review' },
+  { value: 'compliance', label: 'Compliance Review' },
+  { value: 'risk_assessment', label: 'Risk Assessment Review' },
+  { value: 'branch_audit', label: 'Branch Audit Review' },
+  { value: 'quarterly_business', label: 'Quarterly Business Review' },
+  { value: 'staff_development', label: 'Staff Development Review' },
+  { value: 'other', label: 'Other' },
+];
+
+const DURATION_OPTIONS = [
+  { value: 15, label: '15 minutes' },
+  { value: 30, label: '30 minutes' },
+  { value: 45, label: '45 minutes' },
+  { value: 60, label: '1 hour' },
+  { value: 90, label: '1.5 hours' },
+  { value: 120, label: '2 hours' },
+];
+
+const REMINDER_OPTIONS = [
+  { value: 0, label: 'No reminder' },
+  { value: 5, label: '5 minutes before' },
+  { value: 15, label: '15 minutes before' },
+  { value: 30, label: '30 minutes before' },
+  { value: 60, label: '1 hour before' },
+  { value: 1440, label: '1 day before' },
+];
+
+function ScheduleReviewModal({ isOpen, onClose, onSubmit, position }: ScheduleReviewModalProps) {
+  const [formData, setFormData] = useState<ScheduleReviewData>({
+    title: '',
+    reviewType: '',
+    description: '',
+    scheduledDate: '',
+    scheduledTime: '',
+    duration: 30,
+    participants: [],
+    priority: 'medium',
+    location: '',
+    notes: '',
+    reminderMinutes: 15,
+  });
+  const [participantInput, setParticipantInput] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleInputChange = (field: keyof ScheduleReviewData, value: string | number | string[]) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setError(null);
+  };
+
+  const addParticipant = () => {
+    if (participantInput.trim() && !formData.participants.includes(participantInput.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        participants: [...prev.participants, participantInput.trim()],
+      }));
+      setParticipantInput('');
+    }
+  };
+
+  const removeParticipant = (email: string) => {
+    setFormData(prev => ({
+      ...prev,
+      participants: prev.participants.filter(p => p !== email),
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validation
+    if (!formData.title.trim()) {
+      setError('Title is required');
+      return;
+    }
+    if (!formData.reviewType) {
+      setError('Review type is required');
+      return;
+    }
+    if (!formData.scheduledDate) {
+      setError('Scheduled date is required');
+      return;
+    }
+    if (!formData.scheduledTime) {
+      setError('Scheduled time is required');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await onSubmit(formData);
+      // Reset form on success
+      setFormData({
+        title: '',
+        reviewType: '',
+        description: '',
+        scheduledDate: '',
+        scheduledTime: '',
+        duration: 30,
+        participants: [],
+        priority: 'medium',
+        location: '',
+        notes: '',
+        reminderMinutes: 15,
+      });
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to schedule review');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-screen items-center justify-center p-4">
+        {/* Backdrop */}
+        <div 
+          className="fixed inset-0 bg-black/50 transition-opacity" 
+          onClick={onClose}
+        />
+        
+        {/* Modal */}
+        <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="sticky top-0 bg-white dark:bg-gray-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                Schedule Review
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Create a new review meeting or session
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {error && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
+            {/* Title */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Review Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value)}
+                placeholder="e.g., Q1 Performance Review - Branch A"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            {/* Review Type & Priority */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Review Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.reviewType}
+                  onChange={(e) => handleInputChange('reviewType', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select review type</option>
+                  {REVIEW_TYPES.map(type => (
+                    <option key={type.value} value={type.value}>{type.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Priority
+                </label>
+                <select
+                  value={formData.priority}
+                  onChange={(e) => handleInputChange('priority', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Provide details about the review agenda and objectives..."
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+              />
+            </div>
+
+            {/* Date, Time & Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.scheduledDate}
+                  onChange={(e) => handleInputChange('scheduledDate', e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Time <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="time"
+                  value={formData.scheduledTime}
+                  onChange={(e) => handleInputChange('scheduledTime', e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Duration
+                </label>
+                <select
+                  value={formData.duration}
+                  onChange={(e) => handleInputChange('duration', parseInt(e.target.value))}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                >
+                  {DURATION_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Location / Meeting Link
+              </label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                placeholder="e.g., Conference Room A or https://zoom.us/j/..."
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            {/* Participants */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Participants
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={participantInput}
+                  onChange={(e) => setParticipantInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addParticipant())}
+                  placeholder="Enter email or name and press Enter"
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={addParticipant}
+                  className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+              {formData.participants.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {formData.participants.map((participant, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-brand-100 dark:bg-brand-900/30 text-brand-800 dark:text-brand-300 rounded-full text-sm"
+                    >
+                      {participant}
+                      <button
+                        type="button"
+                        onClick={() => removeParticipant(participant)}
+                        className="hover:text-brand-600 dark:hover:text-brand-400"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Reminder */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Reminder
+              </label>
+              <select
+                value={formData.reminderMinutes}
+                onChange={(e) => handleInputChange('reminderMinutes', parseInt(e.target.value))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              >
+                {REMINDER_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Additional Notes
+              </label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                placeholder="Any additional notes or preparation requirements..."
+                rows={2}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent dark:bg-gray-700 dark:text-white resize-none"
+              />
+            </div>
+
+            {/* Position Info */}
+            {position && (
+              <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">Scheduling as:</span> {position}
+                </p>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Scheduling...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Schedule Review
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // COMPONENT
 // ============================================
 
@@ -231,6 +657,8 @@ export default function WorkflowsPage() {
   const { positionName: rawPosition, isLoading: isUserLoading, refreshPosition } = useUserPosition();
   const [config, setConfig] = useState<PositionWorkflowConfig | null>(null);
   const [activeTab, setActiveTab] = useState<'workflows' | 'dependencies' | 'handoffs' | 'escalations'>('workflows');
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && rawPosition) {
@@ -238,6 +666,47 @@ export default function WorkflowsPage() {
       setConfig(getPositionWorkflowConfig(normalizedPosition));
     }
   }, [rawPosition, isUserLoading]);
+
+  // API call to schedule review
+  const scheduleReview = async (data: ScheduleReviewData): Promise<void> => {
+    const API_BASE_URL = 'https://smartbackend.whencefinancesystem.com';
+    
+    // Combine date and time into a single datetime
+    const scheduledDateTime = `${data.scheduledDate}T${data.scheduledTime}:00`;
+    
+    const payload = {
+      title: data.title,
+      review_type: data.reviewType,
+      description: data.description,
+      scheduled_date: data.scheduledDate,
+      scheduled_time: data.scheduledTime,
+      scheduled_datetime: scheduledDateTime,
+      duration_minutes: data.duration,
+      participants: data.participants,
+      priority: data.priority,
+      location: data.location,
+      notes: data.notes,
+      reminder_minutes: data.reminderMinutes,
+      position: rawPosition,
+      created_at: new Date().toISOString(),
+    };
+
+    const response = await fetch(`${API_BASE_URL}/api/reviews/schedule`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to schedule review: ${response.status}`);
+    }
+
+    setSubmitSuccess('Review scheduled successfully!');
+    setTimeout(() => setSubmitSuccess(null), 5000);
+  };
 
   if (isUserLoading || !config) {
     return (
@@ -251,6 +720,16 @@ export default function WorkflowsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Success Toast */}
+      {submitSuccess && (
+        <div className="fixed top-4 right-4 z-50 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg shadow-lg flex items-center gap-3">
+          <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-sm text-green-700 dark:text-green-400">{submitSuccess}</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -276,11 +755,28 @@ export default function WorkflowsPage() {
           <button className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
             Configure Workflows
           </button>
+          <button 
+            onClick={() => setIsScheduleModalOpen(true)}
+            className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Schedule Review
+          </button>
           <button className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors">
             Create Workflow
           </button>
         </div>
       </div>
+
+      {/* Schedule Review Modal */}
+      <ScheduleReviewModal
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        onSubmit={scheduleReview}
+        position={rawPosition as PositionType}
+      />
 
       {/* Tab Navigation */}
       <div className="border-b border-gray-200 dark:border-gray-700">

@@ -90,9 +90,24 @@ interface KPICardProps {
   icon?: React.ReactNode;
   expandable?: boolean;
   expandedContent?: React.ReactNode;
+  isMoney?: boolean;
 }
 
-export function KPICard({ title, value, change, changeType = 'neutral', icon, expandable = false, expandedContent }: KPICardProps) {
+/**
+ * Format number as money (Zambian Kwacha)
+ */
+export function formatMoney(value: string | number): string {
+  const num = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value;
+  if (isNaN(num)) return 'K0.00';
+  return new Intl.NumberFormat('en-ZM', {
+    style: 'currency',
+    currency: 'ZMW',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(num).replace('ZMW', 'K');
+}
+
+export function KPICard({ title, value, change, changeType = 'neutral', icon, expandable = false, expandedContent, isMoney = false }: KPICardProps) {
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   const changeColors = {
@@ -100,6 +115,11 @@ export function KPICard({ title, value, change, changeType = 'neutral', icon, ex
     negative: 'text-red-600 dark:text-red-400',
     neutral: 'text-gray-500 dark:text-gray-400',
   };
+
+  // Format the value
+  const displayValue = isMoney 
+    ? formatMoney(value)
+    : value;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
@@ -109,8 +129,8 @@ export function KPICard({ title, value, change, changeType = 'neutral', icon, ex
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
               {title}
             </p>
-            <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-              {value}
+            <p className="mt-2 text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+              {displayValue}
             </p>
             {change && (
               <p className={`mt-1 text-sm ${changeColors[changeType]}`}>

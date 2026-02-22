@@ -1,7 +1,57 @@
 'use client';
 
 import React from 'react';
-import { roleCardsData, defaultRoleCard, getCurrentUserPosition, getUserOfficeName, RoleCardConfig } from '@/data/role-cards-data';
+import { roleCardsData, defaultRoleCard, RoleCardConfig } from '@/data/role-cards-data';
+import { getOfficeNameById } from '@/hooks/useOffice';
+
+/**
+ * Get current user position from localStorage
+ * @returns The user's position or 'Branch Manager' as default
+ */
+function getCurrentUserPosition(): string {
+  if (typeof window === 'undefined') {
+    return 'Branch Manager';
+  }
+  
+  const storedUser = localStorage.getItem('thisUser');
+  if (!storedUser) {
+    return 'Branch Manager';
+  }
+  
+  try {
+    const user = JSON.parse(storedUser);
+    return user.position || user.role || 'Branch Manager';
+  } catch (e) {
+    console.error('Error parsing user data:', e);
+    return 'Branch Manager';
+  }
+}
+
+/**
+ * Get user office name from localStorage
+ * @returns The user's office name or 'Head Office' as default
+ */
+function getUserOfficeName(): string {
+  if (typeof window === 'undefined') {
+    return 'Head Office';
+  }
+  
+  const storedUser = localStorage.getItem('thisUser');
+  if (!storedUser) {
+    return 'Head Office';
+  }
+  
+  try {
+    const user = JSON.parse(storedUser);
+    if (user.office_id) {
+      return getOfficeNameById(user.office_id) || 'Head Office';
+    }
+    return user.office_name || 'Head Office';
+  } catch (e) {
+    console.error('Error parsing user data:', e);
+    return 'Head Office';
+  }
+}
 
 /**
  * RoleCard Component
