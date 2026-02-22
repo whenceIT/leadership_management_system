@@ -18,4 +18,6 @@ response sample:
         "loan_portfolio": "1227326.0000",
         "pending_transactions": 16341
     }
+
+    
 }

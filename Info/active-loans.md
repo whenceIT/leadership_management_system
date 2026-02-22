@@ -55,3 +55,5 @@ Shows outstanding balance breakdown (principal, interest, fees, penalty)
 Branch capacity utilization tracking
 Breakdown by loan status, product, and loan officer
 Optional detailed loan list with arrears status
+
+sds

@@ -8,6 +8,7 @@ import {
   PositionType,
   getUserPosition 
 } from '@/hooks/useUserPosition';
+import { useUserKPI, ProcessedKPI } from '@/hooks/useUserKPI';
 
 // Position type matching the system available positions
 type Position = PositionType;
@@ -21,6 +22,34 @@ interface ReviewItem {
   assignee: string;
   dueDate: string;
   progress: number;
+}
+
+// Interface for scheduled review from API
+interface ScheduledReview {
+  id: string;
+  position: string;
+  reviewType: string;
+  title: string;
+  description?: string;
+  scheduledDateTime: string;
+  assignee: string;
+  priority: 'low' | 'medium' | 'high';
+  status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+  sendReminder: boolean;
+  reminderDaysBefore: number;
+  kpiId?: string;
+  kpiName?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Interface for KPI option in dropdown
+interface KpiOption {
+  id: string;
+  name: string;
+  category: string;
+  target: string;
 }
 
 // Interface for checklist items
@@ -1189,11 +1218,99 @@ function KPIStatus({ status }: { status: 'on-track' | 'at-risk' | 'behind' }) {
   );
 }
 
+// Helper function to determine KPI status based on score percentage
+function getKPIStatus(kpi: ProcessedKPI): 'on-track' | 'at-risk' | 'behind' {
+  const scorePercentage = kpi.score;
+  
+  if (kpi.lowerIsBetter) {
+    // For metrics where lower is better (e.g., default rate)
+    if (kpi.value <= kpi.target) return 'on-track';
+    if (kpi.value <= kpi.target * 1.1) return 'at-risk';
+    return 'behind';
+  }
+  
+  // For metrics where higher is better
+  if (scorePercentage >= 90) return 'on-track';
+  if (scorePercentage >= 70) return 'at-risk';
+  return 'behind';
+}
+
+// Helper function to format KPI value based on format type
+function formatKPIValue(value: number, format: ProcessedKPI['format']): string {
+  switch (format) {
+    case 'currency':
+      return `K${value.toLocaleString()}`;
+    case 'percent':
+      return `${value}%`;
+    case 'rating':
+      return value.toFixed(1);
+    default:
+      return value.toLocaleString();
+  }
+}
+
+// Helper function to format KPI target
+function formatKPITarget(target: number, format: ProcessedKPI['format'], lowerIsBetter: boolean): string {
+  const prefix = lowerIsBetter ? '≤' : '≥';
+  switch (format) {
+    case 'currency':
+      return `${prefix}K${target.toLocaleString()}`;
+    case 'percent':
+      return `${prefix}${target}%`;
+    case 'rating':
+      return `${prefix}${target.toFixed(1)}`;
+    default:
+      return `${prefix}${target.toLocaleString()}`;
+  }
+}
+
 // Main component
 export default function ReviewsPage() {
   const router = useRouter();
-  const { positionName: rawPosition, isLoading, refreshPosition } = useUserPosition();
+  const { user, positionName: rawPosition, isLoading, refreshPosition } = useUserPosition();
   const [config, setConfig] = useState<PositionReviewConfig | null>(null);
+  
+  // Fetch real-time KPI data from API
+  const { processedKPIs, isLoading: kpiLoading, error: kpiError, refresh: refreshKPIs } = useUserKPI();
+  
+  // Digital Sign-Off state
+  const [signature, setSignature] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [signOffStatus, setSignOffStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [signOffError, setSignOffError] = useState<string>('');
+  const [signedAt, setSignedAt] = useState<Date | null>(null);
+
+  // Schedule Review Modal state
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState<boolean>(false);
+  const [scheduleFormData, setScheduleFormData] = useState({
+    reviewType: '',
+    title: '',
+    description: '',
+    scheduledDate: '',
+    scheduledTime: '09:00',
+    assignee: '',
+    priority: 'medium' as 'low' | 'medium' | 'high',
+    sendReminder: true,
+    reminderDaysBefore: 1,
+    kpiId: '',
+  });
+  const [isScheduling, setIsScheduling] = useState<boolean>(false);
+  const [scheduleStatus, setScheduleStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [scheduleError, setScheduleError] = useState<string>('');
+  const [isClosingModal, setIsClosingModal] = useState<boolean>(false);
+
+  // KPI options for dropdown
+  const [kpiOptions, setKpiOptions] = useState<KpiOption[]>([]);
+  const [isLoadingKpis, setIsLoadingKpis] = useState<boolean>(false);
+
+  // Scheduled reviews from API
+  const [scheduledReviews, setScheduledReviews] = useState<ScheduledReview[]>([]);
+  const [pastReviews, setPastReviews] = useState<ScheduledReview[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState<boolean>(false);
+  const [isLoadingPastReviews, setIsLoadingPastReviews] = useState<boolean>(false);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
 
   // Normalize position and set config
   useEffect(() => {
@@ -1203,7 +1320,490 @@ export default function ReviewsPage() {
     }
   }, [rawPosition, isLoading]);
 
-  if (isLoading || !config) {
+  // Fetch scheduled reviews from API
+  const fetchScheduledReviews = async () => {
+    if (!config) return;
+    
+    setIsLoadingReviews(true);
+    try {
+      const response = await fetch(
+        `/api/reviews/schedule?position=${encodeURIComponent(config.position)}&upcoming=true&limit=10`
+      );
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setScheduledReviews(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching scheduled reviews:', error);
+    } finally {
+      setIsLoadingReviews(false);
+    }
+  };
+
+  // Fetch past reviews from API (reviews that have passed their scheduled date)
+  const fetchPastReviews = async () => {
+    if (!config) return;
+    
+    setIsLoadingPastReviews(true);
+    try {
+      // Get current date in YYYY-MM-DD format
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      const response = await fetch(
+        `/api/reviews/schedule?position=${encodeURIComponent(config.position)}&end_date=${todayStr}&limit=20`
+      );
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        // Filter to only include reviews that have passed their scheduled date
+        const now = new Date();
+        const past = result.data.filter((review: ScheduledReview) => 
+          new Date(review.scheduledDateTime) < now
+        );
+        setPastReviews(past);
+      }
+    } catch (error) {
+      console.error('Error fetching past reviews:', error);
+    } finally {
+      setIsLoadingPastReviews(false);
+    }
+  };
+
+  // Fetch scheduled reviews when config is set
+  useEffect(() => {
+    if (config) {
+      fetchScheduledReviews();
+      fetchPastReviews();
+    }
+  }, [config]);
+
+  // Fetch KPI options from API
+  const fetchKpis = async () => {
+    setIsLoadingKpis(true);
+    try {
+      const response = await fetch('/api/kpi/all');
+      
+      if (!response.ok) {
+        console.error('KPI API returned non-OK status:', response.status);
+        setKpiOptions([]);
+        return;
+      }
+      
+      const data = await response.json();
+      
+      // Handle error response
+      if (data.error) {
+        console.error('KPI API returned error:', data.error);
+        setKpiOptions([]);
+        return;
+      }
+      
+      // Handle array response directly (API returns array, not wrapped object)
+      if (Array.isArray(data) && data.length > 0) {
+        // Transform API data to KpiOption format
+        const options: KpiOption[] = data.map((kpi: any) => ({
+          id: String(kpi.id),
+          name: kpi.name || kpi.kpi_name || 'Unnamed KPI',
+          category: kpi.category || 'General',
+          target: kpi.target ? String(kpi.target) : 'N/A',
+        }));
+        setKpiOptions(options);
+        console.log('KPI options loaded:', options.length, 'items');
+      } else if (Array.isArray(data) && data.length === 0) {
+        // Empty array - no KPIs available
+        console.log('KPI API returned empty array');
+        setKpiOptions([]);
+      } else if (data.success && data.data && Array.isArray(data.data)) {
+        // Handle wrapped response format as fallback
+        const options: KpiOption[] = data.data.map((kpi: any) => ({
+          id: String(kpi.id),
+          name: kpi.name || kpi.kpi_name || 'Unnamed KPI',
+          category: kpi.category || 'General',
+          target: kpi.target ? String(kpi.target) : 'N/A',
+        }));
+        setKpiOptions(options);
+        console.log('KPI options loaded (wrapped format):', options.length, 'items');
+      } else {
+        // Unknown response format
+        console.warn('KPI API returned unexpected format:', typeof data, data);
+        setKpiOptions([]);
+      }
+    } catch (error) {
+      console.error('Error fetching KPIs:', error);
+      setKpiOptions([]);
+    } finally {
+      setIsLoadingKpis(false);
+    }
+  };
+
+  // Fetch KPIs when modal opens
+  useEffect(() => {
+    if (isScheduleModalOpen) {
+      fetchKpis();
+    }
+  }, [isScheduleModalOpen]);
+
+  // Open Edit Review Modal
+  const openEditModal = (review: ScheduledReview) => {
+    const scheduledDate = new Date(review.scheduledDateTime);
+    const dateStr = scheduledDate.toISOString().split('T')[0];
+    const timeStr = scheduledDate.toTimeString().slice(0, 5);
+    
+    setScheduleFormData({
+      reviewType: review.reviewType,
+      title: review.title,
+      description: review.description || '',
+      scheduledDate: dateStr,
+      scheduledTime: timeStr,
+      assignee: review.assignee,
+      priority: review.priority,
+      sendReminder: review.sendReminder,
+      reminderDaysBefore: review.reminderDaysBefore,
+      kpiId: review.kpiId || '',
+    });
+    setEditingReviewId(review.id);
+    setIsEditMode(true);
+    setScheduleStatus('idle');
+    setScheduleError('');
+    setIsScheduleModalOpen(true);
+  };
+
+  // Handle Update Review submission
+  const handleUpdateReview = async () => {
+    if (!editingReviewId) return;
+
+    // Validate required fields
+    if (!scheduleFormData.title.trim()) {
+      setScheduleError('Please enter a review title.');
+      setScheduleStatus('error');
+      return;
+    }
+    if (!scheduleFormData.scheduledDate) {
+      setScheduleError('Please select a scheduled date.');
+      setScheduleStatus('error');
+      return;
+    }
+
+    setIsScheduling(true);
+    setScheduleStatus('idle');
+    setScheduleError('');
+
+    try {
+      const response = await fetch(`/api/reviews/schedule/${editingReviewId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: scheduleFormData.title.trim(),
+          description: scheduleFormData.description.trim(),
+          scheduledDate: scheduleFormData.scheduledDate,
+          scheduledTime: scheduleFormData.scheduledTime,
+          assignee: scheduleFormData.assignee,
+          priority: scheduleFormData.priority,
+          sendReminder: scheduleFormData.sendReminder,
+          reminderDaysBefore: scheduleFormData.reminderDaysBefore,
+          kpiId: scheduleFormData.kpiId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to update review');
+      }
+
+      setScheduleStatus('success');
+      
+      // Close modal after a short delay on success
+      setTimeout(() => {
+        closeScheduleModal();
+        fetchScheduledReviews();
+      }, 1500);
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Failed to update review. Please try again.';
+      setScheduleError(errorMessage);
+      setScheduleStatus('error');
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  // Handle Delete Review
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm('Are you sure you want to cancel this scheduled review?')) return;
+    
+    setDeletingReviewId(reviewId);
+    try {
+      const response = await fetch(`/api/reviews/schedule/${reviewId}`, {
+        method: 'DELETE',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to cancel review');
+      }
+
+      // Refresh the list
+      fetchScheduledReviews();
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      alert('Failed to cancel the review. Please try again.');
+    } finally {
+      setDeletingReviewId(null);
+    }
+  };
+
+  // Handle Status Update
+  const handleStatusUpdate = async (reviewId: string, newStatus: 'scheduled' | 'in-progress' | 'completed' | 'cancelled') => {
+    try {
+      const response = await fetch(`/api/reviews/schedule/${reviewId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to update status');
+      }
+
+      // Refresh the list
+      fetchScheduledReviews();
+    } catch (error) {
+      console.error('Error updating review status:', error);
+      alert('Failed to update the review status. Please try again.');
+    }
+  };
+
+  // Handle Digital Sign-Off submission
+  const handleSignOff = async () => {
+    if (!config) return;
+    
+    // Reset previous states
+    setSignOffError('');
+    setSignOffStatus('idle');
+    
+    // Validate signature
+    const trimmedSignature = signature.trim();
+    if (!trimmedSignature) {
+      setSignOffError('Please enter your name to sign.');
+      setSignOffStatus('error');
+      return;
+    }
+    
+    // Check if signature matches the display name (case-insensitive comparison)
+    const expectedName = config.displayName.toLowerCase();
+    const providedName = trimmedSignature.toLowerCase();
+    
+    // Allow partial match (first name or last name) or full match
+    const nameParts = expectedName.split(' ');
+    const isValidSignature = 
+      providedName === expectedName || 
+      nameParts.some(part => part.length > 2 && providedName.includes(part.toLowerCase()));
+    
+    if (!isValidSignature) {
+      setSignOffError(`Signature must match your position name: ${config.displayName}`);
+      setSignOffStatus('error');
+      return;
+    }
+    
+    // Submit the sign-off
+    setIsSubmitting(true);
+    
+    try {
+      // Get user info for the API call
+      const userId = user?.id;
+      const userEmail = user?.email;
+      const userName = user ? `${user.first_name} ${user.last_name}`.trim() : undefined;
+      const officeId = user?.office_id;
+
+      // Call the sign-off API endpoint
+      const response = await fetch('/api/reviews/signoff', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({
+          position: config.position,
+          signature: trimmedSignature,
+          reviewType: config.reviewType,
+          userId,
+          userEmail,
+          userName,
+          officeId,
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to submit signature');
+      }
+      
+      // Use the signedAt timestamp from the server response
+      setSignedAt(new Date(result.data.signedAt));
+      setSignOffStatus('success');
+      setSignature(trimmedSignature);
+    } catch (error) {
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to submit signature. Please try again.';
+      setSignOffError(errorMessage);
+      setSignOffStatus('error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle signature input change
+  const handleSignatureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSignature(e.target.value);
+    if (signOffStatus === 'error') {
+      setSignOffStatus('idle');
+      setSignOffError('');
+    }
+  };
+
+  // Open Schedule Review Modal
+  const openScheduleModal = () => {
+    if (!config) return;
+    
+    // Pre-populate form with default values
+    setScheduleFormData({
+      reviewType: config.reviewType,
+      title: '',
+      description: '',
+      scheduledDate: '',
+      scheduledTime: '09:00',
+      assignee: config.displayName,
+      priority: 'medium',
+      sendReminder: true,
+      reminderDaysBefore: 1,
+      kpiId: '',
+    });
+    setEditingReviewId(null);
+    setIsEditMode(false);
+    setScheduleStatus('idle');
+    setScheduleError('');
+    setIsScheduleModalOpen(true);
+  };
+
+  // Close Schedule Review Modal
+  const closeScheduleModal = () => {
+    setIsClosingModal(true);
+    setTimeout(() => {
+      setIsScheduleModalOpen(false);
+      setIsEditMode(false);
+      setEditingReviewId(null);
+      setScheduleStatus('idle');
+      setScheduleError('');
+      setIsClosingModal(false);
+    }, 300);
+  };
+
+  // Handle schedule form input changes
+  const handleScheduleFormChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
+    setScheduleFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  // Handle Schedule Review submission
+  const handleScheduleReview = async () => {
+    if (!config) return;
+
+    // Validate required fields
+    if (!scheduleFormData.title.trim()) {
+      setScheduleError('Please enter a review title.');
+      setScheduleStatus('error');
+      return;
+    }
+    if (!scheduleFormData.scheduledDate) {
+      setScheduleError('Please select a scheduled date.');
+      setScheduleStatus('error');
+      return;
+    }
+
+    setIsScheduling(true);
+    setScheduleStatus('idle');
+    setScheduleError('');
+
+    try {
+      // Get user info for the API call
+      const userId = user?.id;
+      const userEmail = user?.email;
+      const userName = user ? `${user.first_name} ${user.last_name}`.trim() : undefined;
+      const officeId = user?.office_id;
+
+      // Call the schedule review API endpoint
+      const response = await fetch('/api/reviews/schedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          position: config.position,
+          reviewType: scheduleFormData.reviewType,
+          title: scheduleFormData.title.trim(),
+          description: scheduleFormData.description.trim(),
+          scheduledDate: scheduleFormData.scheduledDate,
+          scheduledTime: scheduleFormData.scheduledTime,
+          assignee: scheduleFormData.assignee,
+          priority: scheduleFormData.priority,
+          sendReminder: scheduleFormData.sendReminder,
+          reminderDaysBefore: scheduleFormData.reminderDaysBefore,
+          kpiId: scheduleFormData.kpiId,
+          userId,
+          userEmail,
+          userName,
+          officeId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to schedule review');
+      }
+
+      setScheduleStatus('success');
+      
+      // Close modal after a short delay on success
+      setTimeout(() => {
+        closeScheduleModal();
+        // Refresh scheduled reviews list
+        fetchScheduledReviews();
+      }, 1500);
+    } catch (error) {
+      const errorMessage = error instanceof Error
+        ? error.message
+        : 'Failed to schedule review. Please try again.';
+      setScheduleError(errorMessage);
+      setScheduleStatus('error');
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  // Determine if we should show loading state
+  const isPageLoading = isLoading || !config;
+
+  if (isPageLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
@@ -1213,6 +1813,9 @@ export default function ReviewsPage() {
       </div>
     );
   }
+
+  // Use dynamic KPIs if available, otherwise fall back to static config KPIs
+  const displayKPIs = processedKPIs.length > 0 ? processedKPIs : null;
 
   return (
     <div className="space-y-6">
@@ -1233,12 +1836,18 @@ export default function ReviewsPage() {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => refreshPosition(true)}
+            onClick={() => {
+              refreshPosition(true);
+              refreshKPIs();
+            }}
             className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
           >
             Refresh Data
           </button>
-          <button className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors">
+          <button 
+            onClick={openScheduleModal}
+            className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors"
+          >
             Schedule Review
           </button>
         </div>
@@ -1277,66 +1886,168 @@ export default function ReviewsPage() {
 
       {/* KPI Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {config.kpis.map((kpi, idx) => (
-          <div
-            key={idx}
-            className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                {kpi.name}
-              </p>
-              <KPIStatus status={kpi.status} />
-            </div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{kpi.value}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Target: {kpi.target}</p>
+        {displayKPIs ? (
+          // Dynamic KPIs from API
+          displayKPIs.map((kpi, idx) => {
+            const status = getKPIStatus(kpi);
+            return (
+              <div
+                key={idx}
+                className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    {kpi.name}
+                  </p>
+                  <KPIStatus status={status} />
+                </div>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {formatKPIValue(kpi.value, kpi.format)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Target: {formatKPITarget(kpi.target, kpi.format, kpi.lowerIsBetter)}
+                </p>
+              </div>
+            );
+          })
+        ) : (
+          // No KPIs available
+          <div className="col-span-full text-center py-8">
+            <p className="text-gray-500 dark:text-gray-400">No KPI data available.</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+              KPIs will appear here once they are configured for your position.
+            </p>
           </div>
-        ))}
+        )}
       </div>
+
+      {/* KPI Loading/Error State */}
+      {kpiLoading && (
+        <div className="text-center py-2">
+          <p className="text-sm text-gray-500">Loading KPI data...</p>
+        </div>
+      )}
+      {kpiError && (
+        <div className="text-center py-2">
+          <p className="text-sm text-red-500">Error loading KPIs: {kpiError}</p>
+        </div>
+      )}
 
       {/* Upcoming Reviews */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Upcoming Reviews
           </h3>
+          {isLoadingReviews && (
+            <span className="text-sm text-gray-500">Loading...</span>
+          )}
         </div>
         <div className="p-6">
           <div className="space-y-4">
-            {config.upcomingReviews.map((review) => (
-              <div
-                key={review.id}
-                className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-brand-500 transition-colors cursor-pointer"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                        {review.type}
-                      </span>
-                      <StatusBadge status={review.status} />
+            {/* API-fetched scheduled reviews */}
+            {scheduledReviews.length > 0 && scheduledReviews.map((review) => {
+              const scheduledDate = new Date(review.scheduledDateTime);
+              const isDeleting = deletingReviewId === review.id;
+              
+              return (
+                <div
+                  key={review.id}
+                  className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-brand-500 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded">
+                          {review.reviewType}
+                        </span>
+                        <StatusBadge status={review.status} />
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                          review.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                          review.priority === 'low' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
+                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        }`}>
+                          {review.priority}
+                        </span>
+                      </div>
+                      <h4 className="font-medium text-gray-900 dark:text-white">
+                        {review.title}
+                      </h4>
+                      {review.description && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          {review.description}
+                        </p>
+                      )}
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Assigned to: {review.assignee} • Scheduled: {scheduledDate.toLocaleDateString()} at {scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      {review.sendReminder && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          🔔 Reminder {review.reminderDaysBefore} day(s) before
+                        </p>
+                      )}
                     </div>
-                    <h4 className="font-medium text-gray-900 dark:text-white">
-                      {review.title}
-                    </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Assigned to: {review.assignee} • Due: {review.dueDate}
-                    </p>
-                  </div>
-                  <div className="ml-4">
-                    <div className="w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-brand-500 rounded-full transition-all duration-300"
-                        style={{ width: `${review.progress}%` }}
-                      />
+                    <div className="ml-4 flex items-center gap-2">
+                      {/* Status Update Dropdown */}
+                      <select
+                        value={review.status}
+                        onChange={(e) => handleStatusUpdate(review.id, e.target.value as any)}
+                        className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                      >
+                        <option value="scheduled">Scheduled</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                      
+                      {/* Edit Button */}
+                      <button
+                        onClick={() => openEditModal(review)}
+                        disabled={isDeleting}
+                        className="p-1.5 text-gray-500 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded transition-colors disabled:opacity-50"
+                        title="Edit review"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => handleDeleteReview(review.id)}
+                        disabled={isDeleting}
+                        className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors disabled:opacity-50"
+                        title="Cancel review"
+                      >
+                        {isDeleting ? (
+                          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
+                      </button>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">
-                      {review.progress}% complete
-                    </p>
                   </div>
                 </div>
+              );
+            })}
+            
+            {/* Empty state */}
+            {scheduledReviews.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">No upcoming reviews scheduled.</p>
+                <button
+                  onClick={openScheduleModal}
+                  className="mt-2 text-brand-500 hover:text-brand-600 text-sm font-medium"
+                >
+                  Schedule your first review
+                </button>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
@@ -1353,75 +2064,171 @@ export default function ReviewsPage() {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {config.checklistItems.map((item) => (
-              <div
-                key={item.id}
-                className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                  item.completed
-                    ? 'bg-green-50 dark:bg-green-900/20'
-                    : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={item.completed}
-                  onChange={() => {}}
-                  className="w-5 h-5 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
-                />
-                <div className="flex-1">
-                  <span className={`text-sm ${item.completed ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}`}>
-                    {item.title}
-                  </span>
-                  {item.category && (
-                    <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded">
-                      {item.category}
-                    </span>
-                  )}
-                </div>
-                {item.completed && (
-                  <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded">
-                    Complete
-                  </span>
-                )}
+            {displayKPIs ? (
+              // Dynamic KPIs from API as checklist items
+              displayKPIs.map((kpi, idx) => {
+                const status = getKPIStatus(kpi);
+                const isCompleted = status === 'on-track';
+                return (
+                  <div
+                    key={idx}
+                    className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                      isCompleted
+                        ? 'bg-green-50 dark:bg-green-900/20'
+                        : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isCompleted}
+                      onChange={() => {}}
+                      className="w-5 h-5 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                    />
+                    <div className="flex-1">
+                      <span className={`text-sm ${isCompleted ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {kpi.name} ({formatKPIValue(kpi.value, kpi.format)} / {formatKPITarget(kpi.target, kpi.format, kpi.lowerIsBetter)})
+                      </span>
+                      {kpi.category && (
+                        <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded">
+                          {kpi.category}
+                        </span>
+                      )}
+                    </div>
+                    {isCompleted && (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded">
+                        Complete
+                      </span>
+                    )}
+                    {!isCompleted && status === 'at-risk' && (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800 rounded">
+                        At Risk
+                      </span>
+                    )}
+                    {!isCompleted && status === 'behind' && (
+                      <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded">
+                        Behind
+                      </span>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              // No KPIs available
+              <div className="col-span-full text-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">No checklist items available.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                  Checklist items will appear here once KPIs are configured for your position.
+                </p>
               </div>
-            ))}
+            )}
           </div>
 
           {/* Digital Sign-off */}
           <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3">
-              Digital Sign-Off
-            </h4>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Electronic Signature
-                </label>
-                <input
-                  type="text"
-                  placeholder={`Type your name to sign as ${config.displayName}`}
-                  className="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800"
-                />
-              </div>
-              <div className="flex items-end">
-                <button className="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-sm font-medium transition-colors">
-                  Sign & Submit
-                </button>
-              </div>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-gray-900 dark:text-white">
+                Digital Sign-Off
+              </h4>
+              {signOffStatus === 'success' && (
+                <span className="px-3 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 rounded-full flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Signed
+                </span>
+              )}
             </div>
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              Electronic acknowledgment required within 24 hours
-            </p>
+            
+            {signOffStatus === 'success' ? (
+              // Success state - show confirmation
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-green-800 dark:text-green-300">
+                      Review Successfully Signed
+                    </p>
+                    <p className="text-sm text-green-700 dark:text-green-400 mt-1">
+                      Signed by <span className="font-semibold">{signature}</span> on {signedAt?.toLocaleDateString()} at {signedAt?.toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Input state - show form
+              <>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <label htmlFor="electronic-signature" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Electronic Signature
+                    </label>
+                    <input
+                      id="electronic-signature"
+                      type="text"
+                      value={signature}
+                      onChange={handleSignatureChange}
+                      placeholder={`Type your name to sign as ${config.displayName}`}
+                      disabled={isSubmitting}
+                      className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 transition-colors ${
+                        signOffStatus === 'error' 
+                          ? 'border-red-300 dark:border-red-700 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-200 dark:border-gray-700 focus:ring-brand-500 focus:border-brand-500'
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button 
+                      onClick={handleSignOff}
+                      disabled={isSubmitting || !signature.trim()}
+                      className="px-4 py-2 bg-brand-500 hover:bg-brand-600 disabled:bg-brand-300 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Signing...
+                        </>
+                      ) : (
+                        'Sign & Submit'
+                      )}
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Error message */}
+                {signOffStatus === 'error' && signOffError && (
+                  <div className="mt-2 flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {signOffError}
+                  </div>
+                )}
+                
+                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  Electronic acknowledgment required within 24 hours
+                </p>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {/* Review History */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Review History
           </h3>
+          {isLoadingPastReviews && (
+            <span className="text-sm text-gray-500">Loading...</span>
+          )}
         </div>
         <div className="p-6">
           <div className="overflow-x-auto">
@@ -1431,37 +2238,354 @@ export default function ReviewsPage() {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Review</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Date</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Score</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Priority</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">January {config.reviewType}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">2024-01-31</td>
-                  <td className="px-4 py-3"><span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Completed</span></td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">88/100</td>
-                  <td className="px-4 py-3"><button className="text-brand-500 hover:underline text-sm">View</button></td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">December {config.reviewType}</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">2023-12-31</td>
-                  <td className="px-4 py-3"><span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Completed</span></td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">85/100</td>
-                  <td className="px-4 py-3"><button className="text-brand-500 hover:underline text-sm">View</button></td>
-                </tr>
-                <tr>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">Q4 Progression Assessment</td>
-                  <td className="px-4 py-3 text-sm text-gray-500">2023-10-31</td>
-                  <td className="px-4 py-3"><span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Completed</span></td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">82/100</td>
-                  <td className="px-4 py-3"><button className="text-brand-500 hover:underline text-sm">View</button></td>
-                </tr>
+                {pastReviews.length > 0 ? (
+                  pastReviews.map((review) => {
+                    const scheduledDate = new Date(review.scheduledDateTime);
+                    return (
+                      <tr key={review.id}>
+                        <td className="px-4 py-3">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{review.title}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{review.reviewType}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          {scheduledDate.toLocaleDateString()} at {scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            review.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            review.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                            review.status === 'in-progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                          }`}>
+                            {review.status.charAt(0).toUpperCase() + review.status.slice(1).replace('-', ' ')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 text-xs font-medium rounded ${
+                            review.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                            review.priority === 'low' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
+                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
+                            {review.priority}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button 
+                            onClick={() => openEditModal(review)}
+                            className="text-brand-500 hover:underline text-sm"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                      No past reviews found. Reviews will appear here after their scheduled date has passed.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </div>
       </div>
+
+      {/* Schedule Review Modal */}
+      {isScheduleModalOpen && (
+        <div className="fixed inset-0 z-[999999] flex items-end justify-center sm:items-center">
+          {/* Backdrop */}
+          <div 
+            className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${isClosingModal ? 'opacity-0' : 'opacity-100'}`}
+            onClick={closeScheduleModal}
+            aria-hidden="true"
+          ></div>
+
+          {/* Modal panel - Bottom sheet on mobile, centered on desktop */}
+          <div 
+            className={`relative p-4 w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-xl shadow-xl transform transition-all duration-300 ${
+              isClosingModal 
+                ? 'translate-y-full sm:translate-y-0 sm:scale-95 sm:opacity-0' 
+                : 'translate-y-0 sm:translate-y-0 sm:scale-100 sm:opacity-100'
+            }`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="schedule-review-title"
+          >
+            {/* Drag handle for mobile */}
+            <div className="flex justify-center pt-3 sm:hidden">
+              <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+            </div>
+              {/* Modal header */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 id="schedule-review-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {isEditMode ? 'Edit Review' : 'Schedule a Review'}
+                </h3>
+                <button
+                  onClick={closeScheduleModal}
+                  className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Success state */}
+              {scheduleStatus === 'success' ? (
+                <div className="py-8 text-center">
+                  <div className="mx-auto flex items-center justify-center w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
+                    <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                    {isEditMode ? 'Review Updated Successfully' : 'Review Scheduled Successfully'}
+                  </h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {isEditMode 
+                      ? 'The review has been updated with your changes.'
+                      : 'The review has been scheduled and reminders will be sent accordingly.'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Form */}
+                  <div className="space-y-4">
+                    {/* Review Type */}
+                    <div>
+                      <label htmlFor="reviewType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Review Type
+                      </label>
+                      <input
+                        type="text"
+                        id="reviewType"
+                        name="reviewType"
+                        value={scheduleFormData.reviewType}
+                        onChange={handleScheduleFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-brand-500 focus:border-brand-500"
+                        placeholder="e.g., Monthly Performance Review"
+                      />
+                    </div>
+
+                    {/* Title */}
+                    <div>
+                      <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Review Title <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="title"
+                        name="title"
+                        value={scheduleFormData.title}
+                        onChange={handleScheduleFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-brand-500 focus:border-brand-500"
+                        placeholder="e.g., Q1 Performance Assessment"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div>
+                      <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Description
+                      </label>
+                      <textarea
+                        id="description"
+                        name="description"
+                        rows={3}
+                        value={scheduleFormData.description}
+                        onChange={handleScheduleFormChange}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-brand-500 focus:border-brand-500"
+                        placeholder="Optional description or agenda for the review..."
+                      />
+                    </div>
+
+                    {/* Related KPI */}
+                    <div>
+                      <label htmlFor="kpiId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Related KPI (Optional)
+                      </label>
+                      {isLoadingKpis ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 py-2">
+                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Loading KPIs...
+                        </div>
+                      ) : kpiOptions.length > 0 ? (
+                        <select
+                          id="kpiId"
+                          name="kpiId"
+                          value={scheduleFormData.kpiId}
+                          onChange={handleScheduleFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-brand-500 focus:border-brand-500"
+                        >
+                          <option value="">Select a KPI...</option>
+                          {kpiOptions.map((kpi) => (
+                            <option key={kpi.id} value={kpi.id}>
+                              {kpi.name} ({kpi.category})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
+                          No KPIs available. Add KPIs in KPI Settings.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Date and Time */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          id="scheduledDate"
+                          name="scheduledDate"
+                          value={scheduleFormData.scheduledDate}
+                          onChange={handleScheduleFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-brand-500 focus:border-brand-500"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="scheduledTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Time
+                        </label>
+                        <input
+                          type="time"
+                          id="scheduledTime"
+                          name="scheduledTime"
+                          value={scheduleFormData.scheduledTime}
+                          onChange={handleScheduleFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-brand-500 focus:border-brand-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Assignee and Priority */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="assignee" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Assignee
+                        </label>
+                        <input
+                          type="text"
+                          id="assignee"
+                          name="assignee"
+                          value={scheduleFormData.assignee}
+                          onChange={handleScheduleFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-brand-500 focus:border-brand-500"
+                          placeholder="Who will conduct the review"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Priority
+                        </label>
+                        <select
+                          id="priority"
+                          name="priority"
+                          value={scheduleFormData.priority}
+                          onChange={handleScheduleFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-brand-500 focus:border-brand-500"
+                        >
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Reminder Settings */}
+                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <div className="flex items-center mb-2">
+                        <input
+                          type="checkbox"
+                          id="sendReminder"
+                          name="sendReminder"
+                          checked={scheduleFormData.sendReminder}
+                          onChange={handleScheduleFormChange}
+                          className="w-4 h-4 text-brand-500 border-gray-300 rounded focus:ring-brand-500"
+                        />
+                        <label htmlFor="sendReminder" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                          Send reminder before review
+                        </label>
+                      </div>
+                      {scheduleFormData.sendReminder && (
+                        <div className="ml-6">
+                          <label htmlFor="reminderDaysBefore" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                            Days before review
+                          </label>
+                          <input
+                            type="number"
+                            id="reminderDaysBefore"
+                            name="reminderDaysBefore"
+                            min={1}
+                            max={30}
+                            value={scheduleFormData.reminderDaysBefore}
+                            onChange={handleScheduleFormChange}
+                            className="w-20 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-brand-500 focus:border-brand-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Error message */}
+                    {scheduleStatus === 'error' && scheduleError && (
+                      <div className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {scheduleError}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Modal footer */}
+                  <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={closeScheduleModal}
+                      disabled={isScheduling}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={isEditMode ? handleUpdateReview : handleScheduleReview}
+                      disabled={isScheduling}
+                      className="px-4 py-2 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {isScheduling ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          {isEditMode ? 'Updating...' : 'Scheduling...'}
+                        </>
+                      ) : (
+                        isEditMode ? 'Update Review' : 'Schedule Review'
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+      )}
     </div>
   );
 }

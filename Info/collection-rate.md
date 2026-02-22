@@ -56,4 +56,6 @@ Calculates collection rate using (Collected / Expected) × 100
 Compares against configurable target rate (default 93%)
 Provides breakdown by component (principal, interest, fees, penalty)
 Includes daily collection trends
+
+
 Shows top performing loan officers

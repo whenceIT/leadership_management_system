@@ -20,6 +20,8 @@ Target achievement percentage with status indicator (✓ On Track / ⚠ At Risk 
 Projection data (days remaining, required daily rate)
 Breakdown by loan product and loan officer
 Daily disbursement trend
+
+
 Status Indicators:
 
 Status	Condition

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   DashboardBase, 
   KPICard, 
@@ -11,8 +11,67 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import ProvincialDataService, { 
+  BranchPerformance, 
+  ProvinceSummary,
+  ProvincialPerformanceData 
+} from '@/services/ProvincialDataService';
+import { useUserPosition } from '@/hooks/useUserPosition';
+import { useOffice } from '@/hooks/useOffice';
 
 export default function ProvincialManagerDashboard() {
+  const { user, positionName, isLoading: isPositionLoading } = useUserPosition();
+  const { getOffice } = useOffice();
+  const [performanceData, setPerformanceData] = useState<ProvincialPerformanceData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get province ID from user's office
+  const getProvinceIdFromUser = (): number => {
+    if (user?.office_id) {
+      const office = getOffice(user.office_id);
+      if (office?.provinceId) {
+        return parseInt(office.provinceId, 10);
+      }
+    }
+    return 1; // Default to Lusaka Province
+  };
+
+  // Fetch provincial performance data
+  useEffect(() => {
+    const fetchPerformanceData = async () => {
+      if (isPositionLoading) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const service = ProvincialDataService.getInstance();
+        
+        // Get province ID from user's office
+        const targetProvinceId = getProvinceIdFromUser();
+        
+        const data = await service.fetchProvincialPerformance({
+          province_id: targetProvinceId,
+          include_details: true,
+        });
+        
+        if (data) {
+          setPerformanceData(data);
+        } else {
+          setError('Unable to load provincial performance data');
+        }
+      } catch (err) {
+        console.error('Error fetching provincial performance:', err);
+        setError('Failed to load performance data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPerformanceData();
+  }, [user, isPositionLoading]);
+
   const jobInfo = {
     department: "Senior Operations & Strategic Leadership",
     reportsTo: "Technical Director / Executive Committee",
@@ -22,7 +81,15 @@ export default function ProvincialManagerDashboard() {
 
   const jobPurpose = "The Provincial Manager serves as the Strategic Growth Driver & Portfolio Architect for the province/region. This role focuses on strategic oversight, provincial portfolio health, cross-district synergy, market innovation, and long-term value creation aligned with the $100M valuation target.";
 
-  const kpis = [
+  // Build KPIs from actual data if available
+  const kpis = performanceData ? [
+    { name: "Provincial Net Contribution Growth", baseline: "-", target: "+25% YoY", weight: "25%" },
+    { name: "Long-Term Delinquency Reduction", baseline: "-", target: "-5 pp", weight: "20%" },
+    { name: "New Product/Channel Revenue", baseline: "-", target: "≥K500K/yr", weight: "15%" },
+    { name: "Strategic Partnership Revenue", baseline: "-", target: "≥K1M/yr", weight: "15%" },
+    { name: "Cost-to-Income Ratio", baseline: "50%", target: "≤45%", weight: "10%" },
+    { name: "District Manager Development", baseline: "-", target: "≥2 prom/yr", weight: "10%" }
+  ] : [
     { name: "Provincial Net Contribution Growth", baseline: "-", target: "+25% YoY", weight: "25%" },
     { name: "Long-Term Delinquency Reduction", baseline: "-", target: "-5 pp", weight: "20%" },
     { name: "New Product/Channel Revenue", baseline: "-", target: "≥K500K/yr", weight: "15%" },
@@ -30,6 +97,54 @@ export default function ProvincialManagerDashboard() {
     { name: "Cost-to-Income Ratio", baseline: "50%", target: "≤45%", weight: "10%" },
     { name: "District Manager Development", baseline: "-", target: "≥2 prom/yr", weight: "10%" }
   ];
+
+  // Get health status styling
+  const getHealthStatusStyle = (status: 'excellent' | 'good' | 'needs_focus' | 'critical') => {
+    switch (status) {
+      case 'excellent':
+        return {
+          bg: 'bg-green-50 dark:bg-green-900/20',
+          text: 'text-green-700 dark:text-green-300',
+          badge: 'bg-green-200 text-green-800',
+          label: 'Excellent'
+        };
+      case 'good':
+        return {
+          bg: 'bg-green-50 dark:bg-green-900/20',
+          text: 'text-green-700 dark:text-green-300',
+          badge: 'bg-green-200 text-green-800',
+          label: 'Good'
+        };
+      case 'needs_focus':
+        return {
+          bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+          text: 'text-yellow-700 dark:text-yellow-300',
+          badge: 'bg-yellow-200 text-yellow-800',
+          label: 'Needs Focus'
+        };
+      case 'critical':
+        return {
+          bg: 'bg-red-50 dark:bg-red-900/20',
+          text: 'text-red-700 dark:text-red-300',
+          badge: 'bg-red-200 text-red-800',
+          label: 'Critical'
+        };
+    }
+  };
+
+  // Get contribution color based on value
+  const getContributionColor = (value: number, avg: number) => {
+    if (value >= avg * 1.2) return 'text-green-600';
+    if (value >= avg) return 'text-green-600';
+    if (value >= avg * 0.8) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  // Calculate average contribution for comparison
+  const getAverageContribution = (branches: BranchPerformance[]): number => {
+    if (branches.length === 0) return 0;
+    return branches.reduce((sum, b) => sum + b.net_contribution_value, 0) / branches.length;
+  };
 
   return (
     <DashboardBase
@@ -44,13 +159,26 @@ export default function ProvincialManagerDashboard() {
         kpis={kpis}
       />
 
+      {isLoading && (
+        <div className="flex items-center justify-center h-32 mt-6">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
+          <span className="ml-3 text-gray-500">Loading performance data...</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+          <p className="text-red-700 dark:text-red-300">{error}</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-12 gap-4 md:gap-6 mt-6">
-        {/* KPI Cards */}
+        {/* KPI Cards - Use actual data if available */}
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="Provincial Net Contribution"
-            value="K2.8M"
-            change="+18% from target"
+            value={performanceData?.province_summary.formatted_net_contribution || "K2.8M"}
+            change={performanceData ? `${performanceData.province_summary.total_branches} branches` : "+18% from target"}
             changeType="positive"
             icon={
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -63,8 +191,8 @@ export default function ProvincialManagerDashboard() {
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="Provincial Default Rate"
-            value="2.4%"
-            change="-0.6% improvement"
+            value={performanceData ? `${performanceData.province_summary.average_par_rate}%` : "2.4%"}
+            change={performanceData ? `PAR across ${performanceData.province_summary.total_branches} branches` : "-0.6% improvement"}
             changeType="positive"
             icon={
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -76,9 +204,9 @@ export default function ProvincialManagerDashboard() {
 
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
-            title="Active Districts"
-            value="5"
-            change="All operational"
+            title="Active Branches"
+            value={performanceData ? String(performanceData.province_summary.active_branches) : "5"}
+            change={performanceData ? `${performanceData.province_summary.total_staff} staff` : "All operational"}
             changeType="neutral"
             icon={
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -90,9 +218,9 @@ export default function ProvincialManagerDashboard() {
 
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
-            title="Strategic Partnerships"
-            value="8"
-            change="K2.1M revenue"
+            title="Collection Rate"
+            value={performanceData ? `${performanceData.province_summary.average_collection_rate}%` : "92.5%"}
+            change={performanceData ? `${performanceData.province_summary.total_active_loans} active loans` : "K2.1M revenue"}
             changeType="positive"
             icon={
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -102,36 +230,58 @@ export default function ProvincialManagerDashboard() {
           />
         </div>
 
-        {/* District Performance Overview */}
+        {/* Branch Performance Overview - Dynamic from API */}
         <div className="col-span-12">
-          <CollapsibleCard title="District Performance Overview">
-            <div className="grid grid-cols-5 gap-4">
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">District A</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">K850K</p>
-                <p className="text-xs text-gray-500">Net Contribution</p>
+          <CollapsibleCard title="Branch Performance Overview">
+            {performanceData && performanceData.branches.length > 0 ? (
+              <div className={`grid grid-cols-${Math.min(performanceData.branches.length, 5)} gap-4`}>
+                {performanceData.branches.slice(0, 5).map((branch) => {
+                  const avgContribution = getAverageContribution(performanceData.branches);
+                  const contributionColor = getContributionColor(branch.net_contribution_value, avgContribution);
+                  
+                  return (
+                    <div key={branch.branch_id} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{branch.branch_name}</p>
+                      <p className={`text-2xl font-bold ${contributionColor} mt-1`}>{branch.net_contribution}</p>
+                      <p className="text-xs text-gray-500">Net Contribution</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-xs text-gray-400">PAR: {branch.par.rate}%</span>
+                        <span className="text-xs text-gray-400">•</span>
+                        <span className="text-xs text-gray-400">Col: {branch.collections.rate}%</span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">District B</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">K720K</p>
-                <p className="text-xs text-gray-500">Net Contribution</p>
+            ) : (
+              <div className="grid grid-cols-5 gap-4">
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch A</p>
+                  <p className="text-2xl font-bold text-green-600 mt-1">K850K</p>
+                  <p className="text-xs text-gray-500">Net Contribution</p>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch B</p>
+                  <p className="text-2xl font-bold text-green-600 mt-1">K720K</p>
+                  <p className="text-xs text-gray-500">Net Contribution</p>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch C</p>
+                  <p className="text-2xl font-bold text-yellow-600 mt-1">K580K</p>
+                  <p className="text-xs text-gray-500">Net Contribution</p>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch D</p>
+                  <p className="text-2xl font-bold text-green-600 mt-1">K690K</p>
+                  <p className="text-xs text-gray-500">Net Contribution</p>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch E</p>
+                  <p className="text-2xl font-bold text-green-600 mt-1">K760K</p>
+                  <p className="text-xs text-gray-500">Net Contribution</p>
+                </div>
               </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">District C</p>
-                <p className="text-2xl font-bold text-yellow-600 mt-1">K580K</p>
-                <p className="text-xs text-gray-500">Net Contribution</p>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">District D</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">K690K</p>
-                <p className="text-xs text-gray-500">Net Contribution</p>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">District E</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">K760K</p>
-                <p className="text-xs text-gray-500">Net Contribution</p>
-              </div>
-            </div>
+            )}
           </CollapsibleCard>
         </div>
 
@@ -139,19 +289,33 @@ export default function ProvincialManagerDashboard() {
         <div className="col-span-12 lg:col-span-8">
           <CollapsibleCard title="Strategic Priority Items">
             <div className="space-y-4">
-              <AlertCard
-                title="District C Performance Intervention"
-                message="District C requires strategic intervention. Consider resource reallocation."
-                type="warning"
-                action={
-                  <button className="text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:underline">
-                    Review Intervention Plan →
-                  </button>
-                }
-              />
+              {performanceData && performanceData.branches.some(b => b.par.rate > 5) && (
+                <AlertCard
+                  title="High PAR Rate Alert"
+                  message={`Some branches have PAR rates exceeding 5%. Immediate attention required.`}
+                  type="warning"
+                  action={
+                    <button className="text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:underline">
+                      Review PAR Report →
+                    </button>
+                  }
+                />
+              )}
+              {performanceData && performanceData.branches.some(b => b.collections.rate < 90) && (
+                <AlertCard
+                  title="Collection Performance Concern"
+                  message="Some branches are below 90% collection rate. Consider intervention."
+                  type="warning"
+                  action={
+                    <button className="text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:underline">
+                      Review Collection Strategy →
+                    </button>
+                  }
+                />
+              )}
               <AlertCard
                 title="New Market Opportunity"
-                message="Expansion opportunity identified in District D rural areas."
+                message="Expansion opportunity identified in rural areas."
                 type="info"
                 action={
                   <button className="text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline">
@@ -163,31 +327,48 @@ export default function ProvincialManagerDashboard() {
           </CollapsibleCard>
         </div>
 
-        {/* Provincial Health */}
+        {/* Provincial Health - Dynamic from API */}
         <div className="col-span-12 lg:col-span-4">
           <CollapsibleCard title="Provincial Health Indicators">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">District A</span>
-                <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Excellent</span>
+            {performanceData && performanceData.branches.length > 0 ? (
+              <div className="space-y-3">
+                {performanceData.branches.map((branch) => {
+                  const service = ProvincialDataService.getInstance();
+                  const healthStatus = service.getBranchHealthStatus(branch);
+                  const statusStyle = getHealthStatusStyle(healthStatus);
+                  
+                  return (
+                    <div key={branch.branch_id} className={`flex items-center justify-between p-3 ${statusStyle.bg} rounded-lg`}>
+                      <span className={`text-sm font-medium ${statusStyle.text}`}>{branch.branch_name}</span>
+                      <span className={`text-xs px-2 py-1 ${statusStyle.badge} rounded-full`}>{statusStyle.label}</span>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">District B</span>
-                <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Good</span>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Branch A</span>
+                  <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Excellent</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Branch B</span>
+                  <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Good</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Branch C</span>
+                  <span className="text-xs px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full">Needs Focus</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Branch D</span>
+                  <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Good</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Branch E</span>
+                  <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Excellent</span>
+                </div>
               </div>
-              <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">District C</span>
-                <span className="text-xs px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full">Needs Focus</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">District D</span>
-                <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Good</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">District E</span>
-                <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Excellent</span>
-              </div>
-            </div>
+            )}
           </CollapsibleCard>
         </div>
       </div>

@@ -5,6 +5,8 @@ province_id	Yes	Province ID to filter branches
 period_start	No	Start date (YYYY-MM-DD), defaults to current month
 period_end	No	End date (YYYY-MM-DD), defaults to end of current month
 include_details	No	Include detailed breakdown (default: false)
+
+
 Example Request
 GET /province-branches-performance?province_id=1
 Response Structure

@@ -54,9 +54,6 @@ const LoadingIcon = () => (
 
 // Category badge component
 function CategoryBadge({ category }: { category: string }) {
-  const cat = KPI_CATEGORIES[category as keyof typeof KPI_CATEGORIES];
-  if (!cat) return null;
-  
   const colorClasses: Record<string, string> = {
     green: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
     blue: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
@@ -65,6 +62,32 @@ function CategoryBadge({ category }: { category: string }) {
     red: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
     cyan: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
   };
+
+  // Category mapping for API values (handles case-insensitive matching)
+  const categoryMap: Record<string, { label: string; color: string }> = {
+    'financial': { label: 'Financial', color: 'green' },
+    'operational': { label: 'Operational', color: 'blue' },
+    'team': { label: 'Team & Development', color: 'purple' },
+    'team & development': { label: 'Team & Development', color: 'purple' },
+    'strategic': { label: 'Strategic', color: 'orange' },
+    'compliance': { label: 'Compliance & Risk', color: 'red' },
+    'compliance & risk': { label: 'Compliance & Risk', color: 'red' },
+    'technical': { label: 'Technical', color: 'cyan' },
+    'risk': { label: 'Risk', color: 'red' },
+  };
+  
+  // Normalize category to lowercase for matching
+  const normalizedCategory = category?.toLowerCase().trim() || '';
+  const cat = categoryMap[normalizedCategory] || KPI_CATEGORIES[normalizedCategory as keyof typeof KPI_CATEGORIES];
+  
+  // If category doesn't exist in mapping, show a default badge with the raw category value
+  if (!cat) {
+    return (
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClasses.blue}`}>
+        {category ? category.charAt(0).toUpperCase() + category.slice(1) : 'Unknown'}
+      </span>
+    );
+  }
   
   return (
     <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorClasses[cat.color] || colorClasses.blue}`}>

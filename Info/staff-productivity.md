@@ -96,3 +96,4 @@ Score Range	Rating
 80-89%	Good
 70-79%	Average
 Below 70%	Needs Improvement
+
