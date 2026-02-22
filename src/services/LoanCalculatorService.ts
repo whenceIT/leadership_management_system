@@ -1,11 +1,3 @@
-'use client';
-
-import { useUserPosition } from '@/hooks/useUserPosition';
-import { useUserTier } from '@/hooks/useUserTier';
-import { useUserSync } from '@/hooks/useUserSync';
-import { useUserKPI } from '@/hooks/useUserKPI';
-import { useOffice } from '@/hooks/useOffice';
-
 export interface LoanCalculatorResult {
   loan_amount: number;
   interest_rate: number;
