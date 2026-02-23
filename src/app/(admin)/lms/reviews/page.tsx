@@ -1815,7 +1815,25 @@ export default function ReviewsPage() {
   }
 
   // Use dynamic KPIs if available, otherwise fall back to static config KPIs
-  const displayKPIs = processedKPIs.length > 0 ? processedKPIs : null;
+  const displayKPIs = processedKPIs.length > 0 ? processedKPIs : config.kpis.map((kpi, idx) => ({
+    id: `static-kpi-${idx}`,
+    name: kpi.name,
+    description: '',
+    category: 'default',
+    position: config.position,
+    target: parseFloat(kpi.target.replace(/[^0-9.]/g, '')),
+    baseline: parseFloat(kpi.value.replace(/[^0-9.]/g, '')),
+    weight: 10,
+    unit: kpi.target.includes('%') ? 'percent' : kpi.target.includes('K') ? 'currency' : 'number',
+    frequency: 'monthly',
+    isActive: true,
+    lastUpdated: new Date().toISOString(),
+    createdBy: 'Static',
+    value: parseFloat(kpi.value.replace(/[^0-9.]/g, '')),
+    format: kpi.target.includes('%') ? 'percent' : kpi.target.includes('K') ? 'currency' : 'number',
+    lowerIsBetter: kpi.target.includes('≤'),
+    score: kpi.status === 'on-track' ? 95 : kpi.status === 'at-risk' ? 75 : 50,
+  }));
 
   return (
     <div className="space-y-6">

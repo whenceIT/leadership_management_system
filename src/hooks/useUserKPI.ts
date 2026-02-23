@@ -50,21 +50,24 @@ export function useUserKPI() {
 
         const data = await response.json();
 
+        console.log('API Response Data:', data); // Debug log
+        console.log('Position ID:', positionId); // Debug log
+
         if (response.ok) {
-          // Filter KPIs by selected position on client side
+          // Filter KPIs by selected position ID on client side
           const allKpis = Array.isArray(data) ? data : [];
           
-          // Transform API data to KpiMetric format
+          // Transform API data to KpiMetric format - filter by position_id
           const transformedKpis: KpiMetric[] = allKpis
-            .filter((kpi: any) => kpi.position === positionName)
+            .filter((kpi: any) => kpi.position_id === positionId)
             .map((kpi: any, index: number) => ({
               id: kpi.id?.toString() || `kpi-${index}`,
-              name: kpi.name || '',
+              name: kpi.name || kpi.kpi_name || '',
               description: kpi.description || '',
               category: (kpi.category || 'operational') as any,
               position: positionName as PositionType,
               target: kpi.target?.toString() || '',
-              baseline: kpi.baseline?.toString() || '',
+              baseline: kpi.baseline?.toString() || kpi.current_value?.toString() || '',
               weight: parseInt(kpi.weight) || 0,
               unit: 'percent',
               frequency: 'monthly',
@@ -73,26 +76,18 @@ export function useUserKPI() {
               createdBy: 'API',
             }));
             
+          console.log('Transformed KPIs:', transformedKpis); // Debug log
+            
           setKpis(transformedKpis);
-          
-            // Process KPIs for dashboard display
+            
+          // Process KPIs for dashboard display
           const processed = transformedKpis.map(kpi => {
-            // Parse target, baseline, and value from strings with possible units (K, %, etc.)
             const parseMetricValue = (value: string, unit: string): number => {
               if (!value) return 0;
-              
-              let numericValue = 0;
-              
-              // Remove currency symbols, percentage signs, and other non-numeric characters
               const strippedValue = value.replace(/[^0-9.,]/g, '');
-              
-              // Parse as float
-              numericValue = parseFloat(strippedValue);
-              
-              // Handle thousand (K) and million (M) suffixes
+              let numericValue = parseFloat(strippedValue);
               if (value.includes('K')) numericValue *= 1000;
               if (value.includes('M')) numericValue *= 1000000;
-              
               return numericValue;
             };
 
@@ -100,18 +95,11 @@ export function useUserKPI() {
             const target = parseMetricValue(kpi.target, kpi.unit);
             const baseline = parseMetricValue(kpi.baseline, kpi.unit);
 
-            // Calculate score
-            let score = 0;
             const lowerIsBetter = kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost');
+            let score = 0;
             if (lowerIsBetter) {
-              // For metrics where lower is better
-              if (value <= target) {
-                score = 100;
-              } else {
-                score = Math.max(0, 100 - ((value - target) / target) * 100);
-              }
+              score = value <= target ? 100 : Math.max(0, 100 - ((value - target) / target) * 100);
             } else {
-              // For metrics where higher is better
               score = Math.min(100, (value / target) * 100);
             }
 
@@ -135,7 +123,7 @@ export function useUserKPI() {
               score: score,
             };
           });
-          
+            
           setProcessedKPIs(processed);
         } else {
           // Fallback to local KPIs if API fails
@@ -143,22 +131,12 @@ export function useUserKPI() {
           setKpis(localKpis);
           
           const processed = localKpis.map(kpi => {
-              // Parse target, baseline, and value from strings with possible units (K, %, etc.)
               const parseMetricValue = (value: string, unit: string): number => {
                 if (!value) return 0;
-                
-                let numericValue = 0;
-                
-                // Remove currency symbols, percentage signs, and other non-numeric characters
                 const strippedValue = value.replace(/[^0-9.,]/g, '');
-                
-                // Parse as float
-                numericValue = parseFloat(strippedValue);
-                
-                // Handle thousand (K) and million (M) suffixes
+                let numericValue = parseFloat(strippedValue);
                 if (value.includes('K')) numericValue *= 1000;
                 if (value.includes('M')) numericValue *= 1000000;
-                
                 return numericValue;
               };
 
@@ -166,18 +144,11 @@ export function useUserKPI() {
               const target = parseMetricValue(kpi.target, kpi.unit);
               const baseline = parseMetricValue(kpi.baseline, kpi.unit);
 
-              // Calculate score
-              let score = 0;
               const lowerIsBetter = kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost');
+              let score = 0;
               if (lowerIsBetter) {
-                // For metrics where lower is better
-                if (value <= target) {
-                  score = 100;
-                } else {
-                  score = Math.max(0, 100 - ((value - target) / target) * 100);
-                }
+                score = value <= target ? 100 : Math.max(0, 100 - ((value - target) / target) * 100);
               } else {
-                // For metrics where higher is better
                 score = Math.min(100, (value / target) * 100);
               }
 
@@ -212,22 +183,12 @@ export function useUserKPI() {
         setKpis(localKpis);
         
           const processed = localKpis.map(kpi => {
-              // Parse target, baseline, and value from strings with possible units (K, %, etc.)
               const parseMetricValue = (value: string, unit: string): number => {
                 if (!value) return 0;
-                
-                let numericValue = 0;
-                
-                // Remove currency symbols, percentage signs, and other non-numeric characters
                 const strippedValue = value.replace(/[^0-9.,]/g, '');
-                
-                // Parse as float
-                numericValue = parseFloat(strippedValue);
-                
-                // Handle thousand (K) and million (M) suffixes
+                let numericValue = parseFloat(strippedValue);
                 if (value.includes('K')) numericValue *= 1000;
                 if (value.includes('M')) numericValue *= 1000000;
-                
                 return numericValue;
               };
 
@@ -235,18 +196,11 @@ export function useUserKPI() {
               const target = parseMetricValue(kpi.target, kpi.unit);
               const baseline = parseMetricValue(kpi.baseline, kpi.unit);
 
-              // Calculate score
-              let score = 0;
               const lowerIsBetter = kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost');
+              let score = 0;
               if (lowerIsBetter) {
-                // For metrics where lower is better
-                if (value <= target) {
-                  score = 100;
-                } else {
-                  score = Math.max(0, 100 - ((value - target) / target) * 100);
-                }
+                score = value <= target ? 100 : Math.max(0, 100 - ((value - target) / target) * 100);
               } else {
-                // For metrics where higher is better
                 score = Math.min(100, (value / target) * 100);
               }
 
@@ -342,7 +296,7 @@ export function useUserKPI() {
         const allKpis = Array.isArray(data) ? data : [];
         
         const transformedKpis: KpiMetric[] = allKpis
-          .filter((kpi: any) => kpi.position === positionName)
+          .filter((kpi: any) => kpi.position_id === positionId)
           .map((kpi: any, index: number) => ({
             id: kpi.id?.toString() || `kpi-${index}`,
             name: kpi.name || '',
@@ -362,22 +316,12 @@ export function useUserKPI() {
         setKpis(transformedKpis);
         
           const processed = transformedKpis.map(kpi => {
-            // Parse target, baseline, and value from strings with possible units (K, %, etc.)
             const parseMetricValue = (value: string, unit: string): number => {
               if (!value) return 0;
-              
-              let numericValue = 0;
-              
-              // Remove currency symbols, percentage signs, and other non-numeric characters
               const strippedValue = value.replace(/[^0-9.,]/g, '');
-              
-              // Parse as float
-              numericValue = parseFloat(strippedValue);
-              
-              // Handle thousand (K) and million (M) suffixes
+              let numericValue = parseFloat(strippedValue);
               if (value.includes('K')) numericValue *= 1000;
               if (value.includes('M')) numericValue *= 1000000;
-              
               return numericValue;
             };
 
@@ -385,18 +329,11 @@ export function useUserKPI() {
             const target = parseMetricValue(kpi.target, kpi.unit);
             const baseline = parseMetricValue(kpi.baseline, kpi.unit);
 
-            // Calculate score
-            let score = 0;
             const lowerIsBetter = kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost');
+            let score = 0;
             if (lowerIsBetter) {
-              // For metrics where lower is better
-              if (value <= target) {
-                score = 100;
-              } else {
-                score = Math.max(0, 100 - ((value - target) / target) * 100);
-              }
+              score = value <= target ? 100 : Math.max(0, 100 - ((value - target) / target) * 100);
             } else {
-              // For metrics where higher is better
               score = Math.min(100, (value / target) * 100);
             }
 

@@ -11,7 +11,7 @@ import {
   getKPIsByPosition, 
   KpiMetric, 
   KPI_CATEGORIES 
-} from '@/data/kpi-metrics';
+} from '@/data/role-cards-data';
 import { AVAILABLE_POSITIONS, PositionType } from '@/hooks/useUserPosition';
 
 // Icons
