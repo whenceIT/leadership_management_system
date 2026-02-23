@@ -12,7 +12,7 @@ import {
   CollapsibleCard
 } from './DashboardBase';
 
-export default function AdministrationDashboard() {
+export default function AdministrationDashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
     department: "Administration",
     reportsTo: "Administration Director",
@@ -34,6 +34,7 @@ export default function AdministrationDashboard() {
     <DashboardBase
       title="Administration Dashboard"
       subtitle="HR management, staff welfare, and administrative operations"
+      userTier={userTier}
     >
       <QuickInfoBar {...jobInfo} />
       <JobPurpose purpose={jobPurpose} />

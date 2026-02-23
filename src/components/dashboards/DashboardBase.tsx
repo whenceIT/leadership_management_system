@@ -1,22 +1,31 @@
 'use client';
 
 import React from 'react';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 interface DashboardBaseProps {
   children: React.ReactNode;
   title: string;
   subtitle?: string;
+  userTier?: string | null;
   className?: string;
 }
 
-export function DashboardBase({ children, title, subtitle, className = '' }: DashboardBaseProps) {
+export function DashboardBase({ children, title, subtitle, userTier, className = '' }: DashboardBaseProps) {
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Dashboard Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {title}
-        </h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {title}
+          </h1>
+          {userTier && (
+            <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
+              Tier: {userTier}
+            </span>
+          )}
+        </div>
         {subtitle && (
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {subtitle}
@@ -353,7 +362,7 @@ export function JobPurpose({ purpose }: JobPurposeProps) {
  * Displays KPI metrics from role-cards-data with progress bars
  */
 interface KPIMetricsCardProps {
-  kpis: {
+  kpis?: {
     name: string;
     baseline: string;
     target: string;
@@ -362,7 +371,40 @@ interface KPIMetricsCardProps {
   title?: string;
 }
 
-export function KPIMetricsCard({ kpis, title = 'Key Performance Indicators' }: KPIMetricsCardProps) {
+export function KPIMetricsCard({ kpis = [], title = 'Key Performance Indicators' }: KPIMetricsCardProps) {
+  // If no kpis are provided, fetch from API
+  const { processedKPIs: fetchedKpis, isLoading } = useUserKPI();
+  
+  // Transform processedKPIs to match expected format
+  const displayKpis = kpis.length > 0 ? kpis : (fetchedKpis || []).map(kpi => ({
+    name: kpi.name,
+    baseline: String(kpi.value),
+    target: String(kpi.target),
+    weight: String(kpi.weight),
+  }));
+  
+  if (isLoading && displayKpis.length === 0) {
+    return (
+      <CollapsibleCard title={title} defaultExpanded={true}>
+        <div className="flex items-center justify-center h-32">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-500 dark:text-gray-400">Loading KPIs...</p>
+          </div>
+        </div>
+      </CollapsibleCard>
+    );
+  }
+
+  if (displayKpis.length === 0) {
+    return (
+      <CollapsibleCard title={title} defaultExpanded={true}>
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <p>No KPIs available for this position.</p>
+        </div>
+      </CollapsibleCard>
+    );
+  }
   const formatValue = (value: string): string => {
     return value;
   };
@@ -410,7 +452,7 @@ export function KPIMetricsCard({ kpis, title = 'Key Performance Indicators' }: K
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {kpis.map((kpi, index) => (
+            {displayKpis.map((kpi, index) => (
               <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                 <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                   {kpi.name}

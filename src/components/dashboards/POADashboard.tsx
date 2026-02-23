@@ -12,7 +12,7 @@ import {
   CollapsibleCard
 } from './DashboardBase';
 
-export default function POADashboard() {
+export default function POADashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
     department: "Performance Operations",
     reportsTo: "GOM / Performance Manager",
@@ -34,6 +34,7 @@ export default function POADashboard() {
     <DashboardBase
       title="Performance Operations Administrator Dashboard"
       subtitle="Performance tracking, data analysis, and accountability oversight"
+      userTier={userTier}
     >
       <QuickInfoBar {...jobInfo} />
       <JobPurpose purpose={jobPurpose} />

@@ -12,7 +12,7 @@ import {
   CollapsibleCard
 } from './DashboardBase';
 
-export default function ManagementAccountantDashboard() {
+export default function ManagementAccountantDashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
     department: "Finance",
     reportsTo: "Finance Director / CFO",
@@ -34,6 +34,7 @@ export default function ManagementAccountantDashboard() {
     <DashboardBase
       title="Management Accountant Dashboard"
       subtitle="Financial reporting, planning, and strategic analysis"
+      userTier={userTier}
     >
       <QuickInfoBar {...jobInfo} />
       <JobPurpose purpose={jobPurpose} />

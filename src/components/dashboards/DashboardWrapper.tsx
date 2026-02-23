@@ -121,8 +121,8 @@ export default function DashboardWrapper() {
   const [isClient, setIsClient] = useState(false);
   const [forceUpdateKey, setForceUpdateKey] = useState(0);
   
-  // Use the useUserPosition hook which fetches position dynamically from API
-  const { positionId, positionName, isLoading, refreshPosition } = useUserPosition();
+  // Use the useUserPosition hook which fetches position dynamically from API using job_position
+  const { positionId, positionName, userTier, isLoading, refreshPosition } = useUserPosition();
 
   // Handle impersonation events
   const handleImpersonationChange = useCallback((event: CustomEvent) => {
@@ -157,5 +157,5 @@ export default function DashboardWrapper() {
     return <DashboardLoading />;
   }
 
-  return <DashboardComponent key={forceUpdateKey} position={positionName} />;
+  return <DashboardComponent key={forceUpdateKey} position={positionName} userTier={userTier} />;
 }

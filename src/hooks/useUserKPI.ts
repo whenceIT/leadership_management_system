@@ -1,247 +1,380 @@
-'use client';
+import { useState, useEffect } from 'react';
+import { getKPIsByPosition } from '@/data/role-cards-data';
+import { KpiMetric } from '@/data/role-cards-data';
+import { useUserPosition } from '@/hooks/useUserPosition';
+import type { PositionType } from '@/hooks/useUserPosition';
 
-import { useState, useEffect, useCallback } from 'react';
-import { IMPERSONATION_STARTED_EVENT, IMPERSONATION_ENDED_EVENT } from './useUserPosition';
-
-export interface UserKPIScore {
-  score_id: number;
-  kpi_id: number;
-  user_id: number;
-  score: string;
-  name: string;
-  description: string;
-  scoring: string;
-  target: string;
-  role: number;
-  position_id: number;
-  category: string;
-  weight: string;
-}
-
+// Processed KPI interface for dashboard display
 export interface ProcessedKPI {
+  id: string;
   name: string;
-  value: number;
-  target: number;
-  score: number; // percentage achieved
-  category: string;
-  weight: number;
   description: string;
-  format: 'currency' | 'percent' | 'number' | 'rating';
-  lowerIsBetter: boolean;
+  category: string;
+  position: PositionType;
+  target: number;
+  baseline: number;
+  weight: number;
+  unit: string;
+  frequency: string;
+  isActive: boolean;
+  lastUpdated: string;
+  createdBy: string;
+  value: number;
+  format: string;
+  lowerIsBetter?: boolean;
 }
 
-/**
- * useUserKPI Hook
- * Fetches real-time KPI scores from the API for the current user
- * API: GET https://smartbackend.whencefinancesystem.com/smart-kpi-scores/{user_id}/{position_id}
- */
 export function useUserKPI() {
-  const [kpiScores, setKpiScores] = useState<UserKPIScore[]>([]);
+  const [kpis, setKpis] = useState<KpiMetric[]>([]);
   const [processedKPIs, setProcessedKPIs] = useState<ProcessedKPI[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userId, setUserId] = useState<number | null>(null);
-  const [jobPosition, setJobPosition] = useState<number | null>(null);
+  const { positionName, isLoading: isPositionLoading, user, positionId } = useUserPosition();
 
-  // Get user ID and position ID from localStorage
-  const getUserData = useCallback((): { id: number | null; job_position: number | null } => {
-    if (typeof window === 'undefined') {
-      return { id: null, job_position: null };
-    }
-
-    const storedUser = localStorage.getItem('thisUser');
-    if (!storedUser) {
-      return { id: null, job_position: null };
-    }
-
-    try {
-      const user = JSON.parse(storedUser);
-      return { 
-        id: user.id || null,
-        job_position: user.job_position || user.position_id || null
-      };
-    } catch (e) {
-      console.error('Error parsing user data:', e);
-      return { id: null, job_position: null };
-    }
-  }, []);
-
-  // Process raw API scores into usable KPI format
-  const processKPIScores = useCallback((scores: UserKPIScore[]): ProcessedKPI[] => {
-    return scores.map((item) => {
-      const scoreValue = parseFloat(item.score) || 0;
-      const targetValue = parseFloat(item.target) || 1;
-      const weightValue = parseFloat(item.weight) || 0;
-
-      // Calculate percentage achieved
-      let percentageAchieved = 0;
-      if (targetValue > 0) {
-        percentageAchieved = (scoreValue / targetValue) * 100;
-      }
-
-      // Determine format based on scoring type
-      let format: ProcessedKPI['format'] = 'number';
-      if (item.scoring === 'percentage') {
-        format = 'percent';
-      } else if (item.name.toLowerCase().includes('revenue') || 
-                 item.name.toLowerCase().includes('amount') ||
-                 item.name.toLowerCase().includes('given')) {
-        format = 'currency';
-      }
-
-      // Categories where lower is better
-      const lowerIsBetterCategories = ['default', 'overdue', 'late', 'fail', 'churn'];
-      const isLowerBetter = lowerIsBetterCategories.some(cat => 
-        item.name.toLowerCase().includes(cat) || 
-        item.category?.toLowerCase().includes(cat)
-      );
-
-      return {
-        name: item.name,
-        value: scoreValue,
-        target: targetValue,
-        score: percentageAchieved,
-        category: item.category || 'general',
-        weight: weightValue,
-        description: item.description,
-        format,
-        lowerIsBetter: isLowerBetter,
-      };
-    });
-  }, []);
-
-  // Fetch KPI scores from API
-  const fetchKPIScores = useCallback(async (uid: number, pid: number) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Use the API with both user_id and position_id
-      const url = `https://smartbackend.whencefinancesystem.com/smart-kpi-scores/${uid}/${pid}`;
-      
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch KPIs: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (Array.isArray(data)) {
-        setKpiScores(data);
-        setProcessedKPIs(processKPIScores(data));
-      } else {
-        setKpiScores([]);
-        setProcessedKPIs([]);
-      }
-    } catch (err) {
-      console.error('Error fetching KPI scores:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-      setKpiScores([]);
-      setProcessedKPIs([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [processKPIScores]);
-
-  // Refresh KPI data
-  const refresh = useCallback(() => {
-    const userData = getUserData();
-    if (userData.id) {
-      setUserId(userData.id);
-      const jobPos = userData.job_position || 5; // Default to position 5 if null
-      setJobPosition(jobPos);
-      fetchKPIScores(userData.id, jobPos);
-    }
-  }, [getUserData, fetchKPIScores]);
-
-  // Initial fetch on mount
+  // Fetch KPIs from API when position changes (with caching)
   useEffect(() => {
-    const userData = getUserData();
-    if (userData.id) {
-      setUserId(userData.id);
-      const jobPos = userData.job_position || 5; // Default to position 5 if null
-      setJobPosition(jobPos);
-      fetchKPIScores(userData.id, jobPos);
-    } else {
-      setIsLoading(false);
-    }
-  }, [getUserData, fetchKPIScores]);
+    let isMounted = true;
+    
+    const fetchKpis = async () => {
+      if (!positionName) return;
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Fetch all KPIs (cached on server)
+        const response = await fetch('/api/kpi/all');
 
-  // Listen for impersonation events and refresh KPI data
-  useEffect(() => {
-    const handleImpersonationChange = () => {
-      // Refresh KPI data when impersonation starts or ends
-      refresh();
+        if (!isMounted) return;
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Filter KPIs by selected position on client side
+          const allKpis = Array.isArray(data) ? data : [];
+          
+          // Transform API data to KpiMetric format
+          const transformedKpis: KpiMetric[] = allKpis
+            .filter((kpi: any) => kpi.position === positionName)
+            .map((kpi: any, index: number) => ({
+              id: kpi.id?.toString() || `kpi-${index}`,
+              name: kpi.name || '',
+              description: kpi.description || '',
+              category: (kpi.category || 'operational') as any,
+              position: positionName as PositionType,
+              target: kpi.target?.toString() || '',
+              baseline: kpi.baseline?.toString() || '',
+              weight: parseInt(kpi.weight) || 0,
+              unit: 'percent',
+              frequency: 'monthly',
+              isActive: true,
+              lastUpdated: new Date().toISOString().split('T')[0],
+              createdBy: 'API',
+            }));
+            
+          setKpis(transformedKpis);
+          
+          // Process KPIs for dashboard display
+          const processed = transformedKpis.map(kpi => {
+            // Parse target, baseline, and value from strings with possible units (K, %, etc.)
+            const parseMetricValue = (value: string, unit: string): number => {
+              if (!value) return 0;
+              
+              let numericValue = 0;
+              
+              // Remove currency symbols, percentage signs, and other non-numeric characters
+              const strippedValue = value.replace(/[^0-9.,]/g, '');
+              
+              // Parse as float
+              numericValue = parseFloat(strippedValue);
+              
+              // Handle thousand (K) and million (M) suffixes
+              if (value.includes('K')) numericValue *= 1000;
+              if (value.includes('M')) numericValue *= 1000000;
+              
+              return numericValue;
+            };
+
+            const value = parseMetricValue(kpi.baseline, kpi.unit);
+            const target = parseMetricValue(kpi.target, kpi.unit);
+            const baseline = parseMetricValue(kpi.baseline, kpi.unit);
+
+            return {
+              id: kpi.id,
+              name: kpi.name,
+              description: kpi.description,
+              category: kpi.category,
+              position: kpi.position,
+              target: target,
+              baseline: baseline,
+              weight: kpi.weight,
+              unit: kpi.unit,
+              frequency: kpi.frequency,
+              isActive: kpi.isActive,
+              lastUpdated: kpi.lastUpdated,
+              createdBy: kpi.createdBy,
+              value: value,
+              format: kpi.unit === 'ZMW' ? 'currency' : kpi.unit === 'percent' ? 'percent' : 'number',
+              lowerIsBetter: kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost'),
+            };
+          });
+          
+          setProcessedKPIs(processed);
+        } else {
+          // Fallback to local KPIs if API fails
+          const localKpis = getKPIsByPosition(positionName as PositionType);
+          setKpis(localKpis);
+          
+          const processed = localKpis.map(kpi => {
+              // Parse target, baseline, and value from strings with possible units (K, %, etc.)
+              const parseMetricValue = (value: string, unit: string): number => {
+                if (!value) return 0;
+                
+                let numericValue = 0;
+                
+                // Remove currency symbols, percentage signs, and other non-numeric characters
+                const strippedValue = value.replace(/[^0-9.,]/g, '');
+                
+                // Parse as float
+                numericValue = parseFloat(strippedValue);
+                
+                // Handle thousand (K) and million (M) suffixes
+                if (value.includes('K')) numericValue *= 1000;
+                if (value.includes('M')) numericValue *= 1000000;
+                
+                return numericValue;
+              };
+
+              const value = parseMetricValue(kpi.baseline, kpi.unit);
+              const target = parseMetricValue(kpi.target, kpi.unit);
+              const baseline = parseMetricValue(kpi.baseline, kpi.unit);
+
+              return {
+                id: kpi.id,
+                name: kpi.name,
+                description: kpi.description,
+                category: kpi.category,
+                position: kpi.position,
+                target: target,
+                baseline: baseline,
+                weight: kpi.weight,
+                unit: kpi.unit,
+                frequency: kpi.frequency,
+                isActive: kpi.isActive,
+                lastUpdated: kpi.lastUpdated,
+                createdBy: kpi.createdBy,
+                value: value,
+                format: kpi.unit === 'ZMW' ? 'currency' : kpi.unit === 'percent' ? 'percent' : 'number',
+                lowerIsBetter: kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost'),
+              };
+            });
+          
+          setProcessedKPIs(processed);
+        }
+      } catch (error) {
+        console.error('Error fetching KPIs:', error);
+        setError('Failed to fetch KPI data');
+        // Fallback to local KPIs on error
+        const localKpis = getKPIsByPosition(positionName as PositionType);
+        setKpis(localKpis);
+        
+          const processed = localKpis.map(kpi => {
+              // Parse target, baseline, and value from strings with possible units (K, %, etc.)
+              const parseMetricValue = (value: string, unit: string): number => {
+                if (!value) return 0;
+                
+                let numericValue = 0;
+                
+                // Remove currency symbols, percentage signs, and other non-numeric characters
+                const strippedValue = value.replace(/[^0-9.,]/g, '');
+                
+                // Parse as float
+                numericValue = parseFloat(strippedValue);
+                
+                // Handle thousand (K) and million (M) suffixes
+                if (value.includes('K')) numericValue *= 1000;
+                if (value.includes('M')) numericValue *= 1000000;
+                
+                return numericValue;
+              };
+
+              const value = parseMetricValue(kpi.baseline, kpi.unit);
+              const target = parseMetricValue(kpi.target, kpi.unit);
+              const baseline = parseMetricValue(kpi.baseline, kpi.unit);
+
+              return {
+                id: kpi.id,
+                name: kpi.name,
+                description: kpi.description,
+                category: kpi.category,
+                position: kpi.position,
+                target: target,
+                baseline: baseline,
+                weight: kpi.weight,
+                unit: kpi.unit,
+                frequency: kpi.frequency,
+                isActive: kpi.isActive,
+                lastUpdated: kpi.lastUpdated,
+                createdBy: kpi.createdBy,
+                value: value,
+                format: kpi.unit === 'ZMW' ? 'currency' : kpi.unit === 'percent' ? 'percent' : 'number',
+                lowerIsBetter: kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost'),
+              };
+            });
+        
+        setProcessedKPIs(processed);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     };
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange);
-      window.addEventListener(IMPERSONATION_ENDED_EVENT, handleImpersonationChange);
+    if (!isPositionLoading && positionName) {
+      fetchKpis();
     }
 
     return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange);
-        window.removeEventListener(IMPERSONATION_ENDED_EVENT, handleImpersonationChange);
-      }
+      isMounted = false;
     };
-  }, [refresh]);
+  }, [positionName, isPositionLoading]);
 
   // Calculate overall score
-  const getOverallScore = useCallback((): number => {
+  const getOverallScore = () => {
     if (processedKPIs.length === 0) return 0;
-
-    let totalWeight = 0;
-    let weightedScore = 0;
-
-    processedKPIs.forEach((kpi) => {
-      totalWeight += kpi.weight;
+    
+    const totalWeight = processedKPIs.reduce((sum, kpi) => sum + kpi.weight, 0);
+    if (totalWeight === 0) return 0;
+    
+    const weightedScore = processedKPIs.reduce((sum, kpi) => {
+      // Calculate score for individual KPI
+      const target = kpi.target;
+      const value = kpi.value;
       
       let score = 0;
       if (kpi.lowerIsBetter) {
         // For metrics where lower is better
-        if (kpi.value <= kpi.target) {
+        if (value <= target) {
           score = 100;
         } else {
-          score = Math.max(0, 100 - ((kpi.value - kpi.target) / kpi.target) * 100);
+          score = Math.max(0, 100 - ((value - target) / target) * 100);
         }
       } else {
         // For metrics where higher is better
-        score = Math.min(100, (kpi.value / kpi.target) * 100);
+        score = Math.min(100, (value / target) * 100);
       }
+      
+      return sum + (score * kpi.weight);
+    }, 0);
+    
+    return Math.round(weightedScore / totalWeight);
+  };
 
-      weightedScore += score * kpi.weight;
+  // Get unique categories
+  const getCategories = () => {
+    const categories = new Set<string>();
+    processedKPIs.forEach(kpi => {
+      if (kpi.category) {
+        categories.add(kpi.category);
+      }
     });
-
-    return totalWeight > 0 ? Math.round(weightedScore / totalWeight) : 0;
-  }, [processedKPIs]);
-
-  // Get KPIs by category
-  const getKPIsByCategory = useCallback((category: string): ProcessedKPI[] => {
-    return processedKPIs.filter(kpi => 
-      kpi.category?.toLowerCase() === category.toLowerCase()
-    );
-  }, [processedKPIs]);
-
-  // Get all unique categories
-  const getCategories = useCallback((): string[] => {
-    const categories = new Set(processedKPIs.map(kpi => kpi.category));
     return Array.from(categories);
-  }, [processedKPIs]);
+  };
+
+  // Refresh KPI data
+  const refresh = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/kpi/all');
+      if (response.ok) {
+        const data = await response.json();
+        const allKpis = Array.isArray(data) ? data : [];
+        
+        const transformedKpis: KpiMetric[] = allKpis
+          .filter((kpi: any) => kpi.position === positionName)
+          .map((kpi: any, index: number) => ({
+            id: kpi.id?.toString() || `kpi-${index}`,
+            name: kpi.name || '',
+            description: kpi.description || '',
+            category: (kpi.category || 'operational') as any,
+            position: positionName as PositionType,
+            target: kpi.target?.toString() || '',
+            baseline: kpi.baseline?.toString() || '',
+            weight: parseInt(kpi.weight) || 0,
+            unit: 'percent',
+            frequency: 'monthly',
+            isActive: true,
+            lastUpdated: new Date().toISOString().split('T')[0],
+            createdBy: 'API',
+          }));
+          
+        setKpis(transformedKpis);
+        
+        const processed = transformedKpis.map(kpi => {
+          // Parse target, baseline, and value from strings with possible units (K, %, etc.)
+          const parseMetricValue = (value: string, unit: string): number => {
+            if (!value) return 0;
+            
+            let numericValue = 0;
+            
+            // Remove currency symbols, percentage signs, and other non-numeric characters
+            const strippedValue = value.replace(/[^0-9.,]/g, '');
+            
+            // Parse as float
+            numericValue = parseFloat(strippedValue);
+            
+            // Handle thousand (K) and million (M) suffixes
+            if (value.includes('K')) numericValue *= 1000;
+            if (value.includes('M')) numericValue *= 1000000;
+            
+            return numericValue;
+          };
+
+          const value = parseMetricValue(kpi.baseline, kpi.unit);
+          const target = parseMetricValue(kpi.target, kpi.unit);
+          const baseline = parseMetricValue(kpi.baseline, kpi.unit);
+
+          return {
+            id: kpi.id,
+            name: kpi.name,
+            description: kpi.description,
+            category: kpi.category,
+            position: kpi.position,
+            target: target,
+            baseline: baseline,
+            weight: kpi.weight,
+            unit: kpi.unit,
+            frequency: kpi.frequency,
+            isActive: kpi.isActive,
+            lastUpdated: kpi.lastUpdated,
+            createdBy: kpi.createdBy,
+            value: value,
+            format: kpi.unit === 'ZMW' ? 'currency' : kpi.unit === 'percent' ? 'percent' : 'number',
+            lowerIsBetter: kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost'),
+          };
+        });
+        
+        setProcessedKPIs(processed);
+      }
+    } catch (error) {
+      console.error('Error refreshing KPIs:', error);
+      setError('Failed to refresh KPI data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
-    kpiScores,
+    kpis,
     processedKPIs,
     isLoading,
     error,
-    userId,
-    jobPosition,
+    userId: user?.id,
+    jobPosition: positionId,
     refresh,
     getOverallScore,
-    getKPIsByCategory,
     getCategories,
   };
 }
-
-export default useUserKPI;

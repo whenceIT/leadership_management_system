@@ -6,9 +6,10 @@ import { roleCardsData } from '@/data/role-cards-data';
 
 interface BranchManagerDashboardProps {
   position?: string;
+  userTier?: string | null;
 }
 
-export default function BranchManagerDashboard({ position = 'Branch Manager' }: BranchManagerDashboardProps) {
+export default function BranchManagerDashboard({ position = 'Branch Manager', userTier }: BranchManagerDashboardProps) {
   const roleCard = roleCardsData[position] || roleCardsData['Branch Manager'] || {
     department: 'TBD',
     reportsTo: 'TBD',
@@ -22,6 +23,7 @@ export default function BranchManagerDashboard({ position = 'Branch Manager' }: 
     <DashboardBase
       title={roleCard.title}
       subtitle="Real-time branch performance and operations overview"
+      userTier={userTier}
     >
       {/* Quick Info Bar */}
       <QuickInfoBar

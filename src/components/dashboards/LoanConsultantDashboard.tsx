@@ -13,9 +13,10 @@ import { LoanConsultantMetrics } from '@/services/LoanConsultantMetricsService';
 
 interface LoanConsultantDashboardProps {
   position?: string;
+  userTier?: string | null;
 }
 
-export default function LoanConsultantDashboard({ position = 'Loan Consultant' }: LoanConsultantDashboardProps) {
+export default function LoanConsultantDashboard({ position = 'Loan Consultant', userTier }: LoanConsultantDashboardProps) {
   const { data: userTierData, isLoading, error } = useUserTier();
   const { 
     data: loanStats, 
@@ -111,6 +112,7 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant' }
     <DashboardBase
       title={position}
       subtitle="Your personal loan portfolio and performance overview"
+      userTier={userTier}
     >
       {/* Quick Info Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

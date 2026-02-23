@@ -6,6 +6,7 @@ import { roleCardsData } from '@/data/role-cards-data';
 
 interface GenericDashboardProps {
   position: string;
+  userTier?: string;
   metrics?: {
     title: string;
     value: string | number;
@@ -19,7 +20,7 @@ interface GenericDashboardProps {
   }[];
 }
 
-export function GenericDashboard({ position, metrics = [], alerts = [] }: GenericDashboardProps) {
+export function GenericDashboard({ position, userTier, metrics = [], alerts = [] }: GenericDashboardProps) {
   const roleCard = roleCardsData[position] || roleCardsData['Branch Manager'] || {
     department: 'TBD',
     reportsTo: 'TBD',
@@ -32,7 +33,7 @@ export function GenericDashboard({ position, metrics = [], alerts = [] }: Generi
   const subtitle = getSubtitleForPosition(position);
 
   return (
-    <DashboardBase title={`${position} Dashboard`} subtitle={subtitle}>
+    <DashboardBase title={`${position} Dashboard`} subtitle={subtitle} userTier={userTier}>
       {/* Quick Info Bar */}
       <QuickInfoBar
         department={roleCard.department}
@@ -178,7 +179,7 @@ export function GenericDashboard({ position, metrics = [], alerts = [] }: Generi
         </div>
 
         {/* Recent Activity */}
-        <div className="col-span-12 lg:col-span-6">
+        {/* <div className="col-span-12 lg:col-span-6">
           <CollapsibleCard title="Recent Activity" defaultExpanded={true}>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
@@ -216,7 +217,7 @@ export function GenericDashboard({ position, metrics = [], alerts = [] }: Generi
               </div>
             </div>
           </CollapsibleCard>
-        </div>
+        </div> */}
       </div>
     </DashboardBase>
   );

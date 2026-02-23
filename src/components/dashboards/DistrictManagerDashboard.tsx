@@ -6,9 +6,10 @@ import { roleCardsData } from '@/data/role-cards-data';
 
 interface DistrictManagerDashboardProps {
   position?: string;
+  userTier?: string;
 }
 
-export default function DistrictManagerDashboard({ position = 'District Manager' }: DistrictManagerDashboardProps) {
+export default function DistrictManagerDashboard({ position = 'District Manager', userTier }: DistrictManagerDashboardProps) {
   const roleCard = roleCardsData[position] || roleCardsData['District Manager'] || {
     department: 'TBD',
     reportsTo: 'TBD',
@@ -22,6 +23,7 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
     <DashboardBase
       title={roleCard.title}
       subtitle="Cross-branch performance and district-wide oversight"
+      userTier={userTier}
     >
       {/* Quick Info Bar */}
       <QuickInfoBar

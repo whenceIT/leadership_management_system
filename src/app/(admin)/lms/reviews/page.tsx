@@ -1267,7 +1267,7 @@ function formatKPITarget(target: number, format: ProcessedKPI['format'], lowerIs
 // Main component
 export default function ReviewsPage() {
   const router = useRouter();
-  const { user, positionName: rawPosition, isLoading, refreshPosition } = useUserPosition();
+  const { user, positionName: rawPosition, userTier, isLoading, refreshPosition } = useUserPosition();
   const [config, setConfig] = useState<PositionReviewConfig | null>(null);
   
   // Fetch real-time KPI data from API
@@ -1829,6 +1829,11 @@ export default function ReviewsPage() {
             <span className="px-3 py-1 text-sm font-medium bg-brand-100 text-brand-800 rounded-full">
               {config.displayName}
             </span>
+            {userTier && (
+              <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
+                Tier: {userTier}
+              </span>
+            )}
           </div>
           <p className="mt-1 text-gray-500 dark:text-gray-400">
             {config.reviewType} • Position-based automated review tracking

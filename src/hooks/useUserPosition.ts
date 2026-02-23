@@ -31,6 +31,7 @@ interface UserData {
   position?: string; // Keep for backward compatibility
   office_id?: number;
   status?: string;
+  tier?: string; // User's current tier
   [key: string]: any;
 }
 
@@ -53,6 +54,7 @@ export function useUserPosition() {
   const [positionName, setPositionName] = useState<string>('Branch Manager');
   const [positions, setPositions] = useState<LeadershipPosition[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userTier, setUserTier] = useState<string | null>(null); // User's current tier
   const impersonationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Ref to prevent over-polling - track if we've already synced
@@ -124,6 +126,7 @@ export function useUserPosition() {
             const thisUser = getUserData();
             if (thisUser) {
               setUser(thisUser);
+              setUserTier(thisUser.tier || null);
             }
             
             setIsLoading(false);
@@ -188,22 +191,24 @@ export function useUserPosition() {
             // Mark as synced
             hasSyncedRef.current = true;
             lastSyncedEmailRef.current = currentUser.email;
-          } else {
-            setUser(currentUser);
-            const existingPositionId = currentUser.position_id || 5;
-            setPositionId(existingPositionId);
-            setPositionName(currentUser.position || getPositionNameById(existingPositionId));
-            
-            // Mark as synced
-            hasSyncedRef.current = true;
-            lastSyncedEmailRef.current = currentUser.email;
-          }
+      } else {
+        setUser(currentUser);
+        const existingPositionId = currentUser.position_id || 5;
+        setPositionId(existingPositionId);
+        setPositionName(currentUser.position || getPositionNameById(existingPositionId));
+        setUserTier(currentUser.tier || null);
+        
+        // Mark as synced
+        hasSyncedRef.current = true;
+        lastSyncedEmailRef.current = currentUser.email;
+      }
         } catch (error) {
           // If API fails, use localStorage data
           setUser(currentUser);
           const existingPositionId = currentUser.position_id || 5;
           setPositionId(existingPositionId);
           setPositionName(currentUser.position || getPositionNameById(existingPositionId));
+          setUserTier(currentUser.tier || null);
           
           // Mark as synced even on error to prevent retries
           hasSyncedRef.current = true;
@@ -214,6 +219,7 @@ export function useUserPosition() {
         const existingPositionId = currentUser.position_id || 5;
         setPositionId(existingPositionId);
         setPositionName(currentUser.position || getPositionNameById(existingPositionId));
+        setUserTier(currentUser.tier || null);
         
         // Mark as synced
         hasSyncedRef.current = true;
@@ -531,6 +537,7 @@ export function useUserPosition() {
     user,
     positionId,
     positionName,
+    userTier, // User's current tier
     positions,
     isLoading,
     refreshPosition: syncAndGetPosition,

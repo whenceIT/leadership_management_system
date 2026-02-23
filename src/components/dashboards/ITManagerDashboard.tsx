@@ -12,7 +12,7 @@ import {
   CollapsibleCard
 } from './DashboardBase';
 
-export default function ITManagerDashboard() {
+export default function ITManagerDashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
     department: "Information Technology",
     reportsTo: "Executive Committee / Technical Director",
@@ -34,6 +34,7 @@ export default function ITManagerDashboard() {
     <DashboardBase
       title="IT Manager Dashboard"
       subtitle="Technology strategy, infrastructure, and digital transformation"
+      userTier={userTier}
     >
       <QuickInfoBar {...jobInfo} />
       <JobPurpose purpose={jobPurpose} />

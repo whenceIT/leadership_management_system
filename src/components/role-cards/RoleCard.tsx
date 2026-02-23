@@ -3,29 +3,7 @@
 import React from 'react';
 import { roleCardsData, defaultRoleCard, RoleCardConfig } from '@/data/role-cards-data';
 import { getOfficeNameById } from '@/hooks/useOffice';
-
-/**
- * Get current user position from localStorage
- * @returns The user's position or 'Branch Manager' as default
- */
-function getCurrentUserPosition(): string {
-  if (typeof window === 'undefined') {
-    return 'Branch Manager';
-  }
-  
-  const storedUser = localStorage.getItem('thisUser');
-  if (!storedUser) {
-    return 'Branch Manager';
-  }
-  
-  try {
-    const user = JSON.parse(storedUser);
-    return user.position || user.role || 'Branch Manager';
-  } catch (e) {
-    console.error('Error parsing user data:', e);
-    return 'Branch Manager';
-  }
-}
+import { useUserPosition } from '@/hooks/useUserPosition';
 
 /**
  * Get user office name from localStorage
@@ -59,23 +37,21 @@ function getUserOfficeName(): string {
  * Fallback to Branch Manager if position not found
  */
 export default function RoleCard() {
-  const [position, setPosition] = React.useState<string>('Branch Manager');
+  const { user, positionName, userTier, isLoading } = useUserPosition();
   const [roleCard, setRoleCard] = React.useState<RoleCardConfig>(defaultRoleCard);
 
   React.useEffect(() => {
-    // Get user position from localStorage
-    const userPosition = getCurrentUserPosition();
-    setPosition(userPosition);
-
-    // Get role card for this position
-    const card = roleCardsData[userPosition];
-    if (card) {
-      setRoleCard(card);
-    } else {
-      // Use default if position not found
-      setRoleCard(defaultRoleCard);
+    if (!isLoading && positionName) {
+      // Get role card for this position
+      const card = roleCardsData[positionName];
+      if (card) {
+        setRoleCard(card);
+      } else {
+        // Use default if position not found
+        setRoleCard(defaultRoleCard);
+      }
     }
-  }, []);
+  }, [positionName, isLoading]);
 
   // Get status color for KPIs
   const getKPIColor = (baseline: string, target: string): string => {
@@ -93,6 +69,17 @@ export default function RoleCard() {
     return 'text-yellow-600 dark:text-yellow-400';
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mx-auto"></div>
+          <p className="mt-4 text-gray-500">Loading role card...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -102,7 +89,12 @@ export default function RoleCard() {
             {roleCard.title}
           </h1>
           <p className="mt-1 text-gray-500 dark:text-gray-400">
-            Role Card | {position}
+            Role Card | {positionName}
+            {userTier && (
+              <span className="ml-2 px-2 py-0.5 text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded">
+                Tier: {userTier}
+              </span>
+            )}
           </p>
         </div>
       </div>

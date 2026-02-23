@@ -11,80 +11,95 @@ Example Request
 GET /province-branches-performance?province_id=1
 Response Structure
 {
-  "success": true,
-  "data": {
-    "metric": "Branch Performance Overview",
-    "province": {
-      "id": 1,
-      "name": "Lusaka Province"
-    },
-    "period": {
-      "start_date": "2026-02-01",
-      "end_date": "2026-02-28"
-    },
-    "province_summary": {
-      "total_branches": 5,
-      "active_branches": 5,
-      "total_staff": 45,
-      "total_net_contribution": 3600000,
-      "formatted_net_contribution": "K3.6M",
-      "total_portfolio": 45000000,
-      "formatted_portfolio": "K45.0M",
-      "total_active_loans": 6235,
-      "total_active_clients": 5890,
-      "average_par_rate": 4.2,
-      "average_collection_rate": 92.5
-    },
-    "branches": [
-      {
-        "rank": 1,
-        "branch_id": 3,
-        "branch_name": "Branch A",
-        "manager_name": "John Doe",
-        "net_contribution": "K850K",
-        "net_contribution_value": 850000,
-        "portfolio": {
-          "active_loans": 1247,
-          "active_clients": 1180,
-          "total_portfolio": 15000000,
-          "formatted_portfolio": "K15.0M"
+    "success": true,
+    "data": {
+        "metric": "Branch Performance Overview",
+        "province": {
+            "id": 4,
+            "name": "CENTRAL"
         },
-        "disbursements": {
-          "count": 45,
-          "total": 2500000,
-          "formatted": "K2.5M"
+        "period": {
+            "start_date": "2026-02-01",
+            "end_date": "2026-02-31"
         },
-        "par": { "rate": 2.3, "par_balance": 345000 },
-        "collections": { "rate": 94.5, "collected": 1200000, "expected": 1270000 },
-        "staff_count": 9
-      },
-      {
-        "rank": 2,
-        "branch_name": "Branch B",
-        "net_contribution": "K760K",
-        ...
-      },
-      {
-        "rank": 3,
-        "branch_name": "Branch E",
-        "net_contribution": "K720K",
-        ...
-      },
-      {
-        "rank": 4,
-        "branch_name": "Branch D",
-        "net_contribution": "K690K",
-        ...
-      },
-      {
-        "rank": 5,
-        "branch_name": "Branch C",
-        "net_contribution": "K580K",
-        ...
-      }
-    ]
-  }
+        "province_summary": {
+            "total_branches": 2,
+            "active_branches": 2,
+            "total_staff": 35,
+            "total_net_contribution": 0,
+            "formatted_net_contribution": "K0",
+            "total_portfolio": 0,
+            "formatted_portfolio": "K0",
+            "total_active_loans": 1398,
+            "total_active_clients": 2151,
+            "average_par_rate": 0,
+            "average_collection_rate": 0
+        },
+        "branches": [
+            {
+                "rank": 1,
+                "branch_id": 10,
+                "branch_name": "WHENCE KABWE BRANCH",
+                "manager_name": null,
+                "net_contribution": "K0",
+                "net_contribution_value": 0,
+                "portfolio": {
+                    "active_loans": 914,
+                    "active_clients": 1408,
+                    "total_portfolio": 0,
+                    "formatted_portfolio": "K0"
+                },
+                "disbursements": {
+                    "count": 0,
+                    "total": 0,
+                    "formatted": "K0"
+                },
+                "par": {
+                    "rate": 0,
+                    "par_balance": 0
+                },
+                "collections": {
+                    "rate": 0,
+                    "collected": 0,
+                    "expected": 0
+                },
+                "staff_count": 21
+            },
+            {
+                "rank": 2,
+                "branch_id": 39,
+                "branch_name": "WHENCE KAPIRI BRANCH",
+                "manager_name": null,
+                "net_contribution": "K0",
+                "net_contribution_value": 0,
+                "portfolio": {
+                    "active_loans": 484,
+                    "active_clients": 743,
+                    "total_portfolio": 0,
+                    "formatted_portfolio": "K0"
+                },
+                "disbursements": {
+                    "count": 0,
+                    "total": 0,
+                    "formatted": "K0"
+                },
+                "par": {
+                    "rate": 0,
+                    "par_balance": 0
+                },
+                "collections": {
+                    "rate": 0,
+                    "collected": 0,
+                    "expected": 0
+                },
+                "staff_count": 14
+            }
+        ]
+    }
 }
+
+
+
 Data Sources Used
 offices - branch info, province_id, manager_id
 province - province name

@@ -12,7 +12,7 @@ import {
   CollapsibleCard
 } from './DashboardBase';
 
-export default function GOMDashboard() {
+export default function GOMDashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
     department: "Operations",
     reportsTo: "Provincial Manager",
@@ -34,6 +34,7 @@ export default function GOMDashboard() {
     <DashboardBase
       title="General Operations Manager Dashboard"
       subtitle="Operations management, strategic optimization, and national oversight"
+      userTier={userTier}
     >
       <QuickInfoBar {...jobInfo} />
       <JobPurpose purpose={jobPurpose} />
