@@ -45,7 +45,8 @@ export class CollectionWaterflowComplianceService {
   /**
    * Calculate collection compliance based on waterflow method
    */
-  public async calculateCollectionCompliance(
+  public async 
+  i(
     userId: number, 
     officeId: number, 
     periodStart: Date, 

@@ -1910,7 +1910,7 @@ export default function ReviewsPage() {
                   {formatKPIValue(kpi.value, kpi.format)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Target: {formatKPITarget(kpi.target, kpi.format, kpi.lowerIsBetter)}
+                  Target: {formatKPITarget(kpi.target, kpi.format, !!kpi.lowerIsBetter)}
                 </p>
               </div>
             );
@@ -2091,7 +2091,7 @@ export default function ReviewsPage() {
                     />
                     <div className="flex-1">
                       <span className={`text-sm ${isCompleted ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}`}>
-                        {kpi.name} ({formatKPIValue(kpi.value, kpi.format)} / {formatKPITarget(kpi.target, kpi.format, kpi.lowerIsBetter)})
+                        {kpi.name} ({formatKPIValue(kpi.value, kpi.format)} / {formatKPITarget(kpi.target, kpi.format, !!kpi.lowerIsBetter)})
                       </span>
                       {kpi.category && (
                         <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 rounded">

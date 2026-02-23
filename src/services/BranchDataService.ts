@@ -210,6 +210,74 @@ export interface StaffProductivityParams {
   include_officers?: boolean;
 }
 
+// Collection Waterfall Interface
+export interface CollectionWaterfallSummary {
+  due: {
+    total: number;
+    formatted: string;
+    breakdown: string[];
+    loans_count: number;
+    installments_count: number;
+  };
+  collected: {
+    total: number;
+    formatted: string;
+    breakdown?: string[];
+    loans_count?: number;
+    installments_count?: number;
+  };
+  partial: {
+    total: number;
+    formatted: string;
+    breakdown?: string[];
+    loans_count?: number;
+    installments_count?: number;
+  };
+  overdue: {
+    total: number;
+    formatted: string;
+    breakdown?: string[];
+    loans_count?: number;
+    installments_count?: number;
+  };
+  compliance: {
+    rate: number;
+    formatted: string;
+    status: 'excellent' | 'good' | 'average' | 'needs_attention';
+  };
+}
+
+export interface CollectionWaterfallAnalysis {
+  total_collections: number;
+  overall_collection_rate: number;
+  collection_gap: number;
+  uncollected_amount: number;
+}
+
+export interface CollectionWaterfallData {
+  metric: string;
+  office_id: number;
+  office_name: string;
+  period: Period;
+  currency: string;
+  summary: CollectionWaterfallSummary;
+  analysis: CollectionWaterfallAnalysis;
+  officer_breakdown: any[];
+  monthly_trend?: any[];
+  expected_monthly?: any[];
+}
+
+export interface CollectionWaterfallResponse {
+  success: boolean;
+  data: CollectionWaterfallData;
+}
+
+export interface CollectionWaterfallParams {
+  office_id: number;
+  start_date?: string;
+  end_date?: string;
+}
+
 // Branch Stats Interface
 export interface BranchStatsData {
   office_id: number;
@@ -484,6 +552,15 @@ export class BranchDataService {
   }
 
   /**
+   * Fetch collection waterfall data
+   */
+  public async fetchCollectionWaterfall(
+    params: CollectionWaterfallParams
+  ): Promise<CollectionWaterfallData | null> {
+    return this.fetchData<CollectionWaterfallData>('/branch-collection-waterfall', params);
+  }
+
+  /**
    * Fetch all required metrics for branch manager dashboard
    */
   public async fetchBranchManagerMetrics(
@@ -496,13 +573,15 @@ export class BranchDataService {
     collectionRate?: CollectionRateData | null;
     staffProductivity?: StaffProductivityData | null;
     month1DefaultRate?: Month1DefaultRateData | null;
+    collectionWaterfall?: CollectionWaterfallData | null;
   }> {
     const [
       activeLoans,
       branchStats,
       collectionRate,
       staffProductivity,
-      month1DefaultRate
+      month1DefaultRate,
+      collectionWaterfall
     ] = await Promise.all([
       this.fetchActiveLoans({ office_id: officeId }),
       this.fetchBranchStats({ office_id: officeId }),
@@ -520,6 +599,11 @@ export class BranchDataService {
         office_id: officeId, 
         period_start: periodStart, 
         period_end: periodEnd 
+      }),
+      this.fetchCollectionWaterfall({ 
+        office_id: officeId, 
+        start_date: periodStart, 
+        end_date: periodEnd 
       })
     ]);
 
@@ -528,7 +612,8 @@ export class BranchDataService {
       branchStats,
       collectionRate,
       staffProductivity,
-      month1DefaultRate
+      month1DefaultRate,
+      collectionWaterfall
     };
   }
 

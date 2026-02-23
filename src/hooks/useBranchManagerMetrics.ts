@@ -6,11 +6,13 @@ import {
   CollectionRateData, 
   StaffProductivityData, 
   Month1DefaultRateData,
+  CollectionWaterfallData,
   BranchStatsParams,
   ActiveLoansParams,
   CollectionRateParams,
   StaffProductivityParams,
-  Month1DefaultRateParams
+  Month1DefaultRateParams,
+  CollectionWaterfallParams
 } from '@/services/BranchDataService';
 import { useUserPosition } from '@/hooks/useUserPosition';
 
@@ -27,6 +29,7 @@ export function useBranchManagerMetrics() {
   const [collectionRate, setCollectionRate] = useState<CollectionRateData | null>(null);
   const [staffProductivity, setStaffProductivity] = useState<StaffProductivityData | null>(null);
   const [month1DefaultRate, setMonth1DefaultRate] = useState<Month1DefaultRateData | null>(null);
+  const [collectionWaterfall, setCollectionWaterfall] = useState<CollectionWaterfallData | null>(null);
 
   const { user } = useUserPosition();
 
@@ -69,6 +72,7 @@ export function useBranchManagerMetrics() {
       setCollectionRate(metrics.collectionRate || null);
       setStaffProductivity(metrics.staffProductivity || null);
       setMonth1DefaultRate(metrics.month1DefaultRate || null);
+      setCollectionWaterfall(metrics.collectionWaterfall || null);
 
     } catch (err) {
       console.error('Error fetching branch manager metrics:', err);
@@ -179,6 +183,26 @@ export function useBranchManagerMetrics() {
     }
   }, []);
 
+  const fetchCollectionWaterfall = useCallback(async (params: CollectionWaterfallParams) => {
+    if (!params.office_id) {
+      setError('Office ID not available');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const data = await branchDataService.fetchCollectionWaterfall(params);
+      setCollectionWaterfall(data || null);
+    } catch (err) {
+      console.error('Error fetching collection waterfall:', err);
+      setError('Failed to fetch collection waterfall');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   // Refresh all metrics
   const refreshAllMetrics = useCallback(async (periodStart?: string, periodEnd?: string) => {
     const officeId = getOfficeId();
@@ -235,6 +259,17 @@ export function useBranchManagerMetrics() {
     }
   }, [getOfficeId, fetchMonth1DefaultRate]);
 
+  const refreshCollectionWaterfall = useCallback(async (periodStart?: string, periodEnd?: string) => {
+    const officeId = getOfficeId();
+    if (officeId) {
+      await fetchCollectionWaterfall({ 
+        office_id: officeId, 
+        start_date: periodStart, 
+        end_date: periodEnd 
+      });
+    }
+  }, [getOfficeId, fetchCollectionWaterfall]);
+
   // Initialize metrics on component mount or when user changes
   useEffect(() => {
     const officeId = getOfficeId();
@@ -259,6 +294,7 @@ export function useBranchManagerMetrics() {
     collectionRate,
     staffProductivity,
     month1DefaultRate,
+    collectionWaterfall,
 
     // Refresh methods
     refreshAllMetrics,
@@ -267,6 +303,7 @@ export function useBranchManagerMetrics() {
     refreshCollectionRate,
     refreshStaffProductivity,
     refreshMonth1DefaultRate,
+    refreshCollectionWaterfall,
 
     // Individual fetch methods
     fetchAllMetrics,
@@ -275,6 +312,7 @@ export function useBranchManagerMetrics() {
     fetchCollectionRate,
     fetchStaffProductivity,
     fetchMonth1DefaultRate,
+    fetchCollectionWaterfall,
 
     // Cache management
     clearCache,

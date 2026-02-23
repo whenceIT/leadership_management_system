@@ -28,6 +28,7 @@ export default function BranchManagerDashboard({ position = 'Branch Manager', us
     collectionRate,
     staffProductivity,
     month1DefaultRate,
+    collectionWaterfall,
     refreshAllMetrics
   } = useBranchManagerMetrics();
 
@@ -214,28 +215,38 @@ export default function BranchManagerDashboard({ position = 'Branch Manager', us
         {/* Collections Waterfall */}
         <div className="col-span-12">
           <CollapsibleCard title="Collections Waterfall" action={<button className="text-sm text-brand-500 hover:underline">View Details</button>} defaultExpanded={true}>
-            <div className="grid grid-cols-5 gap-4 text-center">
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Due</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">ZMW 125,000</p>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">Loading collections waterfall data...</p>
               </div>
-              <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <p className="text-sm text-green-600 dark:text-green-400">Collected</p>
-                <p className="text-xl font-bold text-green-600 dark:text-green-400">ZMW 118,125</p>
+            ) : collectionWaterfall ? (
+              <div className="grid grid-cols-5 gap-4 text-center">
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Due</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{collectionWaterfall.summary.due.formatted}</p>
+                </div>
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <p className="text-sm text-green-600 dark:text-green-400">Collected</p>
+                  <p className="text-xl font-bold text-green-600 dark:text-green-400">{collectionWaterfall.summary.collected.formatted}</p>
+                </div>
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                  <p className="text-sm text-yellow-600 dark:text-yellow-400">Partial</p>
+                  <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{collectionWaterfall.summary.partial.formatted}</p>
+                </div>
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <p className="text-sm text-red-600 dark:text-red-400">Overdue</p>
+                  <p className="text-xl font-bold text-red-600 dark:text-red-400">{collectionWaterfall.summary.overdue.formatted}</p>
+                </div>
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Compliance</p>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">{collectionWaterfall.summary.compliance.formatted}</p>
+                </div>
               </div>
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <p className="text-sm text-yellow-600 dark:text-yellow-400">Partial</p>
-                <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">ZMW 4,500</p>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-gray-500 dark:text-gray-400">No collections waterfall data available</p>
               </div>
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">Overdue</p>
-                <p className="text-xl font-bold text-red-600 dark:text-red-400">ZMW 2,375</p>
-              </div>
-              <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Compliance</p>
-                <p className="text-xl font-bold text-gray-900 dark:text-white">94.5%</p>
-              </div>
-            </div>
+            )}
           </CollapsibleCard>
         </div>
 

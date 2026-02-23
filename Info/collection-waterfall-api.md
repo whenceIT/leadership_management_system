@@ -9,57 +9,271 @@ start_date	date	No	2023-02-01	Period start date (YYYY-MM-DD)
 end_date	date	No	Current date	Period end date (YYYY-MM-DD)
 Response Structure
 {
-  "success": true,
-  "data": {
-    "metric": "Collections Waterfall",
-    "office_id": 1,
-    "office_name": "Branch Name",
-    "period": {
-      "start_date": "2023-02-01",
-      "end_date": "2026-02-23"
-    },
-    "currency": "ZMW",
-    "summary": {
-      "due": {
-        "total": 125000,
-        "formatted": "ZMW 125,000.00",
-        "breakdown": { "principal", "interest", "fees", "penalty" },
-        "loans_count": 150,
-        "installments_count": 450
-      },
-      "collected": {
-        "total": 118125,
-        "formatted": "ZMW 118,125.00",
-        ...
-      },
-      "partial": {
-        "total": 4500,
-        "formatted": "ZMW 4,500.00",
-        ...
-      },
-      "overdue": {
-        "total": 2375,
-        "formatted": "ZMW 2,375.00",
-        ...
-      },
-      "compliance": {
-        "rate": 94.5,
-        "formatted": "94.5%",
-        "status": "excellent"
-      }
-    },
-    "analysis": {
-      "total_collections": 122625,
-      "overall_collection_rate": 98.1,
-      "collection_gap": 6875,
-      "uncollected_amount": 2375
-    },
-    "officer_breakdown": [...],
-    "monthly_trend": [...],
-    "expected_monthly": [...]
-  }
+    "success": true,
+    "data": {
+        "metric": "Collections Waterfall",
+        "office_id": 1,
+        "office_name": "ZIMCO HOUSE LUSAKA",
+        "period": {
+            "start_date": "2023-02-01",
+            "end_date": "2026-02-23"
+        },
+        "currency": "ZMW",
+        "summary": {
+            "due": {
+                "total": 0,
+                "formatted": "ZMW 0.00",
+                "breakdown": {
+                    "principal": 4725880,
+                    "interest": 3455533.2672,
+                    "fees": 220090,
+                    "penalty": 0
+                },
+                "loans_count": 2127,
+                "installments_count": 3864
+            },
+            "collected": {
+                "total": 0,
+                "formatted": "ZMW 0.00",
+                "breakdown": {
+                    "principal": 0,
+                    "interest": 0,
+                    "fees": 0,
+                    "penalty": 0
+                },
+                "loans_count": 0,
+                "payments_count": 0
+            },
+            "partial": {
+                "total": 0,
+                "formatted": "ZMW 0.00",
+                "breakdown": {
+                    "principal": 0,
+                    "interest": 0,
+                    "fees": 0,
+                    "penalty": 0
+                },
+                "loans_count": 0,
+                "payments_count": 0
+            },
+            "overdue": {
+                "total": 0,
+                "formatted": "ZMW 0.00",
+                "breakdown": {
+                    "principal": 377411.9,
+                    "interest": 355837.86,
+                    "fees": 13483,
+                    "penalty": 0
+                },
+                "loans_count": 324,
+                "installments_count": 870
+            },
+            "compliance": {
+                "rate": 0,
+                "formatted": "0%",
+                "status": "needs_attention"
+            }
+        },
+        "analysis": {
+            "total_collections": 0,
+            "total_collections_formatted": "ZMW 0.00",
+            "overall_collection_rate": 0,
+            "collection_gap": 0,
+            "collection_gap_formatted": "ZMW 0.00",
+            "uncollected_amount": 0,
+            "uncollected_formatted": "ZMW 0.00"
+        },
+        "officer_breakdown": [],
+        "monthly_trend": [],
+        "expected_monthly": [
+            {
+                "month": "2026-02",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2026-01",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-12",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-11",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-10",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-09",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-08",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-07",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-06",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-05",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-04",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-03",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-02",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2025-01",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-12",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-11",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-10",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-09",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-08",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-07",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-06",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-05",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-04",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-03",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-02",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2024-01",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-12",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-11",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-10",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-09",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-08",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-07",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-06",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-05",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-04",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-03",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            },
+            {
+                "month": "2023-02",
+                "expected": 0,
+                "formatted": "ZMW 0.00"
+            }
+        ]
+    }
 }
-
 
 
 Formulas Used
