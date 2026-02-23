@@ -85,6 +85,8 @@ clients - client acquisition
 KPI Calculation Formula
 Staff Productivity = (Disbursement Score × 0.40) + (Collections Score × 0.30) + (Quality Score × 0.20) + (Acquisition Score × 0.10)
 
+
+
 Where:
 - Disbursement Score = (Actual Disbursement / Target Disbursement) × 100
 - Collections Score = (Collected Amount / Expected Amount) × 100

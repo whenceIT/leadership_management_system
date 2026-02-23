@@ -22,6 +22,7 @@ export interface ProcessedKPI {
   value: number;
   format: string;
   lowerIsBetter?: boolean;
+  score: number; // Added score property
 }
 
 export function useUserKPI() {
@@ -74,7 +75,7 @@ export function useUserKPI() {
             
           setKpis(transformedKpis);
           
-          // Process KPIs for dashboard display
+            // Process KPIs for dashboard display
           const processed = transformedKpis.map(kpi => {
             // Parse target, baseline, and value from strings with possible units (K, %, etc.)
             const parseMetricValue = (value: string, unit: string): number => {
@@ -99,6 +100,21 @@ export function useUserKPI() {
             const target = parseMetricValue(kpi.target, kpi.unit);
             const baseline = parseMetricValue(kpi.baseline, kpi.unit);
 
+            // Calculate score
+            let score = 0;
+            const lowerIsBetter = kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost');
+            if (lowerIsBetter) {
+              // For metrics where lower is better
+              if (value <= target) {
+                score = 100;
+              } else {
+                score = Math.max(0, 100 - ((value - target) / target) * 100);
+              }
+            } else {
+              // For metrics where higher is better
+              score = Math.min(100, (value / target) * 100);
+            }
+
             return {
               id: kpi.id,
               name: kpi.name,
@@ -115,7 +131,8 @@ export function useUserKPI() {
               createdBy: kpi.createdBy,
               value: value,
               format: kpi.unit === 'ZMW' ? 'currency' : kpi.unit === 'percent' ? 'percent' : 'number',
-              lowerIsBetter: kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost'),
+              lowerIsBetter: lowerIsBetter,
+              score: score,
             };
           });
           
@@ -149,6 +166,21 @@ export function useUserKPI() {
               const target = parseMetricValue(kpi.target, kpi.unit);
               const baseline = parseMetricValue(kpi.baseline, kpi.unit);
 
+              // Calculate score
+              let score = 0;
+              const lowerIsBetter = kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost');
+              if (lowerIsBetter) {
+                // For metrics where lower is better
+                if (value <= target) {
+                  score = 100;
+                } else {
+                  score = Math.max(0, 100 - ((value - target) / target) * 100);
+                }
+              } else {
+                // For metrics where higher is better
+                score = Math.min(100, (value / target) * 100);
+              }
+
               return {
                 id: kpi.id,
                 name: kpi.name,
@@ -165,7 +197,8 @@ export function useUserKPI() {
                 createdBy: kpi.createdBy,
                 value: value,
                 format: kpi.unit === 'ZMW' ? 'currency' : kpi.unit === 'percent' ? 'percent' : 'number',
-                lowerIsBetter: kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost'),
+                lowerIsBetter: lowerIsBetter,
+                score: score,
               };
             });
           
@@ -202,6 +235,21 @@ export function useUserKPI() {
               const target = parseMetricValue(kpi.target, kpi.unit);
               const baseline = parseMetricValue(kpi.baseline, kpi.unit);
 
+              // Calculate score
+              let score = 0;
+              const lowerIsBetter = kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost');
+              if (lowerIsBetter) {
+                // For metrics where lower is better
+                if (value <= target) {
+                  score = 100;
+                } else {
+                  score = Math.max(0, 100 - ((value - target) / target) * 100);
+                }
+              } else {
+                // For metrics where higher is better
+                score = Math.min(100, (value / target) * 100);
+              }
+
               return {
                 id: kpi.id,
                 name: kpi.name,
@@ -218,7 +266,8 @@ export function useUserKPI() {
                 createdBy: kpi.createdBy,
                 value: value,
                 format: kpi.unit === 'ZMW' ? 'currency' : kpi.unit === 'percent' ? 'percent' : 'number',
-                lowerIsBetter: kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost'),
+                lowerIsBetter: lowerIsBetter,
+                score: score,
               };
             });
         
@@ -312,49 +361,65 @@ export function useUserKPI() {
           
         setKpis(transformedKpis);
         
-        const processed = transformedKpis.map(kpi => {
-          // Parse target, baseline, and value from strings with possible units (K, %, etc.)
-          const parseMetricValue = (value: string, unit: string): number => {
-            if (!value) return 0;
-            
-            let numericValue = 0;
-            
-            // Remove currency symbols, percentage signs, and other non-numeric characters
-            const strippedValue = value.replace(/[^0-9.,]/g, '');
-            
-            // Parse as float
-            numericValue = parseFloat(strippedValue);
-            
-            // Handle thousand (K) and million (M) suffixes
-            if (value.includes('K')) numericValue *= 1000;
-            if (value.includes('M')) numericValue *= 1000000;
-            
-            return numericValue;
-          };
+          const processed = transformedKpis.map(kpi => {
+            // Parse target, baseline, and value from strings with possible units (K, %, etc.)
+            const parseMetricValue = (value: string, unit: string): number => {
+              if (!value) return 0;
+              
+              let numericValue = 0;
+              
+              // Remove currency symbols, percentage signs, and other non-numeric characters
+              const strippedValue = value.replace(/[^0-9.,]/g, '');
+              
+              // Parse as float
+              numericValue = parseFloat(strippedValue);
+              
+              // Handle thousand (K) and million (M) suffixes
+              if (value.includes('K')) numericValue *= 1000;
+              if (value.includes('M')) numericValue *= 1000000;
+              
+              return numericValue;
+            };
 
-          const value = parseMetricValue(kpi.baseline, kpi.unit);
-          const target = parseMetricValue(kpi.target, kpi.unit);
-          const baseline = parseMetricValue(kpi.baseline, kpi.unit);
+            const value = parseMetricValue(kpi.baseline, kpi.unit);
+            const target = parseMetricValue(kpi.target, kpi.unit);
+            const baseline = parseMetricValue(kpi.baseline, kpi.unit);
 
-          return {
-            id: kpi.id,
-            name: kpi.name,
-            description: kpi.description,
-            category: kpi.category,
-            position: kpi.position,
-            target: target,
-            baseline: baseline,
-            weight: kpi.weight,
-            unit: kpi.unit,
-            frequency: kpi.frequency,
-            isActive: kpi.isActive,
-            lastUpdated: kpi.lastUpdated,
-            createdBy: kpi.createdBy,
-            value: value,
-            format: kpi.unit === 'ZMW' ? 'currency' : kpi.unit === 'percent' ? 'percent' : 'number',
-            lowerIsBetter: kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost'),
-          };
-        });
+            // Calculate score
+            let score = 0;
+            const lowerIsBetter = kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost');
+            if (lowerIsBetter) {
+              // For metrics where lower is better
+              if (value <= target) {
+                score = 100;
+              } else {
+                score = Math.max(0, 100 - ((value - target) / target) * 100);
+              }
+            } else {
+              // For metrics where higher is better
+              score = Math.min(100, (value / target) * 100);
+            }
+
+            return {
+              id: kpi.id,
+              name: kpi.name,
+              description: kpi.description,
+              category: kpi.category,
+              position: kpi.position,
+              target: target,
+              baseline: baseline,
+              weight: kpi.weight,
+              unit: kpi.unit,
+              frequency: kpi.frequency,
+              isActive: kpi.isActive,
+              lastUpdated: kpi.lastUpdated,
+              createdBy: kpi.createdBy,
+              value: value,
+              format: kpi.unit === 'ZMW' ? 'currency' : kpi.unit === 'percent' ? 'percent' : 'number',
+              lowerIsBetter: lowerIsBetter,
+              score: score,
+            };
+          });
         
         setProcessedKPIs(processed);
       }

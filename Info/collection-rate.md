@@ -5,6 +5,8 @@ office_id	Yes	Branch office ID
 period_start	No	Start date (YYYY-MM-DD), defaults to current month start
 period_end	No	End date (YYYY-MM-DD), defaults to current month end
 target_rate	No	Target collections rate (default: 93.0)
+
+
 Example Request
 GET /collections-rate?office_id=1&period_start=2026-01-01&period_end=2026-01-31&target_rate=93
 Response Structure

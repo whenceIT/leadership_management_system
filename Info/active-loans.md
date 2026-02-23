@@ -43,6 +43,9 @@ Response Structure
     "loan_details": [...]  // Only if include_details=true
   }
 }
+
+
+
 Data Sources Used
 loans - id, office_id, status, disbursement_date, closed_date, written_off_date, principal_derived
 clients - id, office_id, status

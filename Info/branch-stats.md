@@ -1,6 +1,5 @@
 https://smartbackend.whencefinancesystem.com/branch-stats?office_id = 3
 
-
 response sample:
 {
     "success": true,
