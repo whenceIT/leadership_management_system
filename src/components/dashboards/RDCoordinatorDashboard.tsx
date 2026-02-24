@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function RDCoordinatorDashboard() {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function RDCoordinatorDashboard() {
 
   const jobPurpose = "The R&D Coordinator serves as the innovation catalyst, driving product development and market research to sustain competitive advantage. This role directly supports the $100M valuation by identifying new revenue streams, improving product offerings, and ensuring market relevance through continuous innovation.";
 
-  const kpis = [
-    { name: "New Product Revenue", baseline: "K200K/yr", target: "≥K500K/yr", weight: "30%" },
-    { name: "Research Projects Completed", baseline: "2/yr", target: "≥4/yr", weight: "25%" },
-    { name: "Market Research Adoption Rate", baseline: "50%", target: "≥75%", weight: "20%" },
-    { name: "Innovation Pipeline Health", baseline: "3 projects", target: "≥5 projects", weight: "15%" },
-    { name: "R&D Investment ROI", baseline: "120%", target: "≥200%", weight: "10%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

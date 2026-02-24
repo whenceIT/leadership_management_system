@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function GOMDashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function GOMDashboard({ userTier }: { userTier?: string }) {
 
   const jobPurpose = "The General Operations Manager (GOM) is the strategic orchestrator of national operational excellence, driving innovation, efficiency, and growth across all branches. This role is value-creating, directly contributing to the institution's $100M valuation target through operational optimization and revenue enhancement initiatives.";
 
-  const kpis = [
-    { name: "Net Contribution Growth", baseline: "-", target: "+15% YoY", weight: "30%" },
-    { name: "Operational Cost Reduction", baseline: "Baseline", target: "-10%", weight: "20%" },
-    { name: "Net Promoter Score (NPS)", baseline: "35", target: "≥50", weight: "15%" },
-    { name: "Branch Network Growth", baseline: "42 branches", target: "+5 branches", weight: "20%" },
-    { name: "Staff Engagement Score", baseline: "65%", target: "≥80%", weight: "15%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

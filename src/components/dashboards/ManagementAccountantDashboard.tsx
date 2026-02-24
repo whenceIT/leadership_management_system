@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function ManagementAccountantDashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function ManagementAccountantDashboard({ userTier }: { userTier?:
 
   const jobPurpose = "The Management Accountant serves as the financial steward of the institution, ensuring accurate financial reporting, strategic financial planning, and regulatory compliance. This role directly supports the $100M valuation by maintaining investor confidence through transparent financial management and enabling data-driven decision-making.";
 
-  const kpis = [
-    { name: "Audit Opinion", baseline: "Qualified", target: "Unqualified", weight: "30%" },
-    { name: "Monthly Reporting Deadline", baseline: "75%", target: "100%", weight: "20%" },
-    { name: "Variance Analysis Accuracy", baseline: "±10%", target: "≤±5%", weight: "20%" },
-    { name: "Budget vs Actual Deviation", baseline: "15%", target: "≤8%", weight: "15%" },
-    { name: "Cost Saving Recommendations", baseline: "K50K/yr", target: "≥K200K/yr", weight: "15%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

@@ -18,6 +18,7 @@ import ProvincialDataService, {
 } from '@/services/ProvincialDataService';
 import { useUserPosition } from '@/hooks/useUserPosition';
 import { useOffice } from '@/hooks/useOffice';
+import { useUserKPI, ProcessedKPI } from '@/hooks/useUserKPI';
 
 export default function ProvincialManagerDashboard() {
   const { user, positionName, isLoading: isPositionLoading } = useUserPosition();
@@ -25,6 +26,9 @@ export default function ProvincialManagerDashboard() {
   const [performanceData, setPerformanceData] = useState<ProvincialPerformanceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
 
   // Get province ID from user's office
   const getProvinceIdFromUser = (): number => {
@@ -81,22 +85,13 @@ export default function ProvincialManagerDashboard() {
 
   const jobPurpose = "The Provincial Manager serves as the Strategic Growth Driver & Portfolio Architect for the province/region. This role focuses on strategic oversight, provincial portfolio health, cross-district synergy, market innovation, and long-term value creation aligned with the $100M valuation target.";
 
-  // Build KPIs from actual data if available
-  const kpis = performanceData ? [
-    { name: "Provincial Net Contribution Growth", baseline: "-", target: "+25% YoY", weight: "25%" },
-    { name: "Long-Term Delinquency Reduction", baseline: "-", target: "-5 pp", weight: "20%" },
-    { name: "New Product/Channel Revenue", baseline: "-", target: "≥K500K/yr", weight: "15%" },
-    { name: "Strategic Partnership Revenue", baseline: "-", target: "≥K1M/yr", weight: "15%" },
-    { name: "Cost-to-Income Ratio", baseline: "50%", target: "≤45%", weight: "10%" },
-    { name: "District Manager Development", baseline: "-", target: "≥2 prom/yr", weight: "10%" }
-  ] : [
-    { name: "Provincial Net Contribution Growth", baseline: "-", target: "+25% YoY", weight: "25%" },
-    { name: "Long-Term Delinquency Reduction", baseline: "-", target: "-5 pp", weight: "20%" },
-    { name: "New Product/Channel Revenue", baseline: "-", target: "≥K500K/yr", weight: "15%" },
-    { name: "Strategic Partnership Revenue", baseline: "-", target: "≥K1M/yr", weight: "15%" },
-    { name: "Cost-to-Income Ratio", baseline: "50%", target: "≤45%", weight: "10%" },
-    { name: "District Manager Development", baseline: "-", target: "≥2 prom/yr", weight: "10%" }
-  ];
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   // Get health status styling
   const getHealthStatusStyle = (status: 'excellent' | 'good' | 'needs_focus' | 'critical') => {
@@ -254,32 +249,17 @@ export default function ProvincialManagerDashboard() {
                 })}
               </div>
             ) : (
-              <div className="grid grid-cols-5 gap-4">
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch A</p>
-                  <p className="text-2xl font-bold text-green-600 mt-1">K850K</p>
-                  <p className="text-xs text-gray-500">Net Contribution</p>
+              // Empty state when no branch performance data is available
+              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="flex justify-center mb-4">
+                  <svg className="w-24 h-24 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
                 </div>
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch B</p>
-                  <p className="text-2xl font-bold text-green-600 mt-1">K720K</p>
-                  <p className="text-xs text-gray-500">Net Contribution</p>
-                </div>
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch C</p>
-                  <p className="text-2xl font-bold text-yellow-600 mt-1">K580K</p>
-                  <p className="text-xs text-gray-500">Net Contribution</p>
-                </div>
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch D</p>
-                  <p className="text-2xl font-bold text-green-600 mt-1">K690K</p>
-                  <p className="text-xs text-gray-500">Net Contribution</p>
-                </div>
-                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Branch E</p>
-                  <p className="text-2xl font-bold text-green-600 mt-1">K760K</p>
-                  <p className="text-xs text-gray-500">Net Contribution</p>
-                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Branch Performance Data</h3>
+                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                  Branch performance data is currently unavailable. Please check back later for real-time branch metrics and contributions.
+                </p>
               </div>
             )}
           </CollapsibleCard>
@@ -346,27 +326,17 @@ export default function ProvincialManagerDashboard() {
                 })}
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Branch A</span>
-                  <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Excellent</span>
+              // Empty state when no branch health data is available
+              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="flex justify-center mb-4">
+                  <svg className="w-24 h-24 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Branch B</span>
-                  <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Good</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-yellow-700 dark:text-yellow-300">Branch C</span>
-                  <span className="text-xs px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full">Needs Focus</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Branch D</span>
-                  <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Good</span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Branch E</span>
-                  <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Excellent</span>
-                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Health Indicator Data</h3>
+                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                  Branch health indicator data is currently unavailable. Please check back later for real-time health status updates.
+                </p>
               </div>
             )}
           </CollapsibleCard>

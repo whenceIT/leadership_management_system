@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import PriorityActionService, { PriorityAction } from '@/services/PriorityActionService';
 import AlertService, { Alert, AlertType } from '@/services/AlertService';
+import BranchDataService from '@/services/BranchDataService';
+import { BranchStatsData } from '@/services/BranchDataService';
 import { useUserData } from '@/hooks/useUserSync';
 import { useLoanUpdates } from '@/hooks/useLoanUpdates';
 import { useOffice } from '@/hooks/useOffice';
@@ -26,8 +28,8 @@ export default function AssistantPage() {
   const [priorityActions, setPriorityActions] = useState<PriorityAction[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [teamSnapshot, setTeamSnapshot] = useState({
-    totalStaff: 24,
-    onLeave: 2,
+    totalStaff: 0,
+    onLeave: 0,
     pendingTasks: 0,
     completedToday: 0,
   });
@@ -89,6 +91,26 @@ export default function AssistantPage() {
         pendingTasks: actions.length,
       }));
     });
+
+    // Fetch branch stats from API
+    const fetchBranchStats = async () => {
+      const branchDataService = BranchDataService.getInstance();
+      const officeId = 2; // TODO: Get from user context or office hook
+      
+      const branchStats = await branchDataService.fetchBranchStats({
+        office_id: officeId
+      });
+
+      if (branchStats) {
+        setTeamSnapshot(prev => ({
+          ...prev,
+          totalStaff: branchStats.total_staff,
+          onLeave: branchStats.staff_on_leave,
+        }));
+      }
+    };
+
+    fetchBranchStats();
 
     // Subscribe to real-time priority action updates
     const unsubscribeFn = service.subscribe((updatedActions) => {
@@ -355,7 +377,7 @@ export default function AssistantPage() {
       </div>
 
       {/* Decision Support */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+      {/* <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Decision Support System
@@ -365,7 +387,6 @@ export default function AssistantPage() {
           </p>
         </div>
         <div className="p-6">
-          {/* Question Input */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Ask a question
@@ -382,7 +403,6 @@ export default function AssistantPage() {
             </div>
           </div>
 
-          {/* Sample Decision Support */}
           <div className="space-y-4">
             {decisionSupport.map((support, index) => (
               <div
@@ -417,7 +437,6 @@ export default function AssistantPage() {
                   </div>
                 </div>
 
-                {/* Historical Precedents */}
                 <div>
                   <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Historical Precedents
@@ -445,7 +464,7 @@ export default function AssistantPage() {
             ))}
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Learning & Development */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">

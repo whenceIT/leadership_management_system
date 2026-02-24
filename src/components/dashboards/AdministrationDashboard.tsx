@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function AdministrationDashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function AdministrationDashboard({ userTier }: { userTier?: strin
 
   const jobPurpose = "The Administration role serves as the operational backbone of the institution, ensuring seamless day-to-day administrative functions. This role supports the institution's $100M valuation by enabling operational efficiency, maintaining regulatory compliance, and creating a productive work environment.";
 
-  const kpis = [
-    { name: "Staff Turnover Rate", baseline: "15%", target: "≤10%", weight: "25%" },
-    { name: "Staff Engagement Score", baseline: "65%", target: "≥80%", weight: "25%" },
-    { name: "HR Compliance Rate", baseline: "90%", target: "100%", weight: "20%" },
-    { name: "Payroll Accuracy", baseline: "95%", target: "100%", weight: "20%" },
-    { name: "Training Completion Rate", baseline: "75%", target: "≥95%", weight: "10%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

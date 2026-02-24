@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function POADashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function POADashboard({ userTier }: { userTier?: string }) {
 
   const jobPurpose = "The Performance Operations Administrator (POA) is the strategic data analyst and performance guardian of the institution, ensuring accountability, accuracy, and continuous improvement across all operations. This role directly supports the $100M valuation target by enabling data-driven decision-making and identifying value-creation opportunities.";
 
-  const kpis = [
-    { name: "Audit Finding Resolution", baseline: "14 days", target: "≤7 days", weight: "25%" },
-    { name: "KPIs Achieving Target", baseline: "85%", target: "≥95%", weight: "25%" },
-    { name: "Data-Driven Insights Generated", baseline: "2/month", target: "≥5/month", weight: "20%" },
-    { name: "Staff Trained in Performance Management", baseline: "0", target: "100%", weight: "15%" },
-    { name: "Action Plan Completion Rate", baseline: "78%", target: "≥95%", weight: "15%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function PayrollLoansManagerDashboard() {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function PayrollLoansManagerDashboard() {
 
   const jobPurpose = "The Payroll Loans Manager serves as the strategic growth driver for the institution's payroll loan portfolio, balancing revenue growth with prudent risk management. This role is value-creating, directly contributing to the $100M valuation target by optimizing portfolio performance and expanding the payroll loan business.";
 
-  const kpis = [
-    { name: "Net Contribution Growth", baseline: "-", target: "+25% YoY", weight: "25%" },
-    { name: "M1/M3 Default Rate", baseline: "5%/12%", target: "≤4%/≤10%", weight: "25%" },
-    { name: "Collection Rate", baseline: "88%", target: "≥92%", weight: "20%" },
-    { name: "Payroll Partners", baseline: "25", target: "+10 new", weight: "15%" },
-    { name: "Disbursement Efficiency", baseline: "3 days", target: "≤2 days", weight: "15%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

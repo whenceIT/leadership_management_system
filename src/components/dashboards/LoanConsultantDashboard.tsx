@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { DashboardBase, KPICard, AlertCard, CollapsibleCard, KPIMetricsCard } from './DashboardBase';
 import { roleCardsData } from '@/data/role-cards-data';
 import { useUserTier } from '@/hooks/useUserTier';
+import { useUserKPI } from '@/hooks/useUserKPI';
 import { getUserOfficeName } from '@/hooks/useOffice';
 import { useLoanConsultantStats } from '@/hooks/useLoanConsultantStats';
 import PriorityActionService from '@/services/PriorityActionService';
@@ -40,6 +41,17 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
     jobPurpose: 'TBD',
     kpis: []
   };
+
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   // Calculate changes from previous circle
   const calculateChange = (current: number, previous: number): { value: number; percentage: number; isPositive: boolean } => {
@@ -143,9 +155,9 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
         </p>
       </div>
 
-      {/* KPI Metrics from Role Card */}
-      {roleCard.kpis && roleCard.kpis.length > 0 && (
-        <KPIMetricsCard kpis={roleCard.kpis} title="Key Performance Indicators (KPIs)" />
+      {/* KPI Metrics from User Data */}
+      {kpis.length > 0 && (
+        <KPIMetricsCard kpis={kpis} title="Key Performance Indicators (KPIs)" />
       )}
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">

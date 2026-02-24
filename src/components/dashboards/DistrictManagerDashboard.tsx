@@ -3,6 +3,7 @@
 import React from 'react';
 import { DashboardBase, KPICard, AlertCard, SectionCard, QuickInfoBar, JobPurpose, KPIMetricsCard, CollapsibleCard } from './DashboardBase';
 import { roleCardsData } from '@/data/role-cards-data';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 interface DistrictManagerDashboardProps {
   position?: string;
@@ -18,6 +19,17 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
     jobPurpose: 'TBD',
     kpis: []
   };
+
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase
@@ -36,10 +48,8 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
       {/* Job Purpose */}
       <JobPurpose purpose={roleCard.jobPurpose} />
 
-      {/* KPI Metrics from Role Card */}
-      {roleCard.kpis && roleCard.kpis.length > 0 && (
-        <KPIMetricsCard kpis={roleCard.kpis} title="Key Performance Indicators (KPIs)" />
-      )}
+      {/* KPI Metrics from API */}
+      <KPIMetricsCard kpis={kpis} title="Key Performance Indicators (KPIs)" />
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         {/* KPI Cards with expand functionality */}

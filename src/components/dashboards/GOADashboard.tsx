@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function GOADashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
@@ -22,14 +23,16 @@ export default function GOADashboard({ userTier }: { userTier?: string }) {
 
   const jobPurpose = "The General Operations Administrator (GOA) is the operational backbone of the institution, ensuring efficiency, resource coordination, and compliance across all branches. This role is value-preserving and value-enabling, directly supporting the institution's $100M valuation target by minimizing operational losses and optimizing resource utilization.";
 
-  const kpis = [
-    { name: "Recruitment Vacancy Days", baseline: "21 days", target: "≤7 days", weight: "25%" },
-    { name: "Fleet Downtime", baseline: "8%", target: "≤5%", weight: "15%" },
-    { name: "BMOS Compliance Rate", baseline: "90%", target: "100%", weight: "20%" },
-    { name: "Statutory Submission Timeliness", baseline: "95%", target: "100%", weight: "20%" },
-    { name: "Internet Uptime", baseline: "95%", target: "≥98%", weight: "10%" },
-    { name: "Monthly Value Preserved", baseline: "K120K", target: "≥K150K", weight: "30%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

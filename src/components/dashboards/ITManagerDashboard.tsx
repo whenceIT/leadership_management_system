@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function ITManagerDashboard({ userTier }: { userTier?: string }) {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function ITManagerDashboard({ userTier }: { userTier?: string }) 
 
   const jobPurpose = "The IT Manager serves as the strategic technology leader, driving digital transformation and ensuring technology infrastructure supports the institution's $100M valuation target. This role enables operational excellence through technology while protecting digital assets and ensuring business continuity.";
 
-  const kpis = [
-    { name: "System Uptime", baseline: "96%", target: "≥99.5%", weight: "25%" },
-    { name: "Security Incidents", baseline: "4/quarter", target: "0", weight: "25%" },
-    { name: "Project Delivery On-Time", baseline: "60%", target: "≥90%", weight: "20%" },
-    { name: "User Satisfaction Score", baseline: "72%", target: "≥85%", weight: "15%" },
-    { name: "IT Cost per User", baseline: "K800/mo", target: "≤K600/mo", weight: "15%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

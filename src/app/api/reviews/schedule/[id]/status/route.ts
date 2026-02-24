@@ -1,37 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveSession } from '@/lib/auth';
-
-// Interface for scheduled review stored data
-interface ScheduledReview {
-  id: string;
-  position: string;
-  reviewType: string;
-  title: string;
-  description?: string;
-  scheduledDateTime: string;
-  assignee: string;
-  priority: 'low' | 'medium' | 'high';
-  sendReminder: boolean;
-  reminderDaysBefore: number;
-  status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
-  createdBy: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// In-memory store for scheduled reviews (shared with main route)
-declare global {
-  // eslint-disable-next-line no-var
-  var scheduledReviewsStore: Map<string, ScheduledReview> | undefined;
-}
-
-// Initialize or get the global store
-function getReviewsStore(): Map<string, ScheduledReview> {
-  if (!globalThis.scheduledReviewsStore) {
-    globalThis.scheduledReviewsStore = new Map();
-  }
-  return globalThis.scheduledReviewsStore;
-}
+import { ScheduledReview, getReviewsStore } from '../../types';
 
 // Valid status values
 const VALID_STATUSES = ['scheduled', 'in-progress', 'completed', 'cancelled'] as const;

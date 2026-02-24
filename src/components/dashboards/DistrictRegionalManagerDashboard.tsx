@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function DistrictRegionalManagerDashboard() {
   const jobInfo = {
@@ -22,14 +23,16 @@ export default function DistrictRegionalManagerDashboard() {
 
   const jobPurpose = "The District Regional Manager serves as the strategic growth catalyst for the region, balancing operational excellence with market expansion and portfolio quality. This role is value-creating, directly contributing to the institution's $100M valuation target through optimized regional performance and strategic market development.";
 
-  const kpis = [
-    { name: "Regional Net Contribution Growth", baseline: "-", target: "+20% YoY", weight: "25%" },
-    { name: "Month-1 Default Rate", baseline: "4.5%", target: "≤3.5%", weight: "20%" },
-    { name: "Collection Rate", baseline: "88%", target: "≥92%", weight: "20%" },
-    { name: "District Manager Development", baseline: "-", target: "≥1 prom/yr", weight: "15%" },
-    { name: "Cross-Selling Index", baseline: "1.2", target: "≥1.5", weight: "10%" },
-    { name: "Regional Compliance Score", baseline: "92%", target: "≥98%", weight: "10%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

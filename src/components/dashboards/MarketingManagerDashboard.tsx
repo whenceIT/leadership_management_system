@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function MarketingManagerDashboard() {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function MarketingManagerDashboard() {
 
   const jobPurpose = "The Marketing Manager serves as the brand guardian and growth catalyst, driving market presence and customer acquisition. This role directly supports the $100M valuation by building brand equity, generating leads, and ensuring marketing ROI through strategic campaigns and creative excellence.";
 
-  const kpis = [
-    { name: "Marketing ROI", baseline: "150%", target: "≥250%", weight: "25%" },
-    { name: "Lead Generation", baseline: "100/mo", target: "≥200/mo", weight: "25%" },
-    { name: "Brand Awareness Score", baseline: "45%", target: "≥65%", weight: "20%" },
-    { name: "Customer Acquisition Cost", baseline: "K800", target: "≤K500", weight: "15%" },
-    { name: "Campaign Success Rate", baseline: "35%", target: "≥50%", weight: "15%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

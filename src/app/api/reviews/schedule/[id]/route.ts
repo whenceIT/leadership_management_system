@@ -1,42 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Interface for scheduled review stored data
-interface ScheduledReview {
-  id: string;
-  position: string;
-  reviewType: string;
-  title: string;
-  description?: string;
-  scheduledDateTime: string;
-  assignee: string;
-  priority: 'low' | 'medium' | 'high';
-  sendReminder: boolean;
-  reminderDaysBefore: number;
-  kpiId?: string;
-  kpiName?: string;
-  status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
-  createdBy: string;
-  createdByEmail?: string;
-  userId?: number;
-  officeId?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// In-memory store for scheduled reviews (shared with main route)
-// In production, this would be replaced with database calls
-declare global {
-  // eslint-disable-next-line no-var
-  var scheduledReviewsStore: Map<string, ScheduledReview> | undefined;
-}
-
-// Initialize or get the global store
-function getReviewsStore(): Map<string, ScheduledReview> {
-  if (!globalThis.scheduledReviewsStore) {
-    globalThis.scheduledReviewsStore = new Map();
-  }
-  return globalThis.scheduledReviewsStore;
-}
+import { ScheduledReview, getReviewsStore } from '../types';
 
 // GET - Retrieve a single scheduled review by ID
 export async function GET(

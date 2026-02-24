@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function RiskManagerDashboard() {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function RiskManagerDashboard() {
 
   const jobPurpose = "The Risk Manager serves as the strategic guardian of institutional stability and resilience. This role is critical for protecting the institution's $100M valuation by proactively identifying, assessing, and mitigating risks across all operations while ensuring regulatory compliance.";
 
-  const kpis = [
-    { name: "Month-1 Default Rate", baseline: "5%", target: "≤4%", weight: "25%" },
-    { name: "Month-3 Default Rate", baseline: "12%", target: "≤10%", weight: "25%" },
-    { name: "Collection Rate", baseline: "88%", target: "≥92%", weight: "20%" },
-    { name: "Risk Rating Accuracy", baseline: "75%", target: "≥90%", weight: "15%" },
-    { name: "Fraud Incidents", baseline: "3/quarter", target: "0", weight: "15%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

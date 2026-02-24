@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function ITCoordinatorDashboard() {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function ITCoordinatorDashboard() {
 
   const jobPurpose = "The IT Coordinator serves as the operational backbone of the institution's technology function, ensuring seamless day-to-day IT operations and user support. This role supports the institution's $100M valuation by maintaining system reliability, enabling user productivity, and ensuring technology compliance.";
 
-  const kpis = [
-    { name: "Ticket Resolution Time", baseline: "8 hours", target: "≤4 hours", weight: "25%" },
-    { name: "First Contact Resolution", baseline: "65%", target: "≥80%", weight: "25%" },
-    { name: "User Training Completion", baseline: "70%", target: "100%", weight: "20%" },
-    { name: "Documentation Accuracy", baseline: "80%", target: "≥95%", weight: "15%" },
-    { name: "Hardware Uptime", baseline: "95%", target: "≥99%", weight: "15%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

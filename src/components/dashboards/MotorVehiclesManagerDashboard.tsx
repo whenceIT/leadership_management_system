@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function MotorVehiclesManagerDashboard() {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function MotorVehiclesManagerDashboard() {
 
   const jobPurpose = "The Motor Vehicles Manager serves as the strategic guardian of institutional mobility and collateral assets, ensuring fleet efficiency and asset protection. This role supports the institution's $100M valuation by optimizing transportation costs, ensuring vehicle availability, and protecting collateral assets.";
 
-  const kpis = [
-    { name: "Fleet Utilization Rate", baseline: "65%", target: "≥85%", weight: "25%" },
-    { name: "Vehicle Uptime", baseline: "90%", target: "≥95%", weight: "25%" },
-    { name: "Cost per km", baseline: "K8/km", target: "≤K6/km", weight: "20%" },
-    { name: "Accident Rate", baseline: "2/quarter", target: "0", weight: "15%" },
-    { name: "Collateral Value Preserved", baseline: "K8M", target: "≥K10M", weight: "15%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

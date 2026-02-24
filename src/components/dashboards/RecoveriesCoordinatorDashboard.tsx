@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function RecoveriesCoordinatorDashboard() {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function RecoveriesCoordinatorDashboard() {
 
   const jobPurpose = "The Recoveries Coordinator serves as the strategic portfolio healer, maximizing value recovery from non-performing assets while preserving customer relationships. This role directly protects the institution's $100M valuation by minimizing losses and rehabilitating troubled accounts.";
 
-  const kpis = [
-    { name: "Recovery Rate", baseline: "65%", target: "≥80%", weight: "30%" },
-    { name: "Written-off Recovery", baseline: "15%", target: "≥25%", weight: "25%" },
-    { name: "Avg Recovery Time", baseline: "90 days", target: "≤60 days", weight: "20%" },
-    { name: "Customer Rehabilitation Rate", baseline: "20%", target: "≥40%", weight: "15%" },
-    { name: "Legal Cost per Recovered K", baseline: "K0.15", target: "≤K0.10", weight: "10%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase

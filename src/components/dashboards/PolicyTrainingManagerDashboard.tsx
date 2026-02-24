@@ -11,6 +11,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
+import { useUserKPI } from '@/hooks/useUserKPI';
 
 export default function PolicyTrainingManagerDashboard() {
   const jobInfo = {
@@ -22,13 +23,16 @@ export default function PolicyTrainingManagerDashboard() {
 
   const jobPurpose = "The Policy & Training Manager serves as the strategic guardian of institutional capability and compliance, ensuring staff competence and policy adherence. This role directly supports the $100M valuation by building human capital, ensuring regulatory compliance, and fostering a culture of continuous improvement.";
 
-  const kpis = [
-    { name: "Staff Competency Score", baseline: "70%", target: "≥85%", weight: "25%" },
-    { name: "Policy Compliance Rate", baseline: "85%", target: "100%", weight: "25%" },
-    { name: "Training Completion Rate", baseline: "75%", target: "≥95%", weight: "20%" },
-    { name: "New Hire Ramp-up Time", baseline: "3 months", target: "≤6 weeks", weight: "15%" },
-    { name: "Training ROI", baseline: "150%", target: "≥200%", weight: "15%" }
-  ];
+  // Get user-specific KPI data
+  const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Build KPIs from user-specific KPI data
+  const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
+    name: kpi.name,
+    baseline: kpi.baseline.toString(),
+    target: kpi.target.toString(),
+    weight: `${kpi.weight}%`
+  })) : [];
 
   return (
     <DashboardBase
