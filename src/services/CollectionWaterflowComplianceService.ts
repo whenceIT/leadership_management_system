@@ -1,11 +1,3 @@
-'use client';
-
-import { useUserPosition } from '@/hooks/useUserPosition';
-import { useUserTier } from '@/hooks/useUserTier';
-import { useUserSync } from '@/hooks/useUserSync';
-import { useUserKPI } from '@/hooks/useUserKPI';
-import { useOffice } from '@/hooks/useOffice';
-
 export interface CollectionWaterflowResult {
   user_id: number;
   office_id: number;
@@ -45,8 +37,7 @@ export class CollectionWaterflowComplianceService {
   /**
    * Calculate collection compliance based on waterflow method
    */
-  public async 
-  i(
+  public async calculateCollectionCompliance(
     userId: number, 
     officeId: number, 
     periodStart: Date, 

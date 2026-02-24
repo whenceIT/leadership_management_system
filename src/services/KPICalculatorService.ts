@@ -115,6 +115,14 @@ export class KPICalculatorService {
 
     return score;
   }
+
+  private async markscore(userId: number, positionId: number, kpi_name: string): Promise<any[]> {
+    //write a switch case to return the score based on the kpi_name
+    switch (kpi_name) {
+      default:
+        return [];
+    }
+  }
 }
 
 export default KPICalculatorService;
