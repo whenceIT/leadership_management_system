@@ -121,14 +121,14 @@ export class PriorityActionService {
       return;
     }
 
-    this.initializationPromise = this.doInitialize();
+    this.initializationPromise = this.todayLoans();
     return this.initializationPromise;
   }
 
   /**
    * Internal initialization method
    */
-  private async doInitialize(): Promise<void> {
+  private async todayLoans(): Promise<void> {
     try {
       console.log('PriorityActionService: Initializing from API...');
       
@@ -292,11 +292,12 @@ export class PriorityActionService {
   }
 
   /**
-   * Fetch loans pending for more than specified days from API
-   * @param daysOld - Minimum days a loan should be pending (default: 3)
-   * @returns Array of stale loan data
+   * Fetch loans with specific status and date range from API
+   * @param status - Loan status to filter by
+   * @param daysOld - Minimum days a loan should be in the specified status
+   * @returns Array of loan data
    */
-  private async fetchStaleLoans(daysOld: number = 3): Promise<LoanData[]> {
+  private async fetchLoansByStatusAndAge(status: string, daysOld: number): Promise<LoanData[]> {
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smartbackend.whencefinancesystem.com';
       
@@ -311,7 +312,7 @@ export class PriorityActionService {
       const endDateStr = this.formatDate(endDate);
       
       const response = await fetch(
-        `${API_BASE_URL}/smart-loans?status=pending&start_date=${startDateStr}&end_date=${endDateStr}`,
+        `${API_BASE_URL}/smart-loans?status=${status}&start_date=${startDateStr}&end_date=${endDateStr}`,
         {
           method: 'GET',
           headers: {
@@ -321,7 +322,7 @@ export class PriorityActionService {
       );
 
       if (!response.ok) {
-        console.error('PriorityActionService: Failed to fetch stale loans:', response.status);
+        console.error('PriorityActionService: Failed to fetch loans:', response.status);
         return [];
       }
 
@@ -342,13 +343,50 @@ export class PriorityActionService {
         return [];
       }
       
-      console.log('PriorityActionService: Fetched stale loans from API (pending > ' + daysOld + ' days):', loans.length);
+      console.log(`PriorityActionService: Fetched ${loans.length} ${status} loans from API (> ${daysOld} days)`);
       
       return loans;
     } catch (error) {
-      console.error('PriorityActionService: Error fetching stale loans:', error);
+      console.error('PriorityActionService: Error fetching loans:', error);
       return [];
     }
+  }
+
+  /**
+   * Fetch loans pending for more than 4 days
+   */
+  private async morethan4dayOldLoans(): Promise<LoanData[]> {
+    return this.fetchLoansByStatusAndAge('pending', 4);
+  }
+
+  /**
+   * Fetch loans pending for more than 7 days
+   */
+  private async morethan7dayOldLoans(): Promise<LoanData[]> {
+    return this.fetchLoansByStatusAndAge('pending', 7);
+  }
+
+  /**
+   * Fetch loans disbursed for more than 31 days
+   */
+  private async morethan31dayOldLoans(): Promise<LoanData[]> {
+    return this.fetchLoansByStatusAndAge('disbursed', 31);
+  }
+
+  /**
+   * Fetch loans disbursed for more than 37 days
+   */
+  private async morethan37dayOldLoans(): Promise<LoanData[]> {
+    return this.fetchLoansByStatusAndAge('disbursed', 37);
+  }
+
+  /**
+   * Fetch loans pending for more than specified days from API (backward compatibility)
+   * @param daysOld - Minimum days a loan should be pending (default: 3)
+   * @returns Array of stale loan data
+   */
+  private async fetchStaleLoans(daysOld: number = 3): Promise<LoanData[]> {
+    return this.fetchLoansByStatusAndAge('pending', daysOld);
   }
 
   /**

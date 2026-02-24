@@ -300,35 +300,41 @@ export function generatePositionSpecificActions(
 
     // ---- MANAGEMENT ACCOUNTANT - Payment Actions ----
     if (isPositionAllowed(currentPositionId, [POSITION_IDS.MANAGEMENT_ACCOUNTANT])) {
-      actions.push({
-        action: `💵 Payment Received`,
-        due: `${formattedLoanType} of ${amount.toLocaleString()} from ${borrowerName} at ${officeName}.`,
-        urgent: false,
-        positionSpecific: true,
-        targetPositionIds: [POSITION_IDS.MANAGEMENT_ACCOUNTANT],
-      });
+      if (amount) {
+        actions.push({
+          action: `💵 Payment Received`,
+          due: `${formattedLoanType} of ${amount.toLocaleString()} from ${borrowerName} at ${officeName}.`,
+          urgent: false,
+          positionSpecific: true,
+          targetPositionIds: [POSITION_IDS.MANAGEMENT_ACCOUNTANT],
+        });
+      }
     }
 
     // ---- GOA & POA - Payment Actions ----
     if (isPositionAllowed(currentPositionId, [POSITION_IDS.GOA, POSITION_IDS.POA])) {
-      actions.push({
-        action: `⚙️ Payment Processed`,
-        due: `${formattedLoanType} of ${amount.toLocaleString()} at ${officeName}.`,
-        urgent: false,
-        positionSpecific: true,
-        targetPositionIds: [POSITION_IDS.GOA, POSITION_IDS.POA],
-      });
+      if (amount) {
+        actions.push({
+          action: `⚙️ Payment Processed`,
+          due: `${formattedLoanType} of ${amount.toLocaleString()} at ${officeName}.`,
+          urgent: false,
+          positionSpecific: true,
+          targetPositionIds: [POSITION_IDS.GOA, POSITION_IDS.POA],
+        });
+      }
     }
 
     // ---- SUPER SEER - Payment Actions ----
     if (currentPositionId === POSITION_IDS.SUPER_SEER) {
-      actions.push({
-        action: `👁️ Payment Transaction`,
-        due: `${formattedLoanType} of ${amount.toLocaleString()} from ${borrowerName} at ${officeName}.`,
-        urgent: false,
-        positionSpecific: true,
-        targetPositionIds: [POSITION_IDS.SUPER_SEER],
-      });
+      if (amount) {
+        actions.push({
+          action: `👁️ Payment Transaction`,
+          due: `${formattedLoanType} of ${amount.toLocaleString()} from ${borrowerName} at ${officeName}.`,
+          urgent: false,
+          positionSpecific: true,
+          targetPositionIds: [POSITION_IDS.SUPER_SEER],
+        });
+      }
     }
 
     // Return early for payment transactions - no need to generate loan actions
@@ -354,13 +360,15 @@ export function generatePositionSpecificActions(
 
     // ---- LOAN CONSULTANT - Reloan Actions ----
     if (isPositionAllowed(currentPositionId, [POSITION_IDS.LOAN_CONSULTANT])) {
-      actions.push({
-        action: `📝 Reloan to Process`,
-        due: `${borrowerName}'s reloan application of ${amount.toLocaleString()} ready for processing.`,
-        urgent: false,
-        positionSpecific: true,
-        targetPositionIds: [POSITION_IDS.LOAN_CONSULTANT],
-      });
+      if (amount) {
+        actions.push({
+          action: `📝 Reloan to Process`,
+          due: `${borrowerName}'s reloan application of ${amount.toLocaleString()} ready for processing.`,
+          urgent: false,
+          positionSpecific: true,
+          targetPositionIds: [POSITION_IDS.LOAN_CONSULTANT],
+        });
+      }
     }
 
     // Return early for reloan transactions
@@ -376,22 +384,24 @@ export function generatePositionSpecificActions(
   if (isPositionAllowed(currentPositionId, [POSITION_IDS.BRANCH_MANAGER])) {
     if (isStaleLoan) {
       // Stale loan actions for Branch Manager
-      actions.push({
-        action: `⏰ Stale Loan Alert: ${borrowerName}`,
-        due: `${loanType} of ${amount.toLocaleString()} pending for ${daysPending} days at ${officeName}`,
-        urgent: (daysPending || 0) >= 7 || amount >= LOAN_THRESHOLDS.MODERATE,
-        positionSpecific: true,
-        targetPositionIds: [POSITION_IDS.BRANCH_MANAGER],
-      });
-
-      if ((daysPending || 0) >= 5) {
+      if (amount) {
         actions.push({
-          action: `🚨 Urgent: ${daysPending}-day pending loan`,
-          due: `${borrowerName}'s ${loanType} requires immediate attention. Amount: ${amount.toLocaleString()}`,
-          urgent: true,
+          action: `⏰ Stale Loan Alert: ${borrowerName}`,
+          due: `${loanType} of ${amount.toLocaleString()} pending for ${daysPending} days at ${officeName}`,
+          urgent: (daysPending || 0) >= 7 || amount >= LOAN_THRESHOLDS.MODERATE,
           positionSpecific: true,
           targetPositionIds: [POSITION_IDS.BRANCH_MANAGER],
         });
+
+        if ((daysPending || 0) >= 5) {
+          actions.push({
+            action: `🚨 Urgent: ${daysPending}-day pending loan`,
+            due: `${borrowerName}'s ${loanType} requires immediate attention. Amount: ${amount.toLocaleString()}`,
+            urgent: true,
+            positionSpecific: true,
+            targetPositionIds: [POSITION_IDS.BRANCH_MANAGER],
+          });
+        }
       }
     } else {
       // New loan actions for Branch Manager
@@ -634,30 +644,34 @@ export function generatePositionSpecificActions(
   // Responsibilities: Initial loan processing, customer service
   if (isPositionAllowed(currentPositionId, [POSITION_IDS.LOAN_CONSULTANT])) {
     if (isStaleLoan) {
-      actions.push({
-        action: `📞 Follow-up Required`,
-        due: `${borrowerName}'s ${loanType} pending ${daysPending} days - contact client for status`,
-        urgent: false,
-        positionSpecific: true,
-        targetPositionIds: [POSITION_IDS.LOAN_CONSULTANT],
-      });
-    } else {
-      actions.push({
-        action: `📝 New Loan to Process`,
-        due: `${borrowerName}'s ${loanType} application ready for initial processing.`,
-        urgent: false,
-        positionSpecific: true,
-        targetPositionIds: [POSITION_IDS.LOAN_CONSULTANT],
-      });
-
-      if (status === 'pending') {
+      if (borrowerName) {
         actions.push({
-          action: `📞 Application Follow-up`,
-          due: `Contact ${borrowerName} to complete documentation for ${amount.toLocaleString()} loan.`,
+          action: `📞 Follow-up Required`,
+          due: `${borrowerName}'s ${loanType} pending ${daysPending} days - contact client for status`,
           urgent: false,
           positionSpecific: true,
           targetPositionIds: [POSITION_IDS.LOAN_CONSULTANT],
         });
+      }
+    } else {
+      if (borrowerName) {
+        actions.push({
+          action: `📝 New Loan to Process`,
+          due: `${borrowerName}'s ${loanType} application ready for initial processing.`,
+          urgent: false,
+          positionSpecific: true,
+          targetPositionIds: [POSITION_IDS.LOAN_CONSULTANT],
+        });
+
+        if (status === 'pending') {
+          actions.push({
+            action: `📞 Application Follow-up`,
+            due: `Contact ${borrowerName} to complete documentation for ${amount.toLocaleString()} loan.`,
+            urgent: false,
+            positionSpecific: true,
+            targetPositionIds: [POSITION_IDS.LOAN_CONSULTANT],
+          });
+        }
       }
     }
   }

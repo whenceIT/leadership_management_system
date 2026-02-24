@@ -308,8 +308,10 @@ const Calendar: React.FC = () => {
                       ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
                       : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                   }`}>
-                    {selectedEvent.extendedProps.reviewStatus?.charAt(0).toUpperCase() + 
-                      selectedEvent.extendedProps.reviewStatus?.slice(1).replace('-', ' ')}
+                    {selectedEvent.extendedProps.reviewStatus 
+                      ? selectedEvent.extendedProps.reviewStatus.charAt(0).toUpperCase() + 
+                        selectedEvent.extendedProps.reviewStatus.slice(1).replace('-', ' ')
+                      : 'Scheduled'}
                   </span>
                 </div>
                 <p className="text-lg font-medium text-gray-900 dark:text-white">

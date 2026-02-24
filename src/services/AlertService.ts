@@ -324,6 +324,10 @@ export class AlertService {
     provinceId?: number;
     loanCount?: number;
     staleLoanCount?: number;
+    morethan4dayOldLoansCount?: number;
+    morethan7dayOldLoansCount?: number;
+    morethan31dayOldLoansCount?: number;
+    morethan37dayOldLoansCount?: number;
   }): void {
     const positionName = getPositionNameByIdStatic(positionId);
     const generatedAlerts: Array<Omit<Alert, 'id' | 'createdAt' | 'isRead' | 'isDismissed'>> = [];
@@ -335,6 +339,58 @@ export class AlertService {
         priority: 'high',
         message: `${context.staleLoanCount} loans have been pending for more than 3 days`,
         title: 'Stale Loans Alert',
+        category: 'loans',
+        source: 'system',
+        positionId,
+        officeId: context.officeId,
+      });
+    }
+
+    if (context?.morethan7dayOldLoansCount && context.morethan7dayOldLoansCount > 3) {
+      generatedAlerts.push({
+        type: 'warning',
+        priority: 'high',
+        message: `${context.morethan7dayOldLoansCount} loans have been pending for more than 7 days`,
+        title: 'Very Stale Loans Alert',
+        category: 'loans',
+        source: 'system',
+        positionId,
+        officeId: context.officeId,
+      });
+    }
+
+    if (context?.morethan31dayOldLoansCount && context.morethan31dayOldLoansCount > 2) {
+      generatedAlerts.push({
+        type: 'error',
+        priority: 'critical',
+        message: `${context.morethan31dayOldLoansCount} loans have been disbursed for more than 31 days`,
+        title: 'Overdue Loans Alert',
+        category: 'loans',
+        source: 'system',
+        positionId,
+        officeId: context.officeId,
+      });
+    }
+
+    if (context?.morethan4dayOldLoansCount && context.morethan4dayOldLoansCount > 5) {
+      generatedAlerts.push({
+        type: 'warning',
+        priority: 'medium',
+        message: `${context.morethan4dayOldLoansCount} loans have been pending for more than 4 days`,
+        title: 'Pending Loans Alert',
+        category: 'loans',
+        source: 'system',
+        positionId,
+        officeId: context.officeId,
+      });
+    }
+
+    if (context?.morethan37dayOldLoansCount && context.morethan37dayOldLoansCount > 1) {
+      generatedAlerts.push({
+        type: 'error',
+        priority: 'critical',
+        message: `${context.morethan37dayOldLoansCount} loans have been disbursed for more than 37 days`,
+        title: 'Severely Overdue Loans Alert',
         category: 'loans',
         source: 'system',
         positionId,
