@@ -366,8 +366,10 @@ const Calendar: React.FC = () => {
                         ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                         : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                     }`}>
-                      {selectedEvent.extendedProps.reviewPriority?.charAt(0).toUpperCase() + 
-                        selectedEvent.extendedProps.reviewPriority?.slice(1)}
+                      {selectedEvent && selectedEvent.extendedProps && selectedEvent.extendedProps.reviewPriority 
+                        ? selectedEvent.extendedProps.reviewPriority.charAt(0).toUpperCase() + 
+                          selectedEvent.extendedProps.reviewPriority.slice(1)
+                        : 'Medium'}
                     </span>
                   </div>
                 </div>
