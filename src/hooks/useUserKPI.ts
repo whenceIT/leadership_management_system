@@ -3,6 +3,7 @@ import { getKPIsByPosition } from '@/data/role-cards-data';
 import { KpiMetric } from '@/data/role-cards-data';
 import { useUserPosition } from '@/hooks/useUserPosition';
 import type { PositionType } from '@/hooks/useUserPosition';
+import KPICalculatorService from '@/services/KPICalculatorService';
 
 // Processed KPI interface for dashboard display
 export interface ProcessedKPI {
@@ -32,44 +33,46 @@ export function useUserKPI() {
   const [error, setError] = useState<string | null>(null);
   const { positionName, isLoading: isPositionLoading, user, positionId } = useUserPosition();
 
-  // Fetch KPIs from API when position changes (with caching)
+  // Fetch KPIs from API when position changes (with caching and debouncing)
   useEffect(() => {
     let isMounted = true;
+    let fetchTimeout: NodeJS.Timeout;
     
     const fetchKpis = async () => {
-      if (!positionName) return;
+      if (!positionName || !user?.id || !positionId) return;
       
       setIsLoading(true);
       setError(null);
       
       try {
-        // Fetch all KPIs (cached on server)
-        const response = await fetch('/api/kpi/all');
+        // Fetch KPI scores directly from external API
+        const response = await fetch(`https://smartbackend.whencefinancesystem.com/smart-kpi-scores/${user.id}/${positionId}`);
 
         if (!isMounted) return;
 
         const data = await response.json();
 
-        console.log('API Response Data:', data); // Debug log
+        console.log('KPI Scores API Response:', data); // Debug log
+        console.log('User ID:', user.id); // Debug log
         console.log('Position ID:', positionId); // Debug log
 
         if (response.ok) {
-          // Filter KPIs by selected position ID on client side
           const allKpis = Array.isArray(data) ? data : [];
           
-          // Transform API data to KpiMetric format - filter by position_id
+          console.log('Raw API Data:', allKpis); // Debug log
+            
+          // Transform API data to KpiMetric format
           const transformedKpis: KpiMetric[] = allKpis
-            .filter((kpi: any) => kpi.position_id === positionId)
             .map((kpi: any, index: number) => ({
-              id: kpi.id?.toString() || `kpi-${index}`,
-              name: kpi.name || kpi.kpi_name || '',
+              id: kpi.kpi_id?.toString() || `kpi-${index}`,
+              name: kpi.name || '',
               description: kpi.description || '',
               category: (kpi.category || 'operational') as any,
               position: positionName as PositionType,
               target: kpi.target?.toString() || '',
-              baseline: kpi.baseline?.toString() || kpi.current_value?.toString() || '',
+              baseline: kpi.score?.toString() || '',
               weight: parseInt(kpi.weight) || 0,
-              unit: 'percent',
+              unit: kpi.scoring === 'percentage' ? 'percent' : 'ZMW',
               frequency: 'monthly',
               isActive: true,
               lastUpdated: new Date().toISOString().split('T')[0],
@@ -84,6 +87,7 @@ export function useUserKPI() {
           const processed = transformedKpis.map(kpi => {
             const parseMetricValue = (value: string, unit: string): number => {
               if (!value) return 0;
+              // Handle target formats like "K450,000+", "≤25%", "≥65%"
               const strippedValue = value.replace(/[^0-9.,]/g, '');
               let numericValue = parseFloat(strippedValue);
               if (value.includes('K')) numericValue *= 1000;
@@ -97,10 +101,18 @@ export function useUserKPI() {
 
             const lowerIsBetter = kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost');
             let score = 0;
-            if (lowerIsBetter) {
-              score = value <= target ? 100 : Math.max(0, 100 - ((value - target) / target) * 100);
+            
+            // If we have raw score from API, use it directly
+            const rawScore = parseFloat(kpi.baseline);
+            if (!isNaN(rawScore) && rawScore >= 0 && rawScore <= 100) {
+              score = rawScore;
             } else {
-              score = Math.min(100, (value / target) * 100);
+              // Calculate score based on value and target
+              if (lowerIsBetter) {
+                score = value <= target ? 100 : Math.max(0, 100 - ((value - target) / target) * 100);
+              } else {
+                score = Math.min(100, (value / target) * 100);
+              }
             }
 
             return {
@@ -286,38 +298,45 @@ export function useUserKPI() {
 
   // Refresh KPI data
   const refresh = async () => {
+    if (!user?.id || !positionId) return;
+    
     setIsLoading(true);
     setError(null);
     
     try {
-      const response = await fetch('/api/kpi/all');
+      // Call markscore to update KPI scores
+      const calculatorService = KPICalculatorService.getInstance();
+      await calculatorService.markscore(user.id, positionId, 'all');
+      
+      // Fetch updated KPI scores directly from external API
+      const response = await fetch(`https://smartbackend.whencefinancesystem.com/smart-kpi-scores/${user.id}/${positionId}`);
       if (response.ok) {
         const data = await response.json();
         const allKpis = Array.isArray(data) ? data : [];
         
         const transformedKpis: KpiMetric[] = allKpis
-          .filter((kpi: any) => kpi.position_id === positionId)
           .map((kpi: any, index: number) => ({
-            id: kpi.id?.toString() || `kpi-${index}`,
+            id: kpi.kpi_id?.toString() || `kpi-${index}`,
             name: kpi.name || '',
             description: kpi.description || '',
             category: (kpi.category || 'operational') as any,
             position: positionName as PositionType,
             target: kpi.target?.toString() || '',
-            baseline: kpi.baseline?.toString() || '',
+            baseline: kpi.score?.toString() || '',
             weight: parseInt(kpi.weight) || 0,
-            unit: 'percent',
+            unit: kpi.scoring === 'percentage' ? 'percent' : 'ZMW',
             frequency: 'monthly',
             isActive: true,
             lastUpdated: new Date().toISOString().split('T')[0],
             createdBy: 'API',
           }));
-          
+            
         setKpis(transformedKpis);
         
           const processed = transformedKpis.map(kpi => {
             const parseMetricValue = (value: string, unit: string): number => {
               if (!value) return 0;
+              // Handle target formats like "K450,000+", "≤25%", "≥65%"
               const strippedValue = value.replace(/[^0-9.,]/g, '');
               let numericValue = parseFloat(strippedValue);
               if (value.includes('K')) numericValue *= 1000;
@@ -331,10 +350,18 @@ export function useUserKPI() {
 
             const lowerIsBetter = kpi.name.toLowerCase().includes('default') || kpi.name.toLowerCase().includes('cost');
             let score = 0;
-            if (lowerIsBetter) {
-              score = value <= target ? 100 : Math.max(0, 100 - ((value - target) / target) * 100);
+            
+            // If we have raw score from API, use it directly
+            const rawScore = parseFloat(kpi.baseline);
+            if (!isNaN(rawScore) && rawScore >= 0 && rawScore <= 100) {
+              score = rawScore;
             } else {
-              score = Math.min(100, (value / target) * 100);
+              // Calculate score based on value and target
+              if (lowerIsBetter) {
+                score = value <= target ? 100 : Math.max(0, 100 - ((value - target) / target) * 100);
+              } else {
+                score = Math.min(100, (value / target) * 100);
+              }
             }
 
             return {

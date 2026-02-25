@@ -116,12 +116,49 @@ export class KPICalculatorService {
     return score;
   }
 
-  private async markscore(userId: number, positionId: number, kpi_name: string): Promise<any[]> {
-    //write a switch case to return the score based on the kpi_name
-    switch (kpi_name) {
-      default:
-        return [];
+  public async markscore(userId: number, positionId: number, kpi_name: string): Promise<any[]> {
+    const results: any[] = [];
+
+    // Branch Manager
+    if (positionId === 5) {
+        // Call all Branch Manager KPI score endpoints
+        const endpoints = [
+            '/api/kpi-scores/month1-default-rate',
+            '/api/kpi-scores/monthly-disbursement',
+            '/api/kpi-scores/lcs-at-k50k-tier',
+            '/api/kpi-scores/branch-net-contribution'
+        ];
+
+        // Call each endpoint in parallel
+        const promises = endpoints.map(async (endpoint) => {
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId,
+                        positionId
+                    }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    results.push(data);
+                } else {
+                    console.error(`Failed to fetch ${endpoint}:`, response.statusText);
+                }
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+            }
+        });
+
+        // Wait for all requests to complete
+        await Promise.all(promises);
     }
+
+    return results;
   }
 }
 

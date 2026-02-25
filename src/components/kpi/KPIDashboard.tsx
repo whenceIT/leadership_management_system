@@ -16,6 +16,7 @@ export default function KPIDashboard() {
   const [position, setPosition] = React.useState<string>('Branch Manager');
   const [kpiConfig, setKpiConfig] = React.useState<PositionKPIConfig>(defaultKPIData);
   const [useRealtimeData, setUseRealtimeData] = React.useState(false);
+  const [hasMounted, setHasMounted] = React.useState(false);
   
   // Get user position and tier information
   const { positionName, userTier } = useUserPosition();
@@ -50,6 +51,7 @@ export default function KPIDashboard() {
   }, []);
 
   React.useEffect(() => {
+    setHasMounted(true);
     updatePositionAndConfig();
 
     // Listen for impersonation events to update position
@@ -70,17 +72,23 @@ export default function KPIDashboard() {
     };
   }, [updatePositionAndConfig]);
 
-  // Check if we should use real-time data
+  // Check if we should use real-time data (with debouncing)
   React.useEffect(() => {
-    if (!isLoadingKPI && processedKPIs.length > 0) {
-      setUseRealtimeData(true);
-    } else {
-      setUseRealtimeData(false);
-    }
-  }, [processedKPIs, isLoadingKPI]);
+    if (!hasMounted) return;
+    
+    const timer = setTimeout(() => {
+      if (!isLoadingKPI && processedKPIs.length > 0) {
+        setUseRealtimeData(true);
+      } else {
+        setUseRealtimeData(false);
+      }
+    }, 100);
 
-  // Format value based on type
-  const formatValue = (value: number, format: string): string => {
+    return () => clearTimeout(timer);
+  }, [processedKPIs, isLoadingKPI, hasMounted]);
+
+  // Format value based on type - memoized
+  const formatValue = React.useCallback((value: number, format: string): string => {
     switch (format) {
       case 'currency':
         return new Intl.NumberFormat('en-ZM', { style: 'currency', currency: 'ZMW', maximumFractionDigits: 0 }).format(value);
@@ -91,10 +99,10 @@ export default function KPIDashboard() {
       default:
         return new Intl.NumberFormat('en-ZM').format(value);
     }
-  };
+  }, []);
 
-  // Get status color based on performance
-  const getStatusColor = (metric: KSIMetric | ProcessedKPI): string => {
+  // Get status color based on performance - memoized
+  const getStatusColor = React.useCallback((metric: KSIMetric | ProcessedKPI): string => {
     const lowerIsBetter = 'lowerIsBetter' in metric ? metric.lowerIsBetter : false;
     const value = 'value' in metric ? metric.value : 0;
     const target = 'target' in metric ? metric.target : 1;
@@ -108,10 +116,10 @@ export default function KPIDashboard() {
       if (value >= target * 0.9) return 'text-yellow-600 dark:text-yellow-400';
       return 'text-red-600 dark:text-red-400';
     }
-  };
+  }, []);
 
-  // Get progress percentage
-  const getProgress = (metric: KSIMetric | ProcessedKPI): number => {
+  // Get progress percentage - memoized
+  const getProgress = React.useCallback((metric: KSIMetric | ProcessedKPI): number => {
     const lowerIsBetter = 'lowerIsBetter' in metric ? metric.lowerIsBetter : false;
     const value = 'value' in metric ? metric.value : 0;
     const target = 'target' in metric ? metric.target : 1;
@@ -120,7 +128,7 @@ export default function KPIDashboard() {
       return Math.max(0, Math.min(100, 100 - ((value - target) / target) * 100));
     }
     return Math.max(0, Math.min(100, (value / target) * 100));
-  };
+  }, []);
 
   // Get alert color
   const getAlertColor = (type: string): string => {
@@ -166,17 +174,17 @@ export default function KPIDashboard() {
     }
   };
 
-  // Get metrics to display (only from API)
-  const getDisplayMetrics = () => {
+  // Get metrics to display (only from API) - memoized
+  const displayMetrics = React.useMemo(() => {
     if (useRealtimeData && processedKPIs.length > 0) {
       return processedKPIs;
     }
     // Return empty array when no real-time data
     return [];
-  };
+  }, [useRealtimeData, processedKPIs]);
 
-  // Get alerts to display
-  const getDisplayAlerts = () => {
+  // Get alerts to display - memoized
+  const displayAlerts = React.useMemo(() => {
     if (useRealtimeData) {
       // Generate alerts based on real-time data
       const alerts: { type: string; title: string; message: string }[] = [];
@@ -201,11 +209,12 @@ export default function KPIDashboard() {
     }
     // Return empty array when not using real-time data
     return [];
-  };
+  }, [useRealtimeData, processedKPIs]);
 
-  const displayMetrics = getDisplayMetrics();
-  const displayAlerts = getDisplayAlerts();
-  const overallScore = useRealtimeData ? getOverallScore() : calculateOverallScore(kpiConfig.kpiCategories.flatMap(c => c.metrics));
+  // Calculate overall score - memoized
+  const overallScore = React.useMemo(() => {
+    return useRealtimeData ? getOverallScore() : calculateOverallScore(kpiConfig.kpiCategories.flatMap(c => c.metrics));
+  }, [useRealtimeData, getOverallScore, kpiConfig]);
 
   return (
     <div className="space-y-6">
@@ -296,65 +305,73 @@ export default function KPIDashboard() {
       ) : useRealtimeData ? (
         // Real-time KPI display by category
         <>
-          {getCategories().map((category) => {
-            const categoryKPIs = processedKPIs.filter(kpi => kpi.category === category);
-            if (categoryKPIs.length === 0) return null;
+          {(() => {
+            console.log('Processed KPIs:', processedKPIs); // Debug log
+            const categories = getCategories();
+            console.log('Categories:', categories); // Debug log
             
-            return (
-              <div key={category} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white capitalize">
-                    {category} KPIs
-                  </h3>
-                </div>
-                <div className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {categoryKPIs.map((metric, metricIndex) => (
-                      <div
-                        key={metricIndex}
-                        className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                            {metric.name}
-                          </span>
-                          <span className={`text-lg font-bold ${getStatusColor(metric)}`}>
-                            {formatValue(metric.value, metric.format)}
-                          </span>
-                        </div>
-                        <div className="mb-2">
-                          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
-                            <span>Progress</span>
-                            <span>Target: {formatValue(metric.target, metric.format)}</span>
+            return categories.map((category) => {
+              const categoryKPIs = processedKPIs.filter(kpi => kpi.category === category);
+              console.log(`Category ${category} KPIs:`, categoryKPIs); // Debug log
+              
+              if (categoryKPIs.length === 0) return null;
+              
+              return (
+                <div key={category} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+                  <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white capitalize">
+                      {category} KPIs
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {categoryKPIs.map((metric, metricIndex) => (
+                        <div
+                          key={metricIndex}
+                          className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <span className="text-sm font-medium text-gray-500 dark:text-gray-400 flex-1 mr-2">
+                              {metric.name}
+                            </span>
+                            <span className={`text-lg font-bold ${getStatusColor(metric)}`}>
+                              {formatValue(metric.value, metric.format)}
+                            </span>
                           </div>
-                          <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full transition-all ${
-                                getProgress(metric) >= 90
-                                  ? 'bg-green-500'
-                                  : getProgress(metric) >= 70
-                                  ? 'bg-yellow-500'
-                                  : 'bg-red-500'
-                              }`}
-                              style={{ width: `${Math.min(100, getProgress(metric))}%` }}
-                            />
+                          <div className="mb-2">
+                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+                              <span>Progress</span>
+                              <span className="truncate">Target: {formatValue(metric.target, metric.format)}</span>
+                            </div>
+                            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${
+                                  getProgress(metric) >= 90
+                                    ? 'bg-green-500'
+                                    : getProgress(metric) >= 70
+                                    ? 'bg-yellow-500'
+                                    : 'bg-red-500'
+                                }`}
+                                style={{ width: `${Math.min(100, getProgress(metric))}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Weight: {metric.weight}%
+                            </span>
+                            <span className={`font-medium ${getStatusColor(metric)}`}>
+                              {getProgress(metric).toFixed(0)}%
+                            </span>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-gray-500 dark:text-gray-400">
-                            Weight: {metric.weight}%
-                          </span>
-                          <span className={`font-medium ${getStatusColor(metric)}`}>
-                            {getProgress(metric).toFixed(0)}%
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </>
       ) : (
         // Empty state when no real-time KPI data is available
