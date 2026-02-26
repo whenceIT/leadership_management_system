@@ -100,8 +100,8 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
     loading: () => <DashboardLoading />
   }),
   
-  // Super Seer - has access to all dashboards (currently uses GOM Dashboard as placeholder)
-  'Super Seer': dynamic(() => import('@/components/dashboards/GOMDashboard'), { 
+   // Super Seer - has access to all dashboards with comprehensive oversight
+  'Super Seer': dynamic(() => import('@/components/dashboards/SuperSeerDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   

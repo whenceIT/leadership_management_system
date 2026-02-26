@@ -18,10 +18,10 @@ const CACHE_DURATION = 5 * 60 * 1000;
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string; positionId: string } }
+  { params }: { params: Promise<{ userId: string; positionId: string }> }
 ) {
   try {
-    const { userId, positionId } = params;
+    const { userId, positionId } = await params;
     const cacheKey = `${userId}-${positionId}`;
     const now = Date.now();
 

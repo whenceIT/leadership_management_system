@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { DashboardBase, KPICard, AlertCard, SectionCard, QuickInfoBar, JobPurpose, KPIMetricsCard, CollapsibleCard } from './DashboardBase';
+import { DashboardBase, KPICard, AlertCard, CollapsibleCard } from './DashboardBase';
 import { roleCardsData } from '@/data/role-cards-data';
 import { useBranchManagerMetrics } from '@/hooks/useBranchManagerMetrics';
 import { useUserKPI } from '@/hooks/useUserKPI';
@@ -50,19 +50,7 @@ export default function BranchManagerDashboard({ position = 'Branch Manager', us
       subtitle="Real-time branch performance and operations overview"
       userTier={userTier}
     >
-      {/* Quick Info Bar */}
-      <QuickInfoBar
-        department={roleCard.department}
-        reportsTo={roleCard.reportsTo}
-        directReports={roleCard.directReports}
-        location={roleCard.location}
-      />
-
-      {/* Job Purpose */}
-      <JobPurpose purpose={roleCard.jobPurpose} />
-
-      {/* KPI Metrics from API */}
-      <KPIMetricsCard kpis={kpis} title="Key Performance Indicators (KPIs)" />
+      
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         {/* KPI Cards with expand functionality */}
