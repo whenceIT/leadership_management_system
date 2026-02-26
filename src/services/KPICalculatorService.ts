@@ -36,7 +36,7 @@ export class KPICalculatorService {
   }
 
   /**
-   * Calculate KPI scores for a user
+   * Calculate KPI scores for a user (currently not used anywhere)
    */
   public async calculateKPIScores(userId: number, positionId: number): Promise<KPICalculationResult> {
     try {

@@ -20,9 +20,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string; positionId: string }> }
 ) {
+  const { userId, positionId } = await params;
+  const cacheKey = `${userId}-${positionId}`;
+
   try {
-    const { userId, positionId } = await params;
-    const cacheKey = `${userId}-${positionId}`;
     const now = Date.now();
 
     // Check if we have valid cached data
@@ -64,8 +65,6 @@ export async function GET(
     console.error('Error fetching KPI scores:', error);
 
     // Try to return cached data even if stale on error
-    const { userId, positionId } = params;
-    const cacheKey = `${userId}-${positionId}`;
     if (kpiScoresCache[cacheKey]) {
       return NextResponse.json(kpiScoresCache[cacheKey].data);
     }
