@@ -123,93 +123,6 @@ export interface CollectionRateParams {
   target_rate?: number;
 }
 
-// Staff Productivity Interface
-export interface CurrentPeriodProductivity {
-  productivity_score: number;
-  formatted_score: string;
-  total_officers: number;
-  improvement: number;
-  formatted_improvement: string;
-  trend_direction: 'improving' | 'declining' | 'stable';
-}
-
-export interface PreviousPeriodProductivity {
-  start_date: string;
-  end_date: string;
-  productivity_score: number;
-  formatted_score: string;
-}
-
-export interface KPIWeights {
-  disbursement_target: { weight: string; description: string };
-  collections_rate: { weight: string; description: string };
-  portfolio_quality: { weight: string; description: string };
-  client_acquisition: { weight: string; description: string };
-}
-
-export interface PerformanceSummary {
-  average_disbursement_rate: number;
-  average_collection_rate: number;
-  average_par_rate: number;
-  total_new_clients: number;
-}
-
-export interface PerformanceCategories {
-  excellent: number;
-  good: number;
-  average: number;
-  needs_improvement: number;
-}
-
-export interface Benchmark {
-  target_score: number;
-  status: 'on_target' | 'below_target' | 'above_target';
-  variance_from_target: number;
-}
-
-export interface OfficerBreakdown {
-  officer_id: number;
-  officer_name: string;
-  scores: {
-    disbursement: { achievement_rate: number; weighted_score: number; weight: string };
-    collections: { rate: number; weighted_score: number; weight: string };
-    portfolio_quality: { par_30_rate: number; weighted_score: number; weight: string };
-    client_acquisition: { new_clients: number; target: number; weighted_score: number; weight: string };
-  };
-  total_score: number;
-  previous_score: number;
-  change: number;
-  rating: string;
-}
-
-export interface StaffProductivityData {
-  metric: string;
-  office_id: number;
-  office_name: string;
-  period: Period;
-  current_period: CurrentPeriodProductivity;
-  previous_period: PreviousPeriodProductivity;
-  kpi_weights: KPIWeights;
-  performance_summary: PerformanceSummary;
-  performance_categories: PerformanceCategories;
-  benchmark: Benchmark;
-  officer_breakdown: OfficerBreakdown[];
-  top_performers?: any[];
-  needs_attention?: any[];
-}
-
-export interface StaffProductivityResponse {
-  success: boolean;
-  data: StaffProductivityData;
-}
-
-export interface StaffProductivityParams {
-  office_id: number;
-  period_start?: string;
-  period_end?: string;
-  include_officers?: boolean;
-}
-
 // Collection Waterfall Interface
 export interface CollectionWaterfallSummary {
   due: {
@@ -354,7 +267,6 @@ export interface Month1DefaultRateParams {
  * - API: GET /active-loans
  * - API: GET /branch-stats
  * - API: GET /collections-rate
- * - API: GET /staff-productivity
  * - API: GET /month-1-default-rate (implied by requirement)
  * 
  * FEATURES:
@@ -534,21 +446,12 @@ export class BranchDataService {
   }
 
   /**
-   * Fetch staff productivity data
-   */
-  public async fetchStaffProductivity(
-    params: StaffProductivityParams
-  ): Promise<StaffProductivityData | null> {
-    return this.fetchData<StaffProductivityData>('/staff-productivity', params);
-  }
-
-  /**
    * Fetch Month-1 default rate data
    */
   public async fetchMonth1DefaultRate(
     params: Month1DefaultRateParams
   ): Promise<Month1DefaultRateData | null> {
-    return this.fetchData<Month1DefaultRateData>('/month-1-default-rate', params);
+    return this.fetchData<Month1DefaultRateData>('/month1-default-rate', params);
   }
 
   /**
@@ -571,7 +474,6 @@ export class BranchDataService {
     activeLoans?: ActiveLoansData | null;
     branchStats?: BranchStatsData | null;
     collectionRate?: CollectionRateData | null;
-    staffProductivity?: StaffProductivityData | null;
     month1DefaultRate?: Month1DefaultRateData | null;
     collectionWaterfall?: CollectionWaterfallData | null;
   }> {
@@ -579,18 +481,12 @@ export class BranchDataService {
       activeLoans,
       branchStats,
       collectionRate,
-      staffProductivity,
       month1DefaultRate,
       collectionWaterfall
     ] = await Promise.all([
       this.fetchActiveLoans({ office_id: officeId }),
       this.fetchBranchStats({ office_id: officeId }),
       this.fetchCollectionRate({ 
-        office_id: officeId, 
-        period_start: periodStart, 
-        period_end: periodEnd 
-      }),
-      this.fetchStaffProductivity({ 
         office_id: officeId, 
         period_start: periodStart, 
         period_end: periodEnd 
@@ -611,7 +507,6 @@ export class BranchDataService {
       activeLoans,
       branchStats,
       collectionRate,
-      staffProductivity,
       month1DefaultRate,
       collectionWaterfall
     };

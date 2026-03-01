@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import PriorityActionService, { PriorityAction } from '@/services/PriorityActionService';
-import AlertService, { Alert, AlertType } from '@/services/AlertService';
+import AlertService, { Alert } from '@/services/AlertService';
 import BranchDataService from '@/services/BranchDataService';
 import { BranchStatsData } from '@/services/BranchDataService';
 import { useUserData } from '@/hooks/useUserSync';
@@ -32,7 +32,17 @@ export default function AssistantPage() {
     onLeave: 0,
     pendingTasks: 0,
     completedToday: 0,
+    pendingLoans: 0,
+    disbursedLoans: 0,
+    activeClients: 0,
+    pendingAdvances: 0,
+    approvedAdvances: 0,
+    pendingExpenses: 0,
+    openTickets: 0,
+    pendingTransactions: 0,
+    loanPortfolio: 0,
   });
+  const [branchStats, setBranchStats] = useState<BranchStatsData | null>(null);
   const [greeting, setGreeting] = useState("Good morning");
   const [date, setDate] = useState("");
   const [isClient, setIsClient] = useState(false);
@@ -56,6 +66,46 @@ export default function AssistantPage() {
       return user.name;
     }
     return 'User';
+  };
+
+  const getOfficeId = (): number | null => {
+    const user = getUserData();
+    const officeId = user?.office_id ?? user?.officeId ?? user?.office?.id;
+    const parsedOfficeId = Number(officeId);
+    return Number.isFinite(parsedOfficeId) && parsedOfficeId > 0 ? parsedOfficeId : null;
+  };
+
+  const formatNumber = (value: number): string => new Intl.NumberFormat('en-US').format(value || 0);
+  const formatCurrency = (value: number): string =>
+    new Intl.NumberFormat('en-ZM', { style: 'currency', currency: 'ZMW', maximumFractionDigits: 2 }).format(value || 0);
+
+  const fetchBranchStats = async () => {
+    const branchDataService = BranchDataService.getInstance();
+    const officeId = getOfficeId();
+
+    if (!officeId) return;
+
+    const data = await branchDataService.fetchBranchStats({
+      office_id: officeId
+    });
+
+    if (data) {
+      setBranchStats(data);
+      setTeamSnapshot(prev => ({
+        ...prev,
+        totalStaff: data.total_staff,
+        onLeave: data.staff_on_leave,
+        pendingLoans: data.pending_loans,
+        disbursedLoans: data.disbursed_loans,
+        activeClients: data.active_clients,
+        pendingAdvances: data.pending_advances,
+        approvedAdvances: data.approved_advances,
+        pendingExpenses: data.pending_expenses,
+        openTickets: data.open_tickets,
+        pendingTransactions: data.pending_transactions,
+        loanPortfolio: Number(data.loan_portfolio || 0),
+      }));
+    }
   };
 
   useEffect(() => {
@@ -91,24 +141,6 @@ export default function AssistantPage() {
         pendingTasks: actions.length,
       }));
     });
-
-    // Fetch branch stats from API
-    const fetchBranchStats = async () => {
-      const branchDataService = BranchDataService.getInstance();
-      const officeId = 2; // TODO: Get from user context or office hook
-      
-      const branchStats = await branchDataService.fetchBranchStats({
-        office_id: officeId
-      });
-
-      if (branchStats) {
-        setTeamSnapshot(prev => ({
-          ...prev,
-          totalStaff: branchStats.total_staff,
-          onLeave: branchStats.staff_on_leave,
-        }));
-      }
-    };
 
     fetchBranchStats();
 
@@ -170,6 +202,9 @@ export default function AssistantPage() {
       // Also reset and re-fetch alerts for the new position
       const alertService = AlertService.getInstance();
       await alertService.reset();
+
+      // Re-fetch branch stats for impersonated user office
+      await fetchBranchStats();
     };
 
     window.addEventListener(IMPERSONATION_STARTED_EVENT, handleImpersonationChange);
@@ -311,6 +346,55 @@ export default function AssistantPage() {
           <div className="text-center">
             <p className="text-2xl font-bold">{teamSnapshot.completedToday}</p>
             <p className="text-xs text-white/70">Completed</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Branch Stats */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Branch Stats</h3>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            Office ID: {branchStats?.office_id ?? '-'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Pending Loans</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatNumber(teamSnapshot.pendingLoans)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Disbursed Loans</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatNumber(teamSnapshot.disbursedLoans)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Active Clients</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatNumber(teamSnapshot.activeClients)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Pending Advances</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatNumber(teamSnapshot.pendingAdvances)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Approved Advances</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatNumber(teamSnapshot.approvedAdvances)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Pending Expenses</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatNumber(teamSnapshot.pendingExpenses)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Open Tickets</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatNumber(teamSnapshot.openTickets)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Pending Transactions</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatNumber(teamSnapshot.pendingTransactions)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-900 col-span-2 md:col-span-1 lg:col-span-2">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Loan Portfolio</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(teamSnapshot.loanPortfolio)}</p>
           </div>
         </div>
       </div>

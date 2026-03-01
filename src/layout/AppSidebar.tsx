@@ -68,18 +68,17 @@ const RoleCardIconComponent = () => (
 const navItems: NavItem[] = [
   {
     icon: <GridIcon />,
-    name: "Dashboard",
+    name: "Headlines",
     path: "/",
   },
-  // LMS Modules Section
   {
-    icon: <RoleCardIconComponent />,
-    name: "Role Cards",
-    path: "/lms/role-cards",
+    icon: <AssistantIconComponent />,
+    name: "Assistant",
+    path: "/lms/assistant",
   },
   {
     icon: <KPIIconComponent />,
-    name: "KPI Dashboard",
+    name: "My KPI Scores",
     path: "/lms/kpi-dashboard",
   },
   {
@@ -93,49 +92,15 @@ const navItems: NavItem[] = [
     path: "/lms/workflows",
   },
   {
-    icon: <AssistantIconComponent />,
-    name: "Assistant",
-    path: "/lms/assistant",
-  },
-  // Existing Modules
-  // {
-  //   icon: <TicketIcon />,
-  //   name: "Tickets",
-  //   path: "/tickets",
-  // },
-  {
     icon: <CalenderIcon />,
     name: "Calendar",
     path: "/calendar",
   },
-  // {
-  //   name: "Ledger",
-  //   icon: <LedgerIcon />,
-  //   subItems: [
-  //     { name: "General Ledger", path: "/ledger/general", pro: false },
-  //     { name: "Branch Ledgers", path: "/ledger/branch", pro: false },
-  //   ],
-  // },
-  // {
-  //   name: "Loans",
-  //   icon: <LoansIcon />,
-  //   subItems: [
-  //     { name: "Active Loans", path: "/loans/active", pro: false },
-  //     { name: "My Active Loans", path: "/loans/my-active", pro: false },
-  //     { name: "Branch Active Loans", path: "/loans/branch-active", pro: false },
-  //     { name: "Pending Approval", path: "/loans/pending-approval", pro: false },
-  //     { name: "Awaiting Disbursement", path: "/loans/awaiting-disbursement", pro: false },
-  //     { name: "Loans Declined", path: "/loans/declined", pro: false },
-  //     { name: "Loans Written Off", path: "/loans/written-off", pro: false },
-  //     { name: "Loans Closed", path: "/loans/closed", pro: false },
-  //     { name: "Loans Rescheduled", path: "/loans/rescheduled", pro: false },
-  //     { name: "Loan Applications", path: "/loans/applications", pro: false },
-  //     { name: "Add Loan", path: "/loan/create", pro: false },
-  //     { name: "Manage Loan Products", path: "/loans/products", pro: false },
-  //     { name: "Loan Calculator", path: "/loans/calculator", pro: false },
-  //   ],
-  // },
-  
+  {
+    icon: <RoleCardIconComponent />,
+    name: "Role Card",
+    path: "/lms/role-cards",
+  },
   {
     name: "Settings",
     icon: <SettingsIcon />,

@@ -4,13 +4,11 @@ import {
   ActiveLoansData, 
   BranchStatsData, 
   CollectionRateData, 
-  StaffProductivityData, 
   Month1DefaultRateData,
   CollectionWaterfallData,
   BranchStatsParams,
   ActiveLoansParams,
   CollectionRateParams,
-  StaffProductivityParams,
   Month1DefaultRateParams,
   CollectionWaterfallParams
 } from '@/services/BranchDataService';
@@ -27,7 +25,6 @@ export function useBranchManagerMetrics() {
   const [activeLoans, setActiveLoans] = useState<ActiveLoansData | null>(null);
   const [branchStats, setBranchStats] = useState<BranchStatsData | null>(null);
   const [collectionRate, setCollectionRate] = useState<CollectionRateData | null>(null);
-  const [staffProductivity, setStaffProductivity] = useState<StaffProductivityData | null>(null);
   const [month1DefaultRate, setMonth1DefaultRate] = useState<Month1DefaultRateData | null>(null);
   const [collectionWaterfall, setCollectionWaterfall] = useState<CollectionWaterfallData | null>(null);
 
@@ -70,7 +67,6 @@ export function useBranchManagerMetrics() {
       setActiveLoans(metrics.activeLoans || null);
       setBranchStats(metrics.branchStats || null);
       setCollectionRate(metrics.collectionRate || null);
-      setStaffProductivity(metrics.staffProductivity || null);
       setMonth1DefaultRate(metrics.month1DefaultRate || null);
       setCollectionWaterfall(metrics.collectionWaterfall || null);
 
@@ -138,26 +134,6 @@ export function useBranchManagerMetrics() {
     } catch (err) {
       console.error('Error fetching collection rate:', err);
       setError('Failed to fetch collection rate');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const fetchStaffProductivity = useCallback(async (params: StaffProductivityParams) => {
-    if (!params.office_id) {
-      setError('Office ID not available');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const data = await branchDataService.fetchStaffProductivity(params);
-      setStaffProductivity(data || null);
-    } catch (err) {
-      console.error('Error fetching staff productivity:', err);
-      setError('Failed to fetch staff productivity');
     } finally {
       setIsLoading(false);
     }
@@ -237,17 +213,6 @@ export function useBranchManagerMetrics() {
     }
   }, [getOfficeId, fetchCollectionRate]);
 
-  const refreshStaffProductivity = useCallback(async (periodStart?: string, periodEnd?: string) => {
-    const officeId = getOfficeId();
-    if (officeId) {
-      await fetchStaffProductivity({ 
-        office_id: officeId, 
-        period_start: periodStart, 
-        period_end: periodEnd 
-      });
-    }
-  }, [getOfficeId, fetchStaffProductivity]);
-
   const refreshMonth1DefaultRate = useCallback(async (periodStart?: string, periodEnd?: string) => {
     const officeId = getOfficeId();
     if (officeId) {
@@ -292,7 +257,6 @@ export function useBranchManagerMetrics() {
     activeLoans,
     branchStats,
     collectionRate,
-    staffProductivity,
     month1DefaultRate,
     collectionWaterfall,
 
@@ -301,7 +265,6 @@ export function useBranchManagerMetrics() {
     refreshActiveLoans,
     refreshBranchStats,
     refreshCollectionRate,
-    refreshStaffProductivity,
     refreshMonth1DefaultRate,
     refreshCollectionWaterfall,
 
@@ -310,7 +273,6 @@ export function useBranchManagerMetrics() {
     fetchActiveLoans,
     fetchBranchStats,
     fetchCollectionRate,
-    fetchStaffProductivity,
     fetchMonth1DefaultRate,
     fetchCollectionWaterfall,
 

@@ -2,24 +2,14 @@
 
 import React from 'react';
 import { DashboardBase, KPICard, AlertCard, CollapsibleCard } from './DashboardBase';
-import { roleCardsData } from '@/data/role-cards-data';
 import { useBranchManagerMetrics } from '@/hooks/useBranchManagerMetrics';
 import { useUserKPI } from '@/hooks/useUserKPI';
 
 interface BranchManagerDashboardProps {
-  position?: string;
   userTier?: string | null;
 }
 
-export default function BranchManagerDashboard({ position = 'Branch Manager', userTier }: BranchManagerDashboardProps) {
-  const roleCard = roleCardsData[position] || roleCardsData['Branch Manager'] || {
-    department: 'TBD',
-    reportsTo: 'TBD',
-    directReports: 'TBD',
-    location: 'TBD',
-    jobPurpose: 'TBD',
-    kpis: []
-  };
+export default function BranchManagerDashboard({ userTier }: BranchManagerDashboardProps) {
 
   const {
     isLoading,
@@ -27,7 +17,6 @@ export default function BranchManagerDashboard({ position = 'Branch Manager', us
     activeLoans,
     branchStats,
     collectionRate,
-    staffProductivity,
     month1DefaultRate,
     collectionWaterfall,
     refreshAllMetrics
@@ -46,11 +35,11 @@ export default function BranchManagerDashboard({ position = 'Branch Manager', us
 
   return (
     <DashboardBase
-      title={roleCard.title}
+      title="Branch Manager Dashboard"
       subtitle="Real-time branch performance and operations overview"
       userTier={userTier}
     >
-      
+
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         {/* KPI Cards with expand functionality */}
@@ -64,15 +53,6 @@ export default function BranchManagerDashboard({ position = 'Branch Manager', us
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
-            }
-            expandable={true}
-            expandedContent={
-              <div className="space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-300">Target: ≤2.5%</p>
-                <p className={month1DefaultRate?.current_period.default_rate && month1DefaultRate.current_period.default_rate <= 2.5 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                  {month1DefaultRate?.current_period.default_rate && month1DefaultRate.current_period.default_rate <= 2.5 ? "✅ On Track" : "⚠️ Above Target"}
-                </p>
-              </div>
             }
           />
         </div>
@@ -88,15 +68,6 @@ export default function BranchManagerDashboard({ position = 'Branch Manager', us
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             }
-            expandable={true}
-            expandedContent={
-              <div className="space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-300">Target: ≥93%</p>
-                <p className={collectionRate?.current_period.collection_rate && collectionRate.current_period.collection_rate >= 93 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                  {collectionRate?.current_period.collection_rate && collectionRate.current_period.collection_rate >= 93 ? "✅ Exceeding Target" : "⚠️ Below Target"}
-                </p>
-              </div>
-            }
           />
         </div>
 
@@ -111,38 +82,23 @@ export default function BranchManagerDashboard({ position = 'Branch Manager', us
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             }
-            expandable={true}
-            expandedContent={
-              <div className="space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-300">This Month: {activeLoans?.current_period.active_loans_count || 0}</p>
-                <p className="text-gray-600 dark:text-gray-300">Last Month: {activeLoans?.current_period.active_loans_count && activeLoans.current_period.weekly_change ? activeLoans.current_period.active_loans_count - activeLoans.current_period.weekly_change : 0}</p>
-              </div>
-            }
           />
         </div>
 
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
-            title="Staff Productivity"
-            value={isLoading ? 'Loading...' : staffProductivity?.current_period.formatted_score || '0%'}
-            change={isLoading ? 'Loading...' : staffProductivity?.current_period.formatted_improvement || '0% improvement'}
-            changeType={staffProductivity?.current_period.trend_direction === 'improving' ? 'positive' : 'negative'}
+            title="Total Staff"
+            value={isLoading ? 'Loading...' : `${branchStats?.total_staff ?? 0}`}
+            change={isLoading ? 'Loading...' : `${branchStats?.staff_on_leave ?? 0} on leave`}
+            changeType={(branchStats?.staff_on_leave ?? 0) > 0 ? 'neutral' : 'positive'}
             icon={
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-            }
-            expandable={true}
-            expandedContent={
-              <div className="space-y-2 text-sm">
-                <p className="text-gray-600 dark:text-gray-300">Target: ≥85%</p>
-                <p className={staffProductivity?.current_period.productivity_score && staffProductivity.current_period.productivity_score >= 85 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                  {staffProductivity?.current_period.productivity_score && staffProductivity.current_period.productivity_score >= 85 ? "✅ Above Target" : "⚠️ Below Target"}
-                </p>
-              </div>
             }
           />
         </div>
+
 
         {/* Alerts Section */}
         <div className="col-span-12 lg:col-span-8">
@@ -192,19 +148,29 @@ export default function BranchManagerDashboard({ position = 'Branch Manager', us
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-gray-500 dark:text-gray-400">Pending Approvals</span>
-                <span className="font-semibold text-gray-900 dark:text-white">12</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.pending_loans ?? 0}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Collections Due</span>
-                <span className="font-semibold text-gray-900 dark:text-white">ZMW 45,200</span>
+                <span className="text-gray-500 dark:text-gray-400">Active Clients</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.active_clients ?? 0}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Training Completions</span>
-                <span className="font-semibold text-gray-900 dark:text-white">8/12</span>
+                <span className="text-gray-500 dark:text-gray-400">Open Tickets</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.open_tickets ?? 0}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Compliance Score</span>
-                <span className="font-semibold text-green-600 dark:text-green-400">95%</span>
+                <span className="text-gray-500 dark:text-gray-400">Pending Transactions</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.pending_transactions ?? 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 dark:text-gray-400">Disbursed Loans</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.disbursed_loans ?? 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500 dark:text-gray-400">Loan Portfolio</span>
+                <span className="font-semibold text-green-600 dark:text-green-400">
+                  {isLoading ? '...' : `ZMW ${Number(branchStats?.loan_portfolio ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
+                </span>
               </div>
             </div>
           </CollapsibleCard>
@@ -263,66 +229,11 @@ export default function BranchManagerDashboard({ position = 'Branch Manager', us
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">Loading team data...</td>
-                    </tr>
-                  ) : staffProductivity?.officer_breakdown && staffProductivity.officer_breakdown.length > 0 ? (
-                    staffProductivity.officer_breakdown.map((officer) => {
-                      // Determine status based on rating and score
-                      let status = 'needs_attention';
-                      let statusClass = 'bg-yellow-100 text-yellow-800';
-                      let statusText = 'Needs Attention';
-                      
-                      if (officer.rating === 'Excellent') {
-                        status = 'on_track';
-                        statusClass = 'bg-green-100 text-green-800';
-                        statusText = 'On Track';
-                      } else if (officer.rating === 'Good') {
-                        status = 'on_track';
-                        statusClass = 'bg-green-100 text-green-800';
-                        statusText = 'On Track';
-                      } else if (officer.rating === 'Average') {
-                        status = 'needs_attention';
-                        statusClass = 'bg-yellow-100 text-yellow-800';
-                        statusText = 'Needs Attention';
-                      } else if (officer.rating === 'Needs Improvement') {
-                        status = 'behind';
-                        statusClass = 'bg-red-100 text-red-800';
-                        statusText = 'Behind';
-                      }
-
-                      // Determine change direction
-                      const changeClass = officer.change > 0 
-                        ? 'text-green-600' 
-                        : officer.change < 0 
-                          ? 'text-red-600' 
-                          : 'text-gray-600';
-                      const changeSign = officer.change > 0 ? '+' : '';
-
-                      return (
-                        <tr key={officer.officer_id}>
-                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{officer.officer_name}</td>
-                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{officer.total_score.toFixed(1)}%</td>
-                          <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{officer.rating}</td>
-                          <td className={`px-4 py-3 text-sm ${changeClass}`}>
-                            {changeSign}{officer.change.toFixed(1)}%
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 text-xs font-medium ${statusClass} rounded-full`}>
-                              {statusText}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                        No team performance data available
-                      </td>
-                    </tr>
-                  )}
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                      No team performance data available
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
