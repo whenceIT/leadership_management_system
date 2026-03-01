@@ -1,7 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { DashboardBase, KPICard, AlertCard, CollapsibleCard } from './DashboardBase';
+import { HeadlineParameterCard } from './HeadlineParameterCard';
+import { getHeadlineParameters } from '@/data/headline-parameters-mock';
+import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { useBranchManagerMetrics } from '@/hooks/useBranchManagerMetrics';
 import { useUserKPI } from '@/hooks/useUserKPI';
 
@@ -33,13 +36,106 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
     weight: `${kpi.weight}%`
   })) : [];
 
+  // Headline parameters using composite index approach
+  const headlineParameters = getHeadlineParameters({
+    onStaffRatiosDrillDown: () => setDrillView('consultants')
+  });
+
+  // Drill-down for Branch Manager: consultants -> transactions
+  const [drillView, setDrillView] = useState<'consultants' | 'transactions'>('consultants');
+  const [selectedConsultant, setSelectedConsultant] = useState<number | null>(null);
+
+  // Mock data for branch drill-down
+  const mockConsultants = Array.from({length: 8}, (_, i) => ({
+    id: i + 1,
+    name: `Consultant ${i + 1}`,
+    performance: (70 + Math.random() * 30).toFixed(2),
+    defaultRate: (2 + Math.random() * 5).toFixed(2),
+  }));
+
+  const mockTransactions = (consultantId: number) => Array.from({length: 15}, (_, i) => ({
+    id: i + 1,
+    amount: (1000 + Math.random() * 9000).toFixed(2),
+    status: ['Active', 'Defaulted', 'Recovered'][Math.floor(Math.random() * 3)],
+  }));
+
+  // Render functions
+  const renderConsultants = () => (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {mockConsultants.map(consultant => (
+        <div
+          key={consultant.id}
+          className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer hover:shadow-md"
+          onClick={() => {
+            setSelectedConsultant(consultant.id);
+            setDrillView('transactions');
+          }}
+        >
+          <h3 className="font-bold">{consultant.name}</h3>
+          <p>Performance: {consultant.performance}%</p>
+          <p>Default Rate: {consultant.defaultRate}%</p>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderTransactions = () => {
+    if (!selectedConsultant) return null;
+    const transactions = mockTransactions(selectedConsultant);
+    return (
+      <div>
+        <button onClick={() => setDrillView('consultants')} className="mb-4 text-blue-500">Back to Consultants</button>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map(transaction => (
+                <tr key={transaction.id}>
+                  <td>{transaction.id}</td>
+                  <td>K{transaction.amount}</td>
+                  <td>{transaction.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const summaryData = getInstitutionalSummaryData('branch', 'Branch View');
+
   return (
     <DashboardBase
       title="Branch Manager Dashboard"
       subtitle="Real-time branch performance and operations overview"
       userTier={userTier}
     >
+      {/* Institutional Health Summary - Landing Page View */}
+      <InstitutionalHealthSummary
+        userLevel="branch"
+        userLevelLabel="Branch View"
+        parameters={summaryData.parameters}
+        recentActivities={summaryData.recentActivities}
+        overallScore={summaryData.overallScore}
+        overallInstAvg={summaryData.overallInstAvg}
+        overallTarget={summaryData.overallTarget}
+      />
 
+      {/* Five Headline Institutional Parameters as individual cards */}
+      <div className="col-span-12 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {headlineParameters.map((param, index) => (
+            <HeadlineParameterCard key={index} {...param} />
+          ))}
+        </div>
+      </div>
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         {/* KPI Cards with expand functionality */}
@@ -166,7 +262,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
                 <span className="text-gray-500 dark:text-gray-400">Disbursed Loans</span>
                 <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.disbursed_loans ?? 0}</span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
                 <span className="text-gray-500 dark:text-gray-400">Loan Portfolio</span>
                 <span className="font-semibold text-green-600 dark:text-green-400">
                   {isLoading ? '...' : `ZMW ${Number(branchStats?.loan_portfolio ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
@@ -178,7 +274,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
         {/* Collections Waterfall */}
         <div className="col-span-12">
-          <CollapsibleCard title="Collections Waterfall" action={<button className="text-sm text-brand-500 hover:underline">View Details</button>} defaultExpanded={true}>
+          <CollapsibleCard title="Collections Waterfall" defaultExpanded={true}>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <p className="text-gray-500 dark:text-gray-400">Loading collections waterfall data...</p>
@@ -278,6 +374,14 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
                 </div>
               </div>
             </div>
+          </CollapsibleCard>
+        </div>
+
+        {/* Branch Drill-down */}
+        <div className="col-span-12">
+          <CollapsibleCard title="Branch Drill-down">
+            {drillView === 'consultants' && renderConsultants()}
+            {drillView === 'transactions' && renderTransactions()}
           </CollapsibleCard>
         </div>
       </div>

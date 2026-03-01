@@ -2,6 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { DashboardBase, KPICard, AlertCard, CollapsibleCard, KPIMetricsCard } from './DashboardBase';
+import { HeadlineParameterCard } from './HeadlineParameterCard';
+import { getHeadlineParameters } from '@/data/headline-parameters-mock';
+import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { roleCardsData } from '@/data/role-cards-data';
 import { useUserTier } from '@/hooks/useUserTier';
 import { useUserKPI } from '@/hooks/useUserKPI';
@@ -120,12 +123,36 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
     fetchMetrics();
   }, []);
 
+  // Headline parameters using composite index approach
+  const headlineParameters = getHeadlineParameters();
+
+  // Mock transactions for drill-down
+  const mockTransactions = Array.from({length: 20}, (_, i) => ({
+    id: i + 1,
+    amount: (1000 + Math.random() * 9000).toFixed(2),
+    status: ['Active', 'Defaulted', 'Recovered'][Math.floor(Math.random() * 3)],
+    defaultRate: (2 + Math.random() * 5).toFixed(2),
+  }));
+
+  const summaryData = getInstitutionalSummaryData('consultant', 'Personal Performance View');
+
   return (
     <DashboardBase
       title={position}
       subtitle="Your personal loan portfolio and performance overview"
       userTier={userTier}
     >
+      {/* Institutional Health Summary - Landing Page View */}
+      <InstitutionalHealthSummary
+        userLevel="consultant"
+        userLevelLabel="Personal Performance View"
+        parameters={summaryData.parameters}
+        recentActivities={summaryData.recentActivities}
+        overallScore={summaryData.overallScore}
+        overallInstAvg={summaryData.overallInstAvg}
+        overallTarget={summaryData.overallTarget}
+      />
+
       {/* Quick Info Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -159,6 +186,15 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
       {kpis.length > 0 && (
         <KPIMetricsCard kpis={kpis} title="Key Performance Indicators (KPIs)" />
       )}
+
+      {/* Five Headline Institutional Parameters as individual cards */}
+      <div className="col-span-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {headlineParameters.map((param, index) => (
+            <HeadlineParameterCard key={index} {...param} />
+          ))}
+        </div>
+      </div>
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         {/* KPI Cards - Personal Performance */}
@@ -533,7 +569,7 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
                       text: 'text-teal-600 dark:text-teal-400'
                     }
                   };
-
+                  
                   const config = colorConfig[stage.color];
                   const nextStage = stages[index + 1];
                   const nextConfig = nextStage ? colorConfig[nextStage.color] : null;
@@ -811,6 +847,34 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
                   <p className="text-xs text-gray-500 dark:text-gray-400">From existing client - Yesterday</p>
                 </div>
               </div>
+            </div>
+          </CollapsibleCard>
+        </div>
+
+        {/* Loan Drill-down (Transactions) */}
+        <div className="col-span-12">
+          <CollapsibleCard title="My Loans">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Default Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mockTransactions.map(transaction => (
+                    <tr key={transaction.id}>
+                      <td>{transaction.id}</td>
+                      <td>K{transaction.amount}</td>
+                      <td>{transaction.status}</td>
+                      <td>{transaction.defaultRate}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CollapsibleCard>
         </div>
