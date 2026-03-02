@@ -363,6 +363,10 @@ export function InstitutionalHealthSummary({
 }: InstitutionalHealthSummaryProps) {
   const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
+  const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
+  const [drillLevel, setDrillLevel] = useState<'province' | 'branch' | 'consultant' | null>(null);
+  const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
 
   const levelLabel = {
     institution: 'Institutional',
@@ -540,7 +544,16 @@ export function InstitutionalHealthSummary({
                                     </thead>
                                     <tbody className="divide-y divide-blue-200 dark:divide-blue-900/20">
                                       {kpis.map((kpi, kpiIndex) => (
-                                        <tr key={kpiIndex} className="hover:bg-blue-100 dark:hover:bg-blue-900/20">
+                                        <tr 
+                                          key={kpiIndex} 
+                                          className="hover:bg-blue-100 dark:hover:bg-blue-900/20 cursor-pointer"
+                                          onClick={() => {
+                                            setSelectedKPI(kpi.name);
+                                            setDrillLevel('province');
+                                            setSelectedProvince(null);
+                                            setSelectedBranch(null);
+                                          }}
+                                        >
                                           <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">{kpi.name}</td>
                                           <td className="px-4 py-2 text-left text-sm text-gray-600 dark:text-gray-300">{kpi.institutionalAvg}</td>
                                           <td className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">{kpi.currentPeriod}</td>
@@ -562,69 +575,72 @@ export function InstitutionalHealthSummary({
                                   </table>
                                 </div>
                               </div>
-{/* Trend Analysis */}
-                              <div>
-                                <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">📉 TREND ANALYSIS (vs last month):</h4>
-                                <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                                  <p>• Overall Score: ▼ 8.3% (from 68.5%)</p>
-                                  <p>• Primary Declines: Risk Management (▼12%), LC Performance (▼9%)</p>
-                                  <p>• Geographic Origin: 42% of decline from Eastern Province</p>
-                                  <p>• Branch-Level: Branch X (Eastern) ▼31%, Branch Y (Eastern) ▼18%</p>
+
+                              {/* Grid layout for analysis sections */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Trend Analysis */}
+                                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-blue-200 dark:border-blue-800">
+                                  <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">📉 TREND ANALYSIS (vs last month):</h4>
+                                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                                    <p>• Overall Score: ▼ 8.3% (from 68.5%)</p>
+                                    <p>• Primary Declines: Risk Management (▼12%), LC Performance (▼9%)</p>
+                                    <p>• Geographic Origin: 42% of decline from Eastern Province</p>
+                                    <p>• Branch-Level: Branch X (Eastern) ▼31%, Branch Y (Eastern) ▼18%</p>
+                                  </div>
                                 </div>
+
+                                {/* Root Cause Analysis */}
+                                {(userLevel === 'branch' || userLevel === 'province' || userLevel === 'district') && (
+                                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-blue-200 dark:border-blue-800">
+                                    <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">🔍 ROOT CAUSE ANALYSIS:</h4>
+                                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                                      <p>• Primary Driver: Month-1 Default (20.0/40pp) - 20pp shortfall</p>
+                                      <p>• Secondary: 3-Month Recovery (12.9/30pp) - 17.1pp shortfall</p>
+                                      <p>• Geographic Concentration:</p>
+                                      <p className="ml-4"> - Eastern Province: 22% (vs 38% inst) - contributing 42% of problem</p>
+                                      <p className="ml-4"> - Branch X (Eastern): 15% - contributing 60% of provincial problem</p>
+                                      <p className="ml-4"> - LC Mukuka (Branch X): 8% - PAR 45%, Recovery 12%</p>
+                                      <p className="ml-4"> - LC Banda (Branch X): 12% - PAR 38%, Recovery 18%</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Alerts */}
+                                {userLevel === 'institution' && (
+                                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-blue-200 dark:border-blue-800">
+                                    <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">⚠️ ALERTS:</h4>
+                                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                                      <p>🔴 CRITICAL: Risk Management (38%) - 37pp below target</p>
+                                      <p>🟠 WARNING: LC Performance (47%) - 33pp below target</p>
+                                      <p>🟢 GOOD: Branch Structure (82%) - Near target</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Recommended Actions */}
+                                {(userLevel === 'branch' || userLevel === 'province') && (
+                                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-blue-200 dark:border-blue-800">
+                                    <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">✅ RECOMMENDED ACTIONS:</h4>
+                                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                                      <p>• Immediate: Portfolio reassignment for LC Mukuka and LC Banda (per Section 11)</p>
+                                      <p>• Within 7 days: Branch Manager intervention on 30-60 day delinquent accounts</p>
+                                      <p>• Within 30 days: District Manager review of collection practices at Branch X</p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Timeline Tracking */}
+                                {(userLevel === 'branch' || userLevel === 'province') && (
+                                  <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-blue-200 dark:border-blue-800 md:col-span-2">
+                                    <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">⏰ TIMELINE TRACKING:</h4>
+                                    <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                                      <p>• Performance Manager notified: 2024-07-15 09:34</p>
+                                      <p>• Branch Manager acknowledged: 2024-07-15 14:20</p>
+                                      <p>• Follow-up review scheduled: 2024-07-22</p>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-
-                              {/* Alerts */}
-                              {userLevel === 'institution' && (
-                                <div>
-                                  <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">⚠️ ALERTS:</h4>
-                                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                                    <p>• 🔴 CRITICAL: Risk Management (38%) - 37pp below target</p>
-                                    <p>• 🟠 WARNING: LC Performance (47%) - 33pp below target</p>
-                                    <p>• 🟢 GOOD: Branch Structure (82%) - Near target</p>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Root Cause Analysis */}
-                              {(userLevel === 'branch' || userLevel === 'province' || userLevel === 'district') && (
-                                <div>
-                                  <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">🔍 ROOT CAUSE ANALYSIS:</h4>
-                                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                                    <p>• Primary Driver: Month-1 Default (20.0/40pp) - 20pp shortfall</p>
-                                    <p>• Secondary: 3-Month Recovery (12.9/30pp) - 17.1pp shortfall</p>
-                                    <p>• Geographic Concentration:</p>
-                                    <p className="ml-4"> - Eastern Province: 22% (vs 38% inst) - contributing 42% of problem</p>
-                                    <p className="ml-4"> - Branch X (Eastern): 15% - contributing 60% of provincial problem</p>
-                                    <p className="ml-4"> - LC Mukuka (Branch X): 8% - PAR 45%, Recovery 12%</p>
-                                    <p className="ml-4"> - LC Banda (Branch X): 12% - PAR 38%, Recovery 18%</p>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Recommended Actions */}
-                              {(userLevel === 'branch' || userLevel === 'province') && (
-                                <div>
-                                  <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">✅ RECOMMENDED ACTIONS:</h4>
-                                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                                    <p>• Immediate: Portfolio reassignment for LC Mukuka and LC Banda (per Section 11)</p>
-                                    <p>• Within 7 days: Branch Manager intervention on 30-60 day delinquent accounts</p>
-                                    <p>• Within 30 days: District Manager review of collection practices at Branch X</p>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Timeline Tracking */}
-                              {(userLevel === 'branch' || userLevel === 'province') && (
-                                <div>
-                                  <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">⏰ TIMELINE TRACKING:</h4>
-                                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                                    <p>• Performance Manager notified: 2024-07-15 09:34</p>
-                                    <p>• Branch Manager acknowledged: 2024-07-15 14:20</p>
-                                    <p>• Follow-up review scheduled: 2024-07-22</p>
-                                  </div>
-                                </div>
-                              )}
-
                             </div>
                           </td>
                         </tr>
@@ -661,6 +677,231 @@ export function InstitutionalHealthSummary({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      {/* KPI Drill-down Modal */}
+      {selectedKPI && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[999999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedKPI}</h2>
+              <button 
+                onClick={() => {
+                  setSelectedKPI(null);
+                  setDrillLevel(null);
+                  setSelectedProvince(null);
+                  setSelectedBranch(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {/* Province Level View */}
+              {drillLevel === 'province' && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Province Level Performance</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Province</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Inst. Avg</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Provincial Avg</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {Array.from({ length: 10 }, (_, i) => ({
+                          id: i + 1,
+                          name: `Province ${i + 1}`,
+                          institutionalAvg: '12 loans/month',
+                          currentPeriod: (10 + Math.random() * 5).toFixed(1) + ' loans/month',
+                          target: '≥15 loans/month',
+                          variance: `-${(5 - Math.random() * 3).toFixed(1)} loans/month`,
+                          trend: ['↑', '↓', '→'][Math.floor(Math.random() * 3)] as '↑' | '↓' | '→',
+                          status: ['good', 'warning', 'critical'][Math.floor(Math.random() * 3)] as 'good' | 'warning' | 'critical'
+                        }))
+                        .sort((a, b) => parseFloat(b.currentPeriod) - parseFloat(a.currentPeriod))
+                        .map((province, index) => (
+                          <tr 
+                            key={province.id} 
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                            onClick={() => {
+                              setSelectedProvince(province.id);
+                              setDrillLevel('branch');
+                            }}
+                          >
+                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{province.name}</td>
+                            <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{province.institutionalAvg}</td>
+                            <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{province.currentPeriod}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{province.target}</td>
+                            <td className="px-4 py-2 text-sm">
+                              <span className={`${getVarianceColor(province.variance)}`}>{province.variance}</span>
+                            </td>
+                            <td className="px-4 py-2 text-sm">
+                              <span className={getTrendBadge(province.trend)}>{province.trend}</span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(province.status)}`}>
+                                {province.status === 'good' ? 'GOOD' : province.status === 'warning' ? 'WARNING' : 'CRITICAL'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Branch Level View */}
+              {drillLevel === 'branch' && selectedProvince && (
+                <div>
+                  <div className="flex items-center mb-4">
+                    <button 
+                      onClick={() => setDrillLevel('province')}
+                      className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
+                    >
+                      <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Back to Provinces
+                    </button>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Branches in Province {selectedProvince}</h3>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Inst. Avg</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch Avg</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {Array.from({ length: 5 }, (_, i) => ({
+                          id: i + 1,
+                          name: `Branch ${i + 1}`,
+                          institutionalAvg: '12 loans/month',
+                          currentPeriod: (10 + Math.random() * 5).toFixed(1) + ' loans/month',
+                          target: '≥15 loans/month',
+                          variance: `-${(5 - Math.random() * 3).toFixed(1)} loans/month`,
+                          trend: ['↑', '↓', '→'][Math.floor(Math.random() * 3)] as '↑' | '↓' | '→',
+                          status: ['good', 'warning', 'critical'][Math.floor(Math.random() * 3)] as 'good' | 'warning' | 'critical'
+                        }))
+                        .sort((a, b) => parseFloat(b.currentPeriod) - parseFloat(a.currentPeriod))
+                        .map((branch, index) => (
+                          <tr 
+                            key={branch.id} 
+                            className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                            onClick={() => {
+                              setSelectedBranch(branch.id);
+                              setDrillLevel('consultant');
+                            }}
+                          >
+                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
+                            <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{branch.institutionalAvg}</td>
+                            <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{branch.currentPeriod}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{branch.target}</td>
+                            <td className="px-4 py-2 text-sm">
+                              <span className={`${getVarianceColor(branch.variance)}`}>{branch.variance}</span>
+                            </td>
+                            <td className="px-4 py-2 text-sm">
+                              <span className={getTrendBadge(branch.trend)}>{branch.trend}</span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(branch.status)}`}>
+                                {branch.status === 'good' ? 'GOOD' : branch.status === 'warning' ? 'WARNING' : 'CRITICAL'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Consultant Level View */}
+              {drillLevel === 'consultant' && selectedBranch && (
+                <div>
+                  <div className="flex items-center mb-4">
+                    <button 
+                      onClick={() => setDrillLevel('branch')}
+                      className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
+                    >
+                      <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      Back to Branches
+                    </button>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Loan Consultants in Branch {selectedBranch}</h3>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-900">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Loan Consultant</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Inst. Avg</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Individual Avg</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                        {Array.from({ length: 8 }, (_, i) => ({
+                          id: i + 1,
+                          name: `Consultant ${i + 1}`,
+                          institutionalAvg: '12 loans/month',
+                          currentPeriod: (10 + Math.random() * 5).toFixed(1) + ' loans/month',
+                          target: '≥15 loans/month',
+                          variance: `-${(5 - Math.random() * 3).toFixed(1)} loans/month`,
+                          trend: ['↑', '↓', '→'][Math.floor(Math.random() * 3)] as '↑' | '↓' | '→',
+                          status: ['good', 'warning', 'critical'][Math.floor(Math.random() * 3)] as 'good' | 'warning' | 'critical'
+                        }))
+                        .sort((a, b) => parseFloat(b.currentPeriod) - parseFloat(a.currentPeriod))
+                        .map((consultant, index) => (
+                          <tr key={consultant.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{consultant.name}</td>
+                            <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{consultant.institutionalAvg}</td>
+                            <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{consultant.currentPeriod}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{consultant.target}</td>
+                            <td className="px-4 py-2 text-sm">
+                              <span className={`${getVarianceColor(consultant.variance)}`}>{consultant.variance}</span>
+                            </td>
+                            <td className="px-4 py-2 text-sm">
+                              <span className={getTrendBadge(consultant.trend)}>{consultant.trend}</span>
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(consultant.status)}`}>
+                                {consultant.status === 'good' ? 'GOOD' : consultant.status === 'warning' ? 'WARNING' : 'CRITICAL'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

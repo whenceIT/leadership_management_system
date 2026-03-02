@@ -302,17 +302,6 @@ export default function SuperSeerDashboard({ userTier }: { userTier?: string }) 
         </div>
 
 
-        {/* Institutional Drill-down */}
-        <div className="col-span-12">
-          <CollapsibleCard title="Institutional Drill-down (Province → District → Branch → Officer → Transactions)">
-            {view === 'provinces' && renderProvinces()}
-            {view === 'districts' && renderDistricts()}
-            {view === 'branches' && renderBranches()}
-            {view === 'officers' && renderOfficers()}
-            {view === 'transactions' && renderTransactions()}
-          </CollapsibleCard>
-        </div>
-
         {/* Average Loan Rates by Cycle */}
         <div className="col-span-12">
           <CollapsibleCard title="Average Loan Rates by Cycle">

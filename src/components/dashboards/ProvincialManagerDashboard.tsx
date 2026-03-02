@@ -298,145 +298,6 @@ export default function ProvincialManagerDashboard() {
         overallTarget={summaryData.overallTarget}
       />
 
-      <QuickInfoBar {...jobInfo} />
-      <JobPurpose purpose={jobPurpose} />
-
-      <KPIMetricsCard
-        title="Key Performance Indicators"
-        kpis={kpis}
-      />
-
-      {isLoading && (
-        <div className="flex items-center justify-center h-32 mt-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
-          <span className="ml-3 text-gray-500">Loading performance data...</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-          <p className="text-red-700 dark:text-red-300">{error}</p>
-        </div>
-      )}
-
-      {/* Five Headline Institutional Parameters as individual cards */}
-      <div className="col-span-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {headlineParameters.map((param, index) => (
-            <div key={index} className="rounded-xl overflow-hidden border shadow-lg">
-              <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-4 text-white">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-white/70 uppercase tracking-wider">{param.shortTitle}</p>
-                    <p className="text-sm font-bold text-white leading-tight mt-0.0.5">{param.title}</p>
-                  </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-red-100 text-red-800 ml-2 flex-shrink-0">
-                    {param.indexScore >= 70 ? 'GOOD' : param.indexScore >= 50 ? 'WARNING' : 'CRITICAL'}
-                  </span>
-                </div>
-                <div className="flex items-end gap-3 mt-3">
-                  <div>
-                    <span className="text-4xl font-black text-white">{param.indexScore}%</span>
-                    <span className={`ml-2 text-sm font-medium ${param.trend === '↑' ? 'text-green-300' : param.trend === '↓' ? 'text-red-300' : 'text-white/70'}`}>
-                      {param.trend} {param.trendValue}
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <div className="flex justify-between text-xs text-white/60 mb-1">
-                    <span>0%</span>
-                    <span>Inst Avg: {param.instAvg}%</span>
-                    <span>Target: {param.target}%</span>
-                  </div>
-                  <div className="relative h-2 bg-white/20 rounded-full overflow-hidden">
-                    <div
-                      className="absolute top-0 bottom-0 w-0.5 bg-white/50 z-10"
-                      style={{ left: `${Math.min(param.instAvg, 100)}%` }}
-                    />
-                    <div
-                      className={`h-full ${param.indexScore >= 70 ? 'bg-green-500' : param.indexScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'} rounded-full transition-all duration-700`}
-                      style={{ width: `${Math.min(param.indexScore, 100)}%` }}
-                    />
-                  </div>
-                  {param.target - param.indexScore > 0 && (
-                    <p className="text-xs text-red-300 mt-1">↓{param.target - param.indexScore}pp below target</p>
-                  )}
-                </div>
-              </div>
-              <div className="p-3 bg-blue-950/20 dark:bg-blue-900/10">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Constituents</p>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => setDrillView('districts')}
-                      className="text-xs px-2 py-0.5 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-                    >
-                      Drill ↓
-                    </button>
-                    <button
-                      onClick={() => setExpanded(!expanded)}
-                      className="text-xs px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                    >
-                      More
-                    </button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {param.constituents.map((c, i) => {
-                    const ppContribution = (c.score / 100) * c.weight;
-                    const maxPP = c.weight;
-                    const isOverachieving = ppContribution > maxPP;
-                    const barWidth = Math.min((ppContribution / maxPP) * 100, 150);
-                    return (
-                      <div key={i} className="group">
-                        <div className="flex items-center justify-between text-xs mb-0.5">
-                          <button
-                            onClick={() => setShowDetail(c)}
-                            className={`font-medium text-left text-blue-600 dark:text-blue-400 hover:underline cursor-pointer`}
-                          >
-                            {c.name}
-                          </button>
-                          <span className={`font-bold ${isOverachieving ? 'text-green-600' : c.score >= 70 ? 'text-green-600' : c.score >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
-                            {ppContribution.toFixed(1)}pp/{maxPP}pp
-                          </span>
-                        </div>
-                        <div className={`h-1.5 bg-blue-900/30 rounded-full overflow-hidden`}>
-                          <div
-                            className={`h-full rounded-full transition-all duration-500 ${isOverachieving ? 'bg-green-500' : c.score >= 70 ? 'bg-blue-500' : c.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                            style={{ width: `${Math.min(barWidth, 100)}%` }}
-                          />
-                        </div>
-                        {expanded && (
-                          <div className="mt-1 flex gap-3 text-xs text-gray-500 dark:text-gray-400">
-                            <span>Score: <strong className="text-gray-700 dark:text-gray-200">{c.score}%</strong></span>
-                            <span>Actual: <strong className="text-gray-700 dark:text-gray-200">{c.actual}</strong></span>
-                            <span>Target: <strong className="text-gray-700 dark:text-gray-200">{c.target}</strong></span>
-                            {c.instAvg && <span>Inst: <strong className="text-gray-700 dark:text-gray-200">{c.instAvg}</strong></span>}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 grid grid-cols-3 gap-1 text-center">
-                  <div>
-                    <p className="text-xs text-gray-400">Current</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{param.indexScore}%</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Inst Avg</p>
-                    <p className={`text-sm font-bold ${param.indexScore >= param.instAvg ? 'text-green-600' : 'text-red-600'}`}>{param.instAvg}%</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-400">Target</p>
-                    <p className="text-sm font-bold text-gray-500">{param.target}%</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       <div className="grid grid-cols-12 gap-4 md:gap-6 mt-6">
         {/* Branch Performance Overview - Dynamic from API */}
@@ -478,51 +339,10 @@ export default function ProvincialManagerDashboard() {
             )}
           </CollapsibleCard>
         </div>
-
-        {/* Strategic Alerts */}
-        <div className="col-span-12 lg:col-span-8">
-          <CollapsibleCard title="Strategic Priority Items">
-            <div className="space-y-4">
-              {performanceData && performanceData.branches.some(b => b.par.rate > 5) && (
-                <AlertCard
-                  title="High PAR Rate Alert"
-                  message={`Some branches have PAR rates exceeding 5%. Immediate attention required.`}
-                  type="warning"
-                  action={
-                    <button className="text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:underline">
-                      Review PAR Report →
-                    </button>
-                  }
-                />
-              )}
-              {performanceData && performanceData.branches.some(b => b.collections.rate < 90) && (
-                <AlertCard
-                  title="Collection Performance Concern"
-                  message="Some branches are below 90% collection rate. Consider intervention."
-                  type="warning"
-                  action={
-                    <button className="text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:underline">
-                      Review Collection Strategy →
-                    </button>
-                  }
-                />
-              )}
-              <AlertCard
-                title="New Market Opportunity"
-                message="Expansion opportunity identified in rural areas."
-                type="info"
-                action={
-                  <button className="text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline">
-                    Assess Opportunity →
-                  </button>
-                }
-              />
-            </div>
-          </CollapsibleCard>
-        </div>
-
+        
+        
         {/* Provincial Health - Dynamic from API */}
-        <div className="col-span-12 lg:col-span-4">
+        <div className="col-span-12">
           <CollapsibleCard title="Provincial Health Indicators">
             {performanceData && performanceData.branches.length > 0 ? (
               <div className="space-y-3">
@@ -556,15 +376,6 @@ export default function ProvincialManagerDashboard() {
           </CollapsibleCard>
         </div>
 
-        {/* Provincial Drill-down */}
-        <div className="col-span-12">
-          <CollapsibleCard title="Provincial Drill-down">
-            {drillView === 'districts' && renderDistricts()}
-            {drillView === 'branches' && renderBranches()}
-            {drillView === 'consultants' && renderConsultants()}
-            {drillView === 'transactions' && renderTransactions()}
-          </CollapsibleCard>
-        </div>
       </div>
     </DashboardBase>
   );
