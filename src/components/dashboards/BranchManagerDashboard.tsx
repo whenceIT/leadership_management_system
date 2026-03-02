@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { DashboardBase, KPICard, AlertCard, CollapsibleCard } from './DashboardBase';
+import { getHeadlineParameters } from '@/data/headline-parameters-mock';
+import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { useBranchManagerMetrics } from '@/hooks/useBranchManagerMetrics';
 import { useUserKPI } from '@/hooks/useUserKPI';
 
@@ -33,12 +35,34 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
     weight: `${kpi.weight}%`
   })) : [];
 
+  // Headline parameters using composite index approach
+  const headlineParameters = getHeadlineParameters({
+    onStaffRatiosDrillDown: () => setDrillView('consultants')
+  });
+
+  // Drill-down for Branch Manager: consultants -> transactions
+  const [drillView, setDrillView] = useState<'consultants' | 'transactions'>('consultants');
+  const [selectedConsultant, setSelectedConsultant] = useState<number | null>(null);
+
+
+  const summaryData = getInstitutionalSummaryData('branch', 'Branch View');
+
   return (
     <DashboardBase
       title="Branch Manager Dashboard"
       subtitle="Real-time branch performance and operations overview"
       userTier={userTier}
     >
+      {/* Institutional Health Summary - Landing Page View */}
+      <InstitutionalHealthSummary
+        userLevel="branch"
+        userLevelLabel="Branch View"
+        parameters={summaryData.parameters}
+        recentActivities={summaryData.recentActivities}
+        overallScore={summaryData.overallScore}
+        overallInstAvg={summaryData.overallInstAvg}
+        overallTarget={summaryData.overallTarget}
+      />
 
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
@@ -98,87 +122,11 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
             }
           />
         </div>
-
-
-        {/* Alerts Section */}
-        <div className="col-span-12 lg:col-span-8">
-          <CollapsibleCard title="Priority Actions" defaultExpanded={true}>
-            <div className="space-y-4">
-              <AlertCard
-                title="Review Required - High Default Risk"
-                message="5 loans showing early warning signs. Review action plans due today."
-                type="warning"
-                action={
-                  <button className="text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:underline">
-                    Review Now →
-                  </button>
-                }
-                expandable={true}
-                expandedContent={
-                  <div className="space-y-2 text-sm">
-                    <p className="text-gray-600 dark:text-gray-300">Clients: #4521, #4523, #4525, #4527, #4529</p>
-                    <p className="text-gray-600 dark:text-gray-300">Total at Risk: K125,000</p>
-                  </div>
-                }
-              />
-              <AlertCard
-                title="Monthly Report Due"
-                message="Submit monthly performance report by EOD tomorrow."
-                type="info"
-                action={
-                  <button className="text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline">
-                    Start Report →
-                  </button>
-                }
-                expandable={true}
-                expandedContent={
-                  <div className="space-y-2 text-sm">
-                    <p className="text-gray-600 dark:text-gray-300">Template: Monthly Performance Report</p>
-                    <p className="text-gray-600 dark:text-gray-300">Due: Tomorrow, 5:00 PM</p>
-                  </div>
-                }
-              />
-            </div>
-          </CollapsibleCard>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="col-span-12 lg:col-span-4">
-          <CollapsibleCard title="Quick Stats" defaultExpanded={true}>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Pending Approvals</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.pending_loans ?? 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Active Clients</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.active_clients ?? 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Open Tickets</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.open_tickets ?? 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Pending Transactions</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.pending_transactions ?? 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Disbursed Loans</span>
-                <span className="font-semibold text-gray-900 dark:text-white">{isLoading ? '...' : branchStats?.disbursed_loans ?? 0}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500 dark:text-gray-400">Loan Portfolio</span>
-                <span className="font-semibold text-green-600 dark:text-green-400">
-                  {isLoading ? '...' : `ZMW ${Number(branchStats?.loan_portfolio ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`}
-                </span>
-              </div>
-            </div>
-          </CollapsibleCard>
-        </div>
+        
 
         {/* Collections Waterfall */}
         <div className="col-span-12">
-          <CollapsibleCard title="Collections Waterfall" action={<button className="text-sm text-brand-500 hover:underline">View Details</button>} defaultExpanded={true}>
+          <CollapsibleCard title="Collections Waterfall" defaultExpanded={true}>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <p className="text-gray-500 dark:text-gray-400">Loading collections waterfall data...</p>
@@ -211,73 +159,6 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
                 <p className="text-gray-500 dark:text-gray-400">No collections waterfall data available</p>
               </div>
             )}
-          </CollapsibleCard>
-        </div>
-
-        {/* Team Overview */}
-        <div className="col-span-12 lg:col-span-6">
-          <CollapsibleCard title="Team Performance" defaultExpanded={true}>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Staff</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Total Score</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Rating</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Change</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                      No team performance data available
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </CollapsibleCard>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="col-span-12 lg:col-span-6">
-          <CollapsibleCard title="Recent Activity" defaultExpanded={true}>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Loan Approved - Client #4521</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">2 hours ago</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Collection Follow-up Scheduled</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">4 hours ago</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Default Risk Alert - Client #3892</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Yesterday</p>
-                </div>
-              </div>
-            </div>
           </CollapsibleCard>
         </div>
       </div>

@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { DashboardBase, KPICard, AlertCard, SectionCard, QuickInfoBar, JobPurpose, KPIMetricsCard, CollapsibleCard } from './DashboardBase';
+
+import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { roleCardsData } from '@/data/role-cards-data';
 import { useUserKPI } from '@/hooks/useUserKPI';
 
@@ -22,7 +24,7 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
 
   // Get user-specific KPI data
   const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
-
+  
   // Build KPIs from user-specific KPI data
   const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
     name: kpi.name,
@@ -31,12 +33,125 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
     weight: `${kpi.weight}%`
   })) : [];
 
+  
+
+  // Drill-down for District Manager: branches -> consultants -> transactions
+  const [drillView, setDrillView] = useState<'branches' | 'consultants' | 'transactions'>('branches');
+  const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
+  const [selectedConsultant, setSelectedConsultant] = useState<number | null>(null);
+
+  // Mock data
+  const mockBranches = Array.from({length: 6}, (_, i) => ({
+    id: i + 1,
+    name: `Branch ${i + 1}`,
+    avgDefaultRate: (25 + Math.random() * 10).toFixed(2),
+  }));
+
+  const mockConsultants = (branchId: number) => Array.from({length: 8}, (_, i) => ({
+    id: i + 1,
+    name: `Consultant ${i + 1} in Branch ${branchId}`,
+    performance: (70 + Math.random() * 30).toFixed(2),
+  }));
+
+  const mockTransactions = (consultantId: number) => Array.from({length: 15}, (_, i) => ({
+    id: i + 1,
+    amount: (1000 + Math.random() * 9000).toFixed(2),
+    status: ['Active', 'Defaulted', 'Recovered'][Math.floor(Math.random() * 3)],
+  }));
+
+  // Render functions
+  const renderBranches = () => (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {mockBranches.map(branch => (
+        <div
+          key={branch.id}
+          className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer hover:shadow-md"
+          onClick={() => {
+            setSelectedBranch(branch.id);
+            setDrillView('consultants');
+          }}
+        >
+          <h3 className="font-bold">{branch.name}</h3>
+          <p>Default Rate: {branch.avgDefaultRate}%</p>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderConsultants = () => {
+    if (!selectedBranch) return null;
+    const consultants = mockConsultants(selectedBranch);
+    return (
+      <div>
+        <button onClick={() => setDrillView('branches')} className="mb-4 text-blue-500">Back to Branches</button>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {consultants.map(consultant => (
+            <div
+              key={consultant.id}
+              className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer hover:shadow-md"
+              onClick={() => {
+                setSelectedConsultant(consultant.id);
+                setDrillView('transactions');
+              }}
+            >
+              <h3 className="font-bold">{consultant.name}</h3>
+              <p>Performance: {consultant.performance}%</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTransactions = () => {
+    if (!selectedConsultant) return null;
+    const transactions = mockTransactions(selectedConsultant);
+    return (
+      <div>
+        <button onClick={() => setDrillView('consultants')} className="mb-4 text-blue-500">Back to Consultants</button>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map(transaction => (
+                <tr key={transaction.id}>
+                  <td>{transaction.id}</td>
+                  <td>K{transaction.amount}</td>
+                  <td>{transaction.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const summaryData = getInstitutionalSummaryData('district', 'District View');
+
   return (
     <DashboardBase
       title={roleCard.title}
       subtitle="Cross-branch performance and district-wide oversight"
       userTier={userTier}
     >
+      {/* Institutional Health Summary - Landing Page View */}
+      <InstitutionalHealthSummary
+        userLevel="district"
+        userLevelLabel="District View"
+        parameters={summaryData.parameters}
+        recentActivities={summaryData.recentActivities}
+        overallScore={summaryData.overallScore}
+        overallInstAvg={summaryData.overallInstAvg}
+        overallTarget={summaryData.overallTarget}
+      />
+
       {/* Quick Info Bar */}
       <QuickInfoBar
         department={roleCard.department}
@@ -50,6 +165,8 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
 
       {/* KPI Metrics from API */}
       <KPIMetricsCard kpis={kpis} title="Key Performance Indicators (KPIs)" />
+
+      
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         {/* KPI Cards with expand functionality */}
@@ -229,6 +346,15 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
                 <span className="text-xs px-2 py-1 bg-green-200 text-green-800 rounded-full">Healthy</span>
               </div>
             </div>
+          </CollapsibleCard>
+        </div>
+
+        {/* District Drill-down */}
+        <div className="col-span-12">
+          <CollapsibleCard title="District Drill-down">
+            {drillView === 'branches' && renderBranches()}
+            {drillView === 'consultants' && renderConsultants()}
+            {drillView === 'transactions' && renderTransactions()}
           </CollapsibleCard>
         </div>
       </div>

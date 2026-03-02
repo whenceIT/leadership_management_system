@@ -1,17 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  DashboardBase, 
-  KPICard, 
-  AlertCard, 
-  SectionCard, 
+import {
+  DashboardBase,
+  KPICard,
+  AlertCard,
+  SectionCard,
   QuickInfoBar,
   JobPurpose,
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
-import ProvincialDataService, { 
+import { getHeadlineParameters } from '@/data/headline-parameters-mock';
+import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
+import ProvincialDataService, {
   BranchPerformance, 
   ProvinceSummary,
   ProvincialPerformanceData 
@@ -26,6 +28,8 @@ export default function ProvincialManagerDashboard() {
   const [performanceData, setPerformanceData] = useState<ProvincialPerformanceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [showDetail, setShowDetail] = useState<any>(null);
   
   // Get user-specific KPI data
   const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
@@ -141,90 +145,161 @@ export default function ProvincialManagerDashboard() {
     return branches.reduce((sum, b) => sum + b.net_contribution_value, 0) / branches.length;
   };
 
+  // Headline parameters using composite index approach
+  const headlineParameters = getHeadlineParameters();
+
+  // Drill-down for Provincial Manager: districts -> branches -> consultants -> transactions
+  const [drillView, setDrillView] = useState<'districts' | 'branches' | 'consultants' | 'transactions'>('districts');
+  const [selectedDistrict, setSelectedDistrict] = useState<number | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
+  const [selectedConsultant, setSelectedConsultant] = useState<number | null>(null);
+
+  // Mock data for provincial drill-down
+  const mockDistricts = Array.from({length: 5}, (_, i) => ({
+    id: i + 1,
+    name: `District ${i + 1}`,
+    avgDefaultRate: (25 + Math.random() * 10).toFixed(2),
+    avgRecoveryRate: (50 + Math.random() * 20).toFixed(2),
+  }));
+
+  const mockBranches = (districtId: number) => Array.from({length: 4}, (_, i) => ({
+    id: i + 1,
+    name: `Branch ${i + 1} in District ${districtId}`,
+    avgDefaultRate: (25 + Math.random() * 10).toFixed(2),
+  }));
+
+  const mockConsultants = (branchId: number) => Array.from({length: 8}, (_, i) => ({
+    id: i + 1,
+    name: `Consultant ${i + 1} in Branch ${branchId}`,
+    performance: (70 + Math.random() * 30).toFixed(2),
+  }));
+
+  const mockTransactions = (consultantId: number) => Array.from({length: 15}, (_, i) => ({
+    id: i + 1,
+    amount: (1000 + Math.random() * 9000).toFixed(2),
+    status: ['Active', 'Defaulted', 'Recovered'][Math.floor(Math.random() * 3)],
+  }));
+
+  // Render functions for drill-down
+  const renderDistricts = () => (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {mockDistricts.map(district => (
+        <div
+          key={district.id}
+          className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer hover:shadow-md"
+          onClick={() => {
+            setSelectedDistrict(district.id);
+            setDrillView('branches');
+          }}
+        >
+          <h3 className="font-bold">{district.name}</h3>
+          <p>Default Rate: {district.avgDefaultRate}%</p>
+          <p>Recovery Rate: {district.avgRecoveryRate}%</p>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderBranches = () => {
+    if (!selectedDistrict) return null;
+    const branches = mockBranches(selectedDistrict);
+    return (
+      <div>
+        <button onClick={() => setDrillView('districts')} className="mb-4 text-blue-500">Back to Districts</button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {branches.map(branch => (
+            <div
+              key={branch.id}
+              className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer hover:shadow-md"
+              onClick={() => {
+                setSelectedBranch(branch.id);
+                setDrillView('consultants');
+              }}
+            >
+              <h3 className="font-bold">{branch.name}</h3>
+              <p>Default Rate: {branch.avgDefaultRate}%</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderConsultants = () => {
+    if (!selectedBranch) return null;
+    const consultants = mockConsultants(selectedBranch);
+    return (
+      <div>
+        <button onClick={() => setDrillView('branches')} className="mb-4 text-blue-500">Back to Branches</button>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {consultants.map(consultant => (
+            <div
+              key={consultant.id}
+              className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow cursor-pointer hover:shadow-md"
+              onClick={() => {
+                setSelectedConsultant(consultant.id);
+                setDrillView('transactions');
+              }}
+            >
+              <h3 className="font-bold">{consultant.name}</h3>
+              <p>Performance: {consultant.performance}%</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTransactions = () => {
+    if (!selectedConsultant) return null;
+    const transactions = mockTransactions(selectedConsultant);
+    return (
+      <div>
+        <button onClick={() => setDrillView('consultants')} className="mb-4 text-blue-500">Back to Consultants</button>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map(transaction => (
+                <tr key={transaction.id}>
+                  <td>{transaction.id}</td>
+                  <td>K{transaction.amount}</td>
+                  <td>{transaction.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const summaryData = getInstitutionalSummaryData('province', 'Provincial View');
+
   return (
     <DashboardBase
       title="Provincial Manager Dashboard"
       subtitle="Provincial strategic oversight, portfolio health, and growth leadership"
     >
-      <QuickInfoBar {...jobInfo} />
-      <JobPurpose purpose={jobPurpose} />
-
-      <KPIMetricsCard 
-        title="Key Performance Indicators"
-        kpis={kpis}
+      {/* Institutional Health Summary - Landing Page View */}
+      <InstitutionalHealthSummary
+        userLevel="province"
+        userLevelLabel="Provincial View"
+        parameters={summaryData.parameters}
+        recentActivities={summaryData.recentActivities}
+        overallScore={summaryData.overallScore}
+        overallInstAvg={summaryData.overallInstAvg}
+        overallTarget={summaryData.overallTarget}
       />
 
-      {isLoading && (
-        <div className="flex items-center justify-center h-32 mt-6">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
-          <span className="ml-3 text-gray-500">Loading performance data...</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-          <p className="text-red-700 dark:text-red-300">{error}</p>
-        </div>
-      )}
 
       <div className="grid grid-cols-12 gap-4 md:gap-6 mt-6">
-        {/* KPI Cards - Use actual data if available */}
-        <div className="col-span-12 md:col-span-6 lg:col-span-3">
-          <KPICard
-            title="Provincial Net Contribution"
-            value={performanceData?.province_summary.formatted_net_contribution || "K2.8M"}
-            change={performanceData ? `${performanceData.province_summary.total_branches} branches` : "+18% from target"}
-            changeType="positive"
-            icon={
-              <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
-          />
-        </div>
-
-        <div className="col-span-12 md:col-span-6 lg:col-span-3">
-          <KPICard
-            title="Provincial Default Rate"
-            value={performanceData ? `${performanceData.province_summary.average_par_rate}%` : "2.4%"}
-            change={performanceData ? `PAR across ${performanceData.province_summary.total_branches} branches` : "-0.6% improvement"}
-            changeType="positive"
-            icon={
-              <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            }
-          />
-        </div>
-
-        <div className="col-span-12 md:col-span-6 lg:col-span-3">
-          <KPICard
-            title="Active Branches"
-            value={performanceData ? String(performanceData.province_summary.active_branches) : "5"}
-            change={performanceData ? `${performanceData.province_summary.total_staff} staff` : "All operational"}
-            changeType="neutral"
-            icon={
-              <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            }
-          />
-        </div>
-
-        <div className="col-span-12 md:col-span-6 lg:col-span-3">
-          <KPICard
-            title="Collection Rate"
-            value={performanceData ? `${performanceData.province_summary.average_collection_rate}%` : "92.5%"}
-            change={performanceData ? `${performanceData.province_summary.total_active_loans} active loans` : "K2.1M revenue"}
-            changeType="positive"
-            icon={
-              <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            }
-          />
-        </div>
-
         {/* Branch Performance Overview - Dynamic from API */}
         <div className="col-span-12">
           <CollapsibleCard title="Branch Performance Overview">
@@ -264,51 +339,10 @@ export default function ProvincialManagerDashboard() {
             )}
           </CollapsibleCard>
         </div>
-
-        {/* Strategic Alerts */}
-        <div className="col-span-12 lg:col-span-8">
-          <CollapsibleCard title="Strategic Priority Items">
-            <div className="space-y-4">
-              {performanceData && performanceData.branches.some(b => b.par.rate > 5) && (
-                <AlertCard
-                  title="High PAR Rate Alert"
-                  message={`Some branches have PAR rates exceeding 5%. Immediate attention required.`}
-                  type="warning"
-                  action={
-                    <button className="text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:underline">
-                      Review PAR Report →
-                    </button>
-                  }
-                />
-              )}
-              {performanceData && performanceData.branches.some(b => b.collections.rate < 90) && (
-                <AlertCard
-                  title="Collection Performance Concern"
-                  message="Some branches are below 90% collection rate. Consider intervention."
-                  type="warning"
-                  action={
-                    <button className="text-sm font-medium text-yellow-700 dark:text-yellow-300 hover:underline">
-                      Review Collection Strategy →
-                    </button>
-                  }
-                />
-              )}
-              <AlertCard
-                title="New Market Opportunity"
-                message="Expansion opportunity identified in rural areas."
-                type="info"
-                action={
-                  <button className="text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline">
-                    Assess Opportunity →
-                  </button>
-                }
-              />
-            </div>
-          </CollapsibleCard>
-        </div>
-
+        
+        
         {/* Provincial Health - Dynamic from API */}
-        <div className="col-span-12 lg:col-span-4">
+        <div className="col-span-12">
           <CollapsibleCard title="Provincial Health Indicators">
             {performanceData && performanceData.branches.length > 0 ? (
               <div className="space-y-3">
@@ -341,6 +375,7 @@ export default function ProvincialManagerDashboard() {
             )}
           </CollapsibleCard>
         </div>
+
       </div>
     </DashboardBase>
   );
