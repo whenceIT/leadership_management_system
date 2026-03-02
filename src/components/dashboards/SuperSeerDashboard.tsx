@@ -10,8 +10,7 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
-import { HeadlineParameterCard } from './HeadlineParameterCard';
-import { getHeadlineParameters } from '@/data/headline-parameters-mock';
+
 import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { useUserKPI } from '@/hooks/useUserKPI';
 import ProvincialDataService, { ProvincialPerformanceData } from '@/services/ProvincialDataService';
@@ -78,10 +77,7 @@ export default function SuperSeerDashboard({ userTier }: { userTier?: string }) 
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
   const [selectedOfficer, setSelectedOfficer] = useState<number | null>(null);
 
-  // Headline parameters using composite index approach
-  const headlineParameters = getHeadlineParameters({
-    onStaffRatiosDrillDown: () => setView('provinces')
-  });
+  
 
   // Mock data
   const mockProvinces = Array.from({length: 10}, (_, i) => ({
@@ -287,114 +283,7 @@ export default function SuperSeerDashboard({ userTier }: { userTier?: string }) 
         overallInstAvg={summaryData.overallInstAvg}
         overallTarget={summaryData.overallTarget}
       />
-      
-
-      {/* Institution's Target Evaluation Tracker */}
-      <div className="mt-6">
-        <CollapsibleCard title="Institution's Valuation Target Tracker">
-          <div className="space-y-6">
-            {/* Valuation Progress Bar */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="font-semibold text-gray-900 dark:text-white">Current Valuation</h4>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-brand-500">K85.2M</p>
-                  <p className="text-sm text-green-600 dark:text-green-400">+15% from last quarter</p>
-                </div>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                <div 
-                  className="bg-gradient-to-r from-green-500 to-brand-500 h-3 rounded-full transition-all duration-500"
-                  style={{ width: '85.2%' }}
-                ></div>
-              </div>
-              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-                <span>0M</span>
-                <span>Target: K100M</span>
-                <span>Current: K85.2M</span>
-                <span>Progress: 85.2%</span>
-              </div>
-            </div>
-
-            {/* Target Breakdown */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Revenue Target</h5>
-                <div className="text-2xl font-bold text-brand-500 mb-1">K45.8M</div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '91.6%' }}></div>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">91.6% of K50M target</p>
-              </div>
-
-              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Profit Margin</h5>
-                <div className="text-2xl font-bold text-brand-500 mb-1">34.1%</div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '85.25%' }}></div>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">85.25% of 40% target</p>
-              </div>
-
-              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                <h5 className="font-semibold text-gray-900 dark:text-white mb-2">Portfolio Growth</h5>
-                <div className="text-2xl font-bold text-brand-500 mb-1">+15.3%</div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '100%' }}></div>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">102% of 15% target</p>
-              </div>
-            </div>
-
-            {/* Milestones */}
-            <div>
-              <h5 className="font-semibold text-gray-900 dark:text-white mb-3">Key Milestones</h5>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Q1: Branch Expansion</span>
-                      <span className="text-sm text-green-600 dark:text-green-400">Completed</span>
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Opened 3 new branches in Lusaka and Copperbelt</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Q2: Digital Transformation</span>
-                      <span className="text-sm text-yellow-600 dark:text-yellow-400">In Progress</span>
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Mobile app and online banking portal development</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-gray-500"></div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">Q3: Market Penetration</span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">Pending</span>
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Expand into 2 new provinces in Southern Zambia</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Risk Factors */}
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-              <h5 className="font-semibold text-yellow-800 dark:text-yellow-200 mb-2">Risk Factors</h5>
-              <div className="space-y-2 text-sm text-yellow-800 dark:text-yellow-200">
-                <p>• Economic volatility affecting loan repayment rates</p>
-                <p>• Regulatory changes pending in financial sector</p>
-                <p>• Competition from new microfinance entrants</p>
-              </div>
-            </div>
-          </div>
-        </CollapsibleCard>
-      </div>
+    
 
       <div className="grid grid-cols-12 gap-4 md:gap-6 mt-6">
         {/* Institution Metrics - Headline Figures */}
@@ -412,115 +301,6 @@ export default function SuperSeerDashboard({ userTier }: { userTier?: string }) 
           </CollapsibleCard>
         </div>
 
-        {/* Province-by-Province Data */}
-        <div className="col-span-12 lg:col-span-6">
-          <CollapsibleCard title="Province-by-Province Performance">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
-                <span className="ml-3 text-gray-500">Loading provincial data...</span>
-              </div>
-            ) : provincialData.length > 0 ? (
-              <div className="space-y-4">
-                {provincialData.map((province) => (
-                  <div key={province.province.id} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                    <h4 className="font-semibold text-gray-900 dark:text-white mb-2">
-                      {provinceNames[province.province.id as keyof typeof provinceNames] || province.province.name}
-                    </h4>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500 dark:text-gray-400">Net Contribution</p>
-                        <p className="font-semibold text-gray-900 dark:text-white">{province.province_summary.formatted_net_contribution}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500 dark:text-gray-400">Branches</p>
-                        <p className="font-semibold text-gray-900 dark:text-white">{province.province_summary.total_branches}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500 dark:text-gray-400">PAR Rate</p>
-                        <p className={`font-semibold ${
-                          province.province_summary.average_par_rate > 5 ? 'text-red-600 dark:text-red-400' : 
-                          province.province_summary.average_par_rate > 3 ? 'text-yellow-600 dark:text-yellow-400' : 
-                          'text-green-600 dark:text-green-400'
-                        }`}>{province.province_summary.average_par_rate}%</p>
-                      </div>
-                    </div>
-                    {province.branches.length > 0 && (
-                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Top Branches:</p>
-                        <div className="space-y-2">
-                          {province.branches.slice(0, 3).map((branch) => (
-                            <div key={branch.branch_id} className="flex justify-between text-xs">
-                              <span className="text-gray-600 dark:text-gray-300">{branch.branch_name}</span>
-                              <span className="font-semibold text-gray-900 dark:text-white">{branch.net_contribution}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <p>No provincial performance data available</p>
-              </div>
-            )}
-          </CollapsibleCard>
-        </div>
-
-        {/* Branch-by-Branch Data - All Branches Overview */}
-        <div className="col-span-12 lg:col-span-6">
-          <CollapsibleCard title="Branch-by-Branch Overview">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
-                <span className="ml-3 text-gray-500">Loading branch data...</span>
-              </div>
-            ) : provincialData.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-900">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Branch</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Province</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Net Contribution</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">PAR Rate</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Collection Rate</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {provincialData.flatMap(province => 
-                      province.branches.slice(0, 5).map(branch => (
-                        <tr key={branch.branch_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                          <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.branch_name}</td>
-                          <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">
-                            {provinceNames[province.province.id as keyof typeof provinceNames] || province.province.name}
-                          </td>
-                          <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{branch.net_contribution}</td>
-                          <td className={`px-4 py-2 text-sm font-semibold ${
-                            branch.par.rate > 5 ? 'text-red-600 dark:text-red-400' : 
-                            branch.par.rate > 3 ? 'text-yellow-600 dark:text-yellow-400' : 
-                            'text-green-600 dark:text-green-400'
-                          }`}>{branch.par.rate}%</td>
-                          <td className={`px-4 py-2 text-sm font-semibold ${
-                            branch.collections.rate < 90 ? 'text-yellow-600 dark:text-yellow-400' : 
-                            branch.collections.rate < 85 ? 'text-red-600 dark:text-red-400' : 
-                            'text-green-600 dark:text-green-400'
-                          }`}>{branch.collections.rate}%</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <p>No branch performance data available</p>
-              </div>
-            )}
-          </CollapsibleCard>
-        </div>
 
         {/* Institutional Drill-down */}
         <div className="col-span-12">

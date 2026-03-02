@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { DashboardBase, KPICard, AlertCard, CollapsibleCard, KPIMetricsCard } from './DashboardBase';
-import { HeadlineParameterCard } from './HeadlineParameterCard';
-import { getHeadlineParameters } from '@/data/headline-parameters-mock';
+
 import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { roleCardsData } from '@/data/role-cards-data';
 import { useUserTier } from '@/hooks/useUserTier';
@@ -123,8 +122,7 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
     fetchMetrics();
   }, []);
 
-  // Headline parameters using composite index approach
-  const headlineParameters = getHeadlineParameters();
+  
 
   // Mock transactions for drill-down
   const mockTransactions = Array.from({length: 20}, (_, i) => ({
@@ -187,14 +185,7 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
         <KPIMetricsCard kpis={kpis} title="Key Performance Indicators (KPIs)" />
       )}
 
-      {/* Five Headline Institutional Parameters as individual cards */}
-      <div className="col-span-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {headlineParameters.map((param, index) => (
-            <HeadlineParameterCard key={index} {...param} />
-          ))}
-        </div>
-      </div>
+      
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         {/* KPI Cards - Personal Performance */}

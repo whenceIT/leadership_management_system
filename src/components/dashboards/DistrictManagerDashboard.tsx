@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { DashboardBase, KPICard, AlertCard, SectionCard, QuickInfoBar, JobPurpose, KPIMetricsCard, CollapsibleCard } from './DashboardBase';
-import { HeadlineParameterCard } from './HeadlineParameterCard';
-import { getHeadlineParameters } from '@/data/headline-parameters-mock';
+
 import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { roleCardsData } from '@/data/role-cards-data';
 import { useUserKPI } from '@/hooks/useUserKPI';
@@ -34,10 +33,7 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
     weight: `${kpi.weight}%`
   })) : [];
 
-  // Headline parameters using composite index approach
-  const headlineParameters = getHeadlineParameters({
-    onStaffRatiosDrillDown: () => setDrillView('branches')
-  });
+  
 
   // Drill-down for District Manager: branches -> consultants -> transactions
   const [drillView, setDrillView] = useState<'branches' | 'consultants' | 'transactions'>('branches');
@@ -170,14 +166,7 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
       {/* KPI Metrics from API */}
       <KPIMetricsCard kpis={kpis} title="Key Performance Indicators (KPIs)" />
 
-      {/* Five Headline Institutional Parameters as individual cards */}
-      <div className="col-span-12 mt-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          {headlineParameters.map((param, index) => (
-            <HeadlineParameterCard key={index} {...param} />
-          ))}
-        </div>
-      </div>
+      
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
         {/* KPI Cards with expand functionality */}
