@@ -29,7 +29,7 @@ export const POSITION_IDS = {
   POA: 17,                   // Performance Operations Administrator
   MARKETING_MANAGER: 18,     // Creative Artwork & Marketing Representative Manager
   ADMINISTRATION: 19,        // Administration
-  SUPER_SEER: 20,            // Super Seer (has access to all)
+  EXECUTIVE_CHAIRPERSON: 20,            // Executive Chairperson (has access to all)
   LOAN_CONSULTANT: 21,       // Loan Consultant
 } as const;
 
@@ -234,8 +234,8 @@ export function parseLoanData(loan: LoanData, now: Date = new Date()): ParsedLoa
  * Check if current position is in a list of allowed positions
  */
 export function isPositionAllowed(currentPositionId: number, allowedPositions: number[]): boolean {
-  // Super Seer has access to everything
-  if (currentPositionId === POSITION_IDS.SUPER_SEER) {
+  // Executive Chairperson has access to everything
+  if (currentPositionId === POSITION_IDS.EXECUTIVE_CHAIRPERSON) {
     return true;
   }
   return allowedPositions.includes(currentPositionId);
@@ -324,15 +324,15 @@ export function generatePositionSpecificActions(
       }
     }
 
-    // ---- SUPER SEER - Payment Actions ----
-    if (currentPositionId === POSITION_IDS.SUPER_SEER) {
+    // ---- EXECUTIVE CHAIRPERSON - Payment Actions ----
+    if (currentPositionId === POSITION_IDS.EXECUTIVE_CHAIRPERSON) {
       if (amount) {
         actions.push({
           action: `👁️ Payment Transaction`,
           due: `${formattedLoanType} of ${amount.toLocaleString()} from ${borrowerName} at ${officeName}.`,
           urgent: false,
           positionSpecific: true,
-          targetPositionIds: [POSITION_IDS.SUPER_SEER],
+          targetPositionIds: [POSITION_IDS.EXECUTIVE_CHAIRPERSON],
         });
       }
     }
@@ -698,16 +698,16 @@ export function generatePositionSpecificActions(
     }
   }
 
-  // ---- SUPER SEER (ID: 20) ----
+  // ---- EXECUTIVE CHAIRPERSON (ID: 20) ----
   // Has access to all actions - receives comprehensive summary
-  if (currentPositionId === POSITION_IDS.SUPER_SEER) {
+  if (currentPositionId === POSITION_IDS.EXECUTIVE_CHAIRPERSON) {
     if (isStaleLoan) {
       actions.push({
         action: `👁️ Comprehensive Stale Alert`,
         due: `${borrowerName}: ${amount.toLocaleString()} at ${officeName} - ${daysPending} days pending - Status: ${status}`,
         urgent: (daysPending || 0) >= 7 || amount >= LOAN_THRESHOLDS.HIGH,
         positionSpecific: true,
-        targetPositionIds: [POSITION_IDS.SUPER_SEER],
+        targetPositionIds: [POSITION_IDS.EXECUTIVE_CHAIRPERSON],
       });
     } else {
       actions.push({
@@ -715,7 +715,7 @@ export function generatePositionSpecificActions(
         due: `${loanType} of ${amount.toLocaleString()} from ${borrowerName} at ${officeName}. Status: ${status}`,
         urgent: amount >= LOAN_THRESHOLDS.HIGH,
         positionSpecific: true,
-        targetPositionIds: [POSITION_IDS.SUPER_SEER],
+        targetPositionIds: [POSITION_IDS.EXECUTIVE_CHAIRPERSON],
       });
     }
   }

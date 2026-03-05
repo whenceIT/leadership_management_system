@@ -88,7 +88,7 @@ export default function UserRoleCard() {
       16: ['GOM', 'GOA'],
       17: ['GOM', 'POA'],
       18: ['Marketing Director', 'Creative Artwork Manager'],
-      20: ['Board of Directors', 'Super Seer'],
+      20: ['Board of Directors', 'Executive Chairperson'],
     };
     
     return hierarchies[positionId] || ['Organization'];

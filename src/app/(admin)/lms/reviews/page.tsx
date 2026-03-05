@@ -121,7 +121,7 @@ function normalizePosition(position: string): Position {
     'Recoveries Manager': 'Recoveries Coordinator',
     'Risk Manager': 'Risk Manager',
     'District Regional Manager': 'District Regional Manager',
-    'Super Seer': 'Super Seer',
+    'Executive Chairperson': 'Executive Chairperson',
     'Loan Consultant': 'Loan Consultant',
   };
 
@@ -1167,7 +1167,7 @@ function getPositionConfig(position: Position | null): PositionReviewConfig {
     'Performance Operations Administrator (POA)': getPOAConfig,
     'R&D Coordinator': getRDCoordinatorConfig,
     'Creative Artwork & Marketing Representative Manager': getCreativeArtworkManagerConfig,
-    'Super Seer': getGOMConfig, // Super Seer uses GOM config as placeholder
+    'Executive Chairperson': getGOMConfig, // Executive Chairperson uses GOM config as placeholder
     'Loan Consultant': getBranchManagerConfig, // Loan Consultant uses Branch Manager config
   };
 

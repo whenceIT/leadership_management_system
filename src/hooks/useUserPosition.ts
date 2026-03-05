@@ -602,7 +602,7 @@ export function getPositionNameByIdStatic(id: number): string {
     17: 'Performance Operations Administrator (POA)',
     18: 'Creative Artwork & Marketing Representative Manager',
     19: 'Administration',
-    20: 'Super Seer',
+    20: 'Executive Chairperson',
     21: 'Loan Consultant',
   };
   
@@ -664,7 +664,7 @@ export const AVAILABLE_POSITIONS = [
   'Performance Operations Administrator (POA)',
   'Creative Artwork & Marketing Representative Manager',
   'Administration',
-  'Super Seer',
+  'Executive Chairperson',
   'Loan Consultant',
 ] as const;
 

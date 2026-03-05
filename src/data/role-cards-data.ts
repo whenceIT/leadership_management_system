@@ -1012,8 +1012,8 @@ export const kpiDataByPosition: Record<string, PositionKPIConfig> = {
       { type: 'warning', title: 'Lead Generation', message: 'Lead generation below target. Campaign refresh needed.' },
     ],
   },
-  'Super Seer': {
-    title: 'Super Seer Dashboard',
+  'Executive Chairperson': {
+    title: 'Executive Chairperson Dashboard',
     description: 'Executive overview - All positions and system-wide metrics',
     kpiCategories: [
       {
@@ -2057,7 +2057,7 @@ function getPositionNameByIdStatic(id: number): string {
     17: 'Performance Operations Administrator (POA)',
     18: 'Creative Artwork & Marketing Representative Manager',
     19: 'Administration',
-    20: 'Super Seer',
+    20: 'Executive Chairperson',
   };
   return positionMap[id] || 'Branch Manager';
 }

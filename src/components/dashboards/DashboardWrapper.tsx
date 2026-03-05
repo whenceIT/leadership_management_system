@@ -100,8 +100,8 @@ const DASHBOARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
     loading: () => <DashboardLoading />
   }),
   
-   // Super Seer - has access to all dashboards with comprehensive oversight
-  'Super Seer': dynamic(() => import('@/components/dashboards/SuperSeerDashboard'), { 
+   // Executive Chairperson - has access to all dashboards with comprehensive oversight
+  'Executive Chairperson': dynamic(() => import('@/components/dashboards/ExecutiveChairpersonDashboard'), { 
     loading: () => <DashboardLoading />
   }),
   

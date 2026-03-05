@@ -7,9 +7,11 @@ interface ConstituentDetailProps {
     name: string;
     score: number;
     weight: number;
-    actual: string;
+    current: string;
     target: string;
     instAvg?: string;
+    provAvg?: string;
+    branchAvg?: string;
   };
   onClose: () => void;
 }
@@ -60,14 +62,10 @@ export function ConstituentDetailView({ constituent, onClose }: ConstituentDetai
         <div className="p-6 space-y-4">
           <div>
             <h3 className="text-sm font-semibold text-gray-600 mb-2">Performance Details</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-6 gap-4">
               <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500">Actual</p>
-                <p className="text-sm font-medium text-gray-900">{constituent.actual}</p>
-              </div>
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-xs text-gray-500">Target</p>
-                <p className="text-sm font-medium text-gray-900">{constituent.target}</p>
+                <p className="text-xs text-gray-500">Current</p>
+                <p className="text-sm font-medium text-gray-900">{constituent.current}</p>
               </div>
               {constituent.instAvg && (
                 <div className="p-3 bg-gray-50 rounded-lg">
@@ -75,6 +73,26 @@ export function ConstituentDetailView({ constituent, onClose }: ConstituentDetai
                   <p className="text-sm font-medium text-gray-900">{constituent.instAvg}</p>
                 </div>
               )}
+              {constituent.provAvg && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500">Prov Avg</p>
+                  <p className="text-sm font-medium text-gray-900">{constituent.provAvg}</p>
+                </div>
+              )}
+              {constituent.branchAvg && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500">Branch Avg</p>
+                  <p className="text-sm font-medium text-gray-900">{constituent.branchAvg}</p>
+                </div>
+              )}
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500">Target</p>
+                <p className="text-sm font-medium text-gray-900">{constituent.target}</p>
+              </div>
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500">Contribution</p>
+                <p className={`text-sm font-medium ${isOverachieving ? 'text-green-600' : 'text-blue-600'}`}>{ppContribution.toFixed(1)}pp</p>
+              </div>
             </div>
           </div>
 
