@@ -41,7 +41,7 @@ export { default as RDCoordinatorDashboard } from './RDCoordinatorDashboard';
 export { default as MarketingManagerDashboard } from './MarketingManagerDashboard';
 
 // Executive Leadership Dashboards
-export { default as SuperSeerDashboard } from './SuperSeerDashboard';
+export { default as ExecutiveChairpersonDashboard } from './ExecutiveChairpersonDashboard';
 
 // Generic Dashboard
 export { default as GenericDashboard } from './GenericDashboard';

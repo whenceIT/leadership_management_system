@@ -7,9 +7,11 @@ export interface Constituent {
   name: string;
   score: number;       // 0-100 (or higher if overachieving)
   weight: number;      // percentage weight (e.g., 25 for 25%)
-  actual: string;      // display value (e.g., "30%", "K45k")
+  current: string;     // current value
   target: string;      // target value
   instAvg?: string;    // institutional average
+  provAvg?: string;    // provincial average
+  branchAvg?: string;  // branch average
   onClick?: () => void;
 }
 
@@ -51,36 +53,44 @@ export function getHeadlineParameters(options?: {
       constituents: [
         {
           name: "Staff Adequacy Score",
-          score: 80,
+          score: 97,
           weight: 25,
-          actual: "8/10 LCs",
+          current: "8/10 LCs",
           target: "10-12 LCs",
           instAvg: "85%",
+          provAvg: "8/10 LCs",
+          branchAvg: "8/10 LCs",
           onClick: options?.onStaffRatiosDrillDown
         },
         {
           name: "Productivity Achievement",
           score: 112,
           weight: 30,
-          actual: "K45k/LC",
+          current: "K45k/LC",
           target: "K40k/LC",
-          instAvg: "K38k/LC"
+          instAvg: "K38k/LC",
+          provAvg: "K42k/LC",
+          branchAvg: "K45k/LC"
         },
         {
           name: "Vacancy Impact",
           score: 80,
           weight: 20,
-          actual: "2 vacancies",
+          current: "2 vacancies",
           target: "0 vacancies",
-          instAvg: "1.2 avg"
+          instAvg: "1.2 avg",
+          provAvg: "1.5 avg",
+          branchAvg: "2 avg"
         },
         {
           name: "Portfolio Load Balance",
           score: 27,
           weight: 25,
-          actual: "K350k/LC",
+          current: "K350k/LC",
           target: "K300k-380k",
-          instAvg: "K320k"
+          instAvg: "K320k",
+          provAvg: "K330k/LC",
+          branchAvg: "K350k/LC"
         }
       ]
     },
@@ -99,33 +109,41 @@ export function getHeadlineParameters(options?: {
           name: "Volume Achievement",
           score: 140,
           weight: 25,
-          actual: "K588k",
+          current: "K588k",
           target: "K420k",
-          instAvg: "K380k"
+          instAvg: "K380k",
+          provAvg: "K450k",
+          branchAvg: "K588k"
         },
         {
           name: "Portfolio Quality Score",
           score: 40,
           weight: 35,
-          actual: "PAR 20%",
+          current: "PAR 20%",
           target: "PAR ≤8%",
-          instAvg: "PAR 12%"
+          instAvg: "PAR 12%",
+          provAvg: "PAR 18%",
+          branchAvg: "PAR 20%"
         },
         {
           name: "Collection Efficiency",
           score: 60,
           weight: 30,
-          actual: "43%",
+          current: "43%",
           target: "≥71.64%",
-          instAvg: "58%"
+          instAvg: "58%",
+          provAvg: "48%",
+          branchAvg: "43%"
         },
         {
           name: "Vetting Compliance",
           score: 95,
           weight: 10,
-          actual: "95%",
+          current: "95%",
           target: "100%",
-          instAvg: "88%"
+          instAvg: "88%",
+          provAvg: "92%",
+          branchAvg: "95%"
         }
       ]
     },
@@ -144,33 +162,41 @@ export function getHeadlineParameters(options?: {
           name: "Yield Achievement",
           score: 100,
           weight: 35,
-          actual: "38.2%",
+          current: "38.2%",
           target: "38.2%",
-          instAvg: "36.5%"
+          instAvg: "36.5%",
+          provAvg: "37.5%",
+          branchAvg: "38.2%"
         },
         {
           name: "Product Diversification",
           score: 70,
           weight: 25,
-          actual: "HHI 0.45",
+          current: "HHI 0.45",
           target: "HHI <0.3",
-          instAvg: "HHI 0.38"
+          instAvg: "HHI 0.38",
+          provAvg: "HHI 0.42",
+          branchAvg: "HHI 0.45"
         },
         {
           name: "Product Risk Score",
           score: 100,
           weight: 30,
-          actual: "Below avg",
+          current: "Below avg",
           target: "≤ inst avg",
-          instAvg: "At avg"
+          instAvg: "At avg",
+          provAvg: "Below avg",
+          branchAvg: "Below avg"
         },
         {
           name: "Strategic Alignment",
           score: 0,
           weight: 10,
-          actual: "0% Motor Veh",
+          current: "0% Motor Veh",
           target: "≥15%",
-          instAvg: "8%"
+          instAvg: "8%",
+          provAvg: "5%",
+          branchAvg: "0%"
         }
       ]
     },
@@ -189,33 +215,41 @@ export function getHeadlineParameters(options?: {
           name: "Month-1 Default Performance",
           score: 50,
           weight: 40,
-          actual: "30% default",
+          current: "30% default",
           target: "≤25%",
-          instAvg: "26.5%"
+          instAvg: "26.5%",
+          provAvg: "28%",
+          branchAvg: "30%"
         },
         {
           name: "3-Month Recovery Achievement",
           score: 43,
           weight: 30,
-          actual: "24%",
+          current: "24%",
           target: "≥56.05%",
-          instAvg: "42%"
+          instAvg: "42%",
+          provAvg: "35%",
+          branchAvg: "24%"
         },
         {
           name: "Roll-Rate Control",
           score: 30,
           weight: 20,
-          actual: "45% (30→60d)",
+          current: "45% (30→60d)",
           target: "≤36.74%",
-          instAvg: "35%"
+          instAvg: "35%",
+          provAvg: "40%",
+          branchAvg: "45%"
         },
         {
           name: "Long-Term Delinquency Risk",
           score: 89,
           weight: 10,
-          actual: "41%",
+          current: "41%",
           target: "≤43.95%",
-          instAvg: "44%"
+          instAvg: "44%",
+          provAvg: "42%",
+          branchAvg: "41%"
         }
       ]
     },
@@ -234,33 +268,41 @@ export function getHeadlineParameters(options?: {
           name: "Revenue Achievement",
           score: 85,
           weight: 40,
-          actual: "K355k",
+          current: "K355k",
           target: "K418k",
-          instAvg: "K380k"
+          instAvg: "K380k",
+          provAvg: "K360k",
+          branchAvg: "K355k"
         },
         {
           name: "Efficiency Ratio (CIR)",
           score: 73,
           weight: 30,
-          actual: "CIR 75%",
+          current: "CIR 75%",
           target: "CIR ≤55%",
-          instAvg: "CIR 65%"
+          instAvg: "CIR 65%",
+          provAvg: "CIR 70%",
+          branchAvg: "CIR 75%"
         },
         {
           name: "Profitability Contribution",
           score: 80,
           weight: 20,
-          actual: "Below avg",
+          current: "Below avg",
           target: "≥ inst avg",
-          instAvg: "At avg"
+          instAvg: "At avg",
+          provAvg: "Below avg",
+          branchAvg: "Below avg"
         },
         {
           name: "Growth Trajectory",
           score: 0,
           weight: 10,
-          actual: "0% MoM",
+          current: "0% MoM",
           target: "≥2.5% MoM",
-          instAvg: "1.8% MoM"
+          instAvg: "1.8% MoM",
+          provAvg: "1.0% MoM",
+          branchAvg: "0% MoM"
         }
       ]
     }

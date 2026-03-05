@@ -148,7 +148,7 @@ Loan Processing & Priority Actions System
 |  - Management Accountant (8) -> Disbursement tracking                        |
 |  - Loan Consultant (21)     -> Processing, follow-up                       |
 |  - GOA/POA (16,17)           -> Operations admin                             |
-|  - Super Seer (20)           -> Full access to all                          |
+|  - Executive Chairperson (20)           -> Full access to all                          |
 +------------------------------------------------------------------------------+
 Data Flow Diagram
                     NOTIFICATION SERVER

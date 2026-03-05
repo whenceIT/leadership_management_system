@@ -43,7 +43,7 @@ export const POSITION_DASHBOARDS = {
   'Creative Artwork & Marketing Representative Manager Performance Review': () => import('./MarketingManagerDashboard'),
   
   // Executive Leadership
-  'Super Seer': () => import('./SuperSeerDashboard'),
+  'Executive Chairperson': () => import('./ExecutiveChairpersonDashboard'),
 } as const;
 
 // Default dashboard for unrecognized positions

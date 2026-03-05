@@ -65,6 +65,8 @@ interface KeyMetric {
   target: string;
   variance: string;
   trend: '↑' | '↓' | '→';
+  provAvg?: string;
+  contribution?: string;
 }
 
 interface RecentActivity {
@@ -72,6 +74,157 @@ interface RecentActivity {
   description: string;
   impact: 'positive' | 'negative' | 'neutral';
   parameter: string;
+}
+
+export interface InstitutionalSummaryData {
+  parameters: ParameterSummary[];
+  keyMetrics: KeyMetric[];
+  recentActivities: RecentActivity[];
+  overallScore: number;
+  overallInstAvg: number;
+  overallTarget: number;
+}
+
+export function getInstitutionalSummaryData(userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant', userLevelLabel: string): InstitutionalSummaryData {
+  // Base data that can be adjusted based on user level
+  const baseParameters: ParameterSummary[] = [
+    {
+      name: 'Branch Structure & Staffing Index',
+      shortName: 'Staffing & Structure',
+      institutionalAvg: '92%',
+      userLevelAvg: userLevel === 'branch' ? '88%' : userLevel === 'district' ? '90%' : userLevel === 'province' ? '91%' : '92%',
+      target: '≥95%',
+      variance: userLevel === 'branch' ? '-7%' : userLevel === 'district' ? '-5%' : userLevel === 'province' ? '-4%' : '0%',
+      varianceAbs: userLevel === 'branch' ? '7pp' : userLevel === 'district' ? '5pp' : userLevel === 'province' ? '4pp' : '0pp',
+      trend: userLevel === 'branch' ? '↓' : userLevel === 'district' ? '→' : userLevel === 'province' ? '↑' : '→',
+      status: userLevel === 'branch' ? 'warning' : userLevel === 'district' ? 'warning' : userLevel === 'province' ? 'good' : 'good'
+    },
+    {
+      name: 'Loan Consultant Performance Index',
+      shortName: 'LC Performance',
+      institutionalAvg: '85%',
+      userLevelAvg: userLevel === 'branch' ? '82%' : userLevel === 'district' ? '84%' : userLevel === 'province' ? '86%' : '85%',
+      target: '≥90%',
+      variance: userLevel === 'branch' ? '-8%' : userLevel === 'district' ? '-6%' : userLevel === 'province' ? '+1%' : '0%',
+      varianceAbs: userLevel === 'branch' ? '8pp' : userLevel === 'district' ? '6pp' : userLevel === 'province' ? '1pp' : '0pp',
+      trend: userLevel === 'branch' ? '↓' : userLevel === 'district' ? '→' : userLevel === 'province' ? '↑' : '→',
+      status: userLevel === 'branch' ? 'warning' : userLevel === 'district' ? 'warning' : userLevel === 'province' ? 'good' : 'good'
+    },
+    {
+      name: 'Loan Products & Interest Rates Index',
+      shortName: 'Products & Rates',
+      institutionalAvg: '88%',
+      userLevelAvg: userLevel === 'branch' ? '86%' : userLevel === 'district' ? '87%' : userLevel === 'province' ? '89%' : '88%',
+      target: '≥92%',
+      variance: userLevel === 'branch' ? '-6%' : userLevel === 'district' ? '-5%' : userLevel === 'province' ? '-3%' : '0%',
+      varianceAbs: userLevel === 'branch' ? '6pp' : userLevel === 'district' ? '5pp' : userLevel === 'province' ? '3pp' : '0pp',
+      trend: userLevel === 'branch' ? '→' : userLevel === 'district' ? '→' : userLevel === 'province' ? '→' : '→',
+      status: userLevel === 'branch' ? 'warning' : userLevel === 'district' ? 'warning' : userLevel === 'province' ? 'warning' : 'good'
+    },
+    {
+      name: 'Risk Management & Defaults Index',
+      shortName: 'Risk & Defaults',
+      institutionalAvg: '75%',
+      userLevelAvg: userLevel === 'branch' ? '72%' : userLevel === 'district' ? '74%' : userLevel === 'province' ? '76%' : '75%',
+      target: '≥80%',
+      variance: userLevel === 'branch' ? '-8%' : userLevel === 'district' ? '-6%' : userLevel === 'province' ? '-4%' : '0%',
+      varianceAbs: userLevel === 'branch' ? '8pp' : userLevel === 'district' ? '6pp' : userLevel === 'province' ? '4pp' : '0pp',
+      trend: userLevel === 'branch' ? '↓' : userLevel === 'district' ? '↓' : userLevel === 'province' ? '→' : '→',
+      status: userLevel === 'branch' ? 'critical' : userLevel === 'district' ? 'warning' : userLevel === 'province' ? 'warning' : 'warning'
+    },
+    {
+      name: 'Revenue & Performance Metrics Index',
+      shortName: 'Revenue & Performance',
+      institutionalAvg: '80%',
+      userLevelAvg: userLevel === 'branch' ? '78%' : userLevel === 'district' ? '82%' : userLevel === 'province' ? '85%' : '80%',
+      target: '≥85%',
+      variance: userLevel === 'branch' ? '-7%' : userLevel === 'district' ? '-3%' : userLevel === 'province' ? '+0%' : '0%',
+      varianceAbs: userLevel === 'branch' ? '7pp' : userLevel === 'district' ? '3pp' : userLevel === 'province' ? '0pp' : '0pp',
+      trend: userLevel === 'branch' ? '→' : userLevel === 'district' ? '↑' : userLevel === 'province' ? '→' : '→',
+      status: userLevel === 'branch' ? 'warning' : userLevel === 'district' ? 'warning' : userLevel === 'province' ? 'good' : 'good'
+    }
+  ];
+
+  const baseKeyMetrics: KeyMetric[] = [
+    {
+      parameter: 'Staff Adequacy Score',
+      institutionalAvg: '92%',
+      currentPeriod: userLevel === 'branch' ? '88%' : userLevel === 'district' ? '90%' : userLevel === 'province' ? '91%' : '92%',
+      target: '100%',
+      variance: userLevel === 'branch' ? '-12%' : userLevel === 'district' ? '-10%' : userLevel === 'province' ? '-9%' : '0%',
+      trend: userLevel === 'branch' ? '↓' : userLevel === 'district' ? '→' : userLevel === 'province' ? '↑' : '→',
+      provAvg: '90%',
+      contribution: userLevel === 'branch' ? '22/25pp ▼' : userLevel === 'district' ? '23/25pp →' : userLevel === 'province' ? '24/25pp ↑' : '25/25pp →'
+    },
+    {
+      parameter: 'Productivity Achievement',
+      institutionalAvg: '95%',
+      currentPeriod: userLevel === 'branch' ? '87%' : userLevel === 'district' ? '92%' : userLevel === 'province' ? '94%' : '95%',
+      target: '≥100%',
+      variance: userLevel === 'branch' ? '-8%' : userLevel === 'district' ? '-3%' : userLevel === 'province' ? '-1%' : '0%',
+      trend: userLevel === 'branch' ? '↓' : userLevel === 'district' ? '↑' : userLevel === 'province' ? '→' : '→',
+      provAvg: '93%',
+      contribution: '21/25pp ▼'
+    },
+    {
+      parameter: 'Month-1 Default Rate',
+      institutionalAvg: '27%',
+      currentPeriod: userLevel === 'branch' ? '30%' : userLevel === 'district' ? '28%' : userLevel === 'province' ? '26%' : '27%',
+      target: '≤25%',
+      variance: userLevel === 'branch' ? '+5%' : userLevel === 'district' ? '+3%' : userLevel === 'province' ? '+1%' : '0%',
+      trend: userLevel === 'branch' ? '↑' : userLevel === 'district' ? '→' : userLevel === 'province' ? '↓' : '→',
+      provAvg: '26%',
+      contribution: '18/40pp ▼'
+    },
+    {
+      parameter: '3-Month Recovery Rate',
+      institutionalAvg: '60%',
+      currentPeriod: userLevel === 'branch' ? '51%' : userLevel === 'district' ? '56%' : userLevel === 'province' ? '59%' : '60%',
+      target: '≥60%',
+      variance: userLevel === 'branch' ? '-9%' : userLevel === 'district' ? '-4%' : userLevel === 'province' ? '-1%' : '0%',
+      trend: userLevel === 'branch' ? '↓' : userLevel === 'district' ? '→' : userLevel === 'province' ? '↑' : '→',
+      provAvg: '58%',
+      contribution: '12.9/30pp ▼'
+    }
+  ];
+
+  const baseRecentActivities: RecentActivity[] = [
+    {
+      time: '2024-07-15 09:34',
+      description: 'Performance Manager updated KPIs for Q3',
+      impact: 'neutral',
+      parameter: 'All Parameters'
+    },
+    {
+      time: '2024-07-14 14:20',
+      description: 'Branch Manager acknowledged declining staff adequacy',
+      impact: 'negative',
+      parameter: 'Branch Structure & Staffing Index'
+    },
+    {
+      time: '2024-07-13 11:05',
+      description: 'Risk Management team identified increasing defaults',
+      impact: 'negative',
+      parameter: 'Risk Management & Defaults Index'
+    },
+    {
+      time: '2024-07-12 08:45',
+      description: 'District Manager reviewed branch performance',
+      impact: 'positive',
+      parameter: 'Loan Consultant Performance Index'
+    }
+  ];
+
+  const overallScore = userLevel === 'branch' ? 65 : userLevel === 'district' ? 72 : userLevel === 'province' ? 78 : 82;
+
+  return {
+    parameters: baseParameters,
+    keyMetrics: baseKeyMetrics,
+    recentActivities: baseRecentActivities,
+    overallScore,
+    overallInstAvg: 82,
+    overallTarget: 90
+  };
 }
 
 interface InstitutionalHealthSummaryProps {
@@ -83,6 +236,11 @@ interface InstitutionalHealthSummaryProps {
   overallScore?: number;
   overallInstAvg?: number;
   overallTarget?: number;
+  staffAdequacyData?: any;
+  productivityAchievementData?: any;
+  vacancyImpactData?: any;
+  volumeAchievementData?: any;
+  loanPortfolioLoadData?: any;
 }
 
 function getTrendColor(trend: '↑' | '↓' | '→', status: 'good' | 'warning' | 'critical') {
@@ -108,9 +266,9 @@ function getAlertBadge(level: 'critical' | 'warning' | 'good') {
 }
 
 function getTrendBadge(trend: '↑' | '↓' | '→') {
-  if (trend === '↑') return 'text-red-600 dark:text-red-400 text-lg font-bold';
-  if (trend === '↓') return 'text-green-600 dark:text-green-400 text-lg font-bold';
-  return 'text-gray-500 dark:text-gray-400 text-lg font-bold';
+  if (trend === '↑') return 'text-green-600 dark:text-gray-600 text-lg font-bold';
+  if (trend === '↓') return 'text-red-600 dark:text-gray-600 text-lg font-bold';
+  return 'text-orange-500 dark:text-gray-600 text-lg font-bold';
 }
 
 function getStatusBadge(status: 'good' | 'warning' | 'critical') {
@@ -127,56 +285,56 @@ function getVarianceColor(variance: string) {
   return 'text-gray-600 dark:text-gray-400';
 }
 
-function getParameterKPIs(paramName: string): KPI[] {
+function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, volumeAchievementData?: any, loanPortfolioLoadData?: any): KPI[] {
   const kpis: ParameterKPIs = {
     'Branch Structure & Staffing Index': [
       {
-        name: 'Staff-to-loan-book ratios',
-        institutionalAvg: '1.8:1',
-        currentPeriod: '1.9:1',
-        target: '≥2:1',
-        variance: '+0.1:1',
-        trend: '↑',
-        status: 'warning'
+        name: 'Staff Adequacy Score',
+        institutionalAvg: staffAdequacyData?.instAvg || '--',
+        currentPeriod: staffAdequacyData?.normalized_score || '--',
+        target: staffAdequacyData?.target || 100+'%',
+        variance: staffAdequacyData ? `${(staffAdequacyData.normalized_score - staffAdequacyData.target)}%` : 'N/a',
+        trend: staffAdequacyData?.normalized_score >= staffAdequacyData?.target ? '↑' : '↓',
+        status: staffAdequacyData?.normalized_score >= 90 ? 'good' : staffAdequacyData?.normalized_score >= 70 ? 'warning' : 'critical'
       },
       {
-        name: 'Staff productivity levels',
-        institutionalAvg: '12 loans/month',
-        currentPeriod: '11 loans/month',
-        target: '≥15 loans/month',
-        variance: '-1 loan/month',
-        trend: '↓',
-        status: 'warning'
+        name: 'Productivity Achievement',
+        institutionalAvg: productivityAchievementData ? '--' : '--',
+        currentPeriod: productivityAchievementData ? `${parseFloat(productivityAchievementData.normalized_score)}` : '0',
+        target: productivityAchievementData ? '≥100%' : '≥100%',
+        variance: productivityAchievementData ? `${(parseFloat(productivityAchievementData.normalized_score) - productivityAchievementData.target)}%` : '0%',
+        trend: productivityAchievementData ? (parseFloat(productivityAchievementData.normalized_score) >= productivityAchievementData.target ? '↑' : '↓') : '↓',
+        status: productivityAchievementData ? (parseFloat(productivityAchievementData.normalized_score) >= 90 ? 'good' : parseFloat(productivityAchievementData.normalized_score) >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
-        name: 'Structural adequacy',
-        institutionalAvg: '85%',
-        currentPeriod: '82%',
-        target: '≥90%',
-        variance: '-3%',
-        trend: '↓',
-        status: 'warning'
+        name: 'Vacancy Impact',
+        institutionalAvg: vacancyImpactData ? '--' : '--',
+        currentPeriod: vacancyImpactData ? `${(vacancyImpactData.normalized_score * 100).toFixed(1)}%` : '90%',
+        target: vacancyImpactData ? '0' : '0',
+        variance: vacancyImpactData ? `${((vacancyImpactData.normalized_score * 100) - vacancyImpactData.target).toFixed(1)}` : '-10%',
+        trend: vacancyImpactData ? ((vacancyImpactData.normalized_score * 100) >= vacancyImpactData.target ? '↑' : '↓') : '↑',
+        status: vacancyImpactData ? ((vacancyImpactData.normalized_score * 100) >= 90 ? 'good' : (vacancyImpactData.normalized_score * 100) >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
-        name: 'Vacancies',
-        institutionalAvg: '8%',
-        currentPeriod: '10%',
-        target: '≤5%',
-        variance: '+2%',
-        trend: '↑',
-        status: 'critical'
-      },
-      {
-        name: 'Replacement cycles',
-        institutionalAvg: '4.2 months',
-        currentPeriod: '5.1 months',
-        target: '≤3 months',
-        variance: '+2.1 months',
-        trend: '↑',
-        status: 'critical'
+        name: 'Portfolio Load Balance',
+        institutionalAvg: loanPortfolioLoadData ? '--' : '--',
+        currentPeriod: loanPortfolioLoadData ? `${parseFloat(loanPortfolioLoadData.score).toFixed(1)}` : '--%',
+        target: 'K40k - K70k per LC',
+        variance: loanPortfolioLoadData ? `${(parseFloat(loanPortfolioLoadData.score) - loanPortfolioLoadData.target).toFixed(1)}%` : '-11%',
+        trend: loanPortfolioLoadData ? (parseFloat(loanPortfolioLoadData.score) >= loanPortfolioLoadData.target ? '↑' : '↓') : '↓',
+        status: loanPortfolioLoadData ? (parseFloat(loanPortfolioLoadData.score) >= 90 ? 'good' : parseFloat(loanPortfolioLoadData.score) >= 70 ? 'warning' : 'critical') : 'warning'
       }
     ],
     'Loan Consultant Performance Index': [
+      {
+        name: 'Volume Achievement',
+        institutionalAvg: volumeAchievementData ? '--' : '--',
+        currentPeriod: volumeAchievementData ? `${parseFloat(volumeAchievementData.normalized_score).toFixed(1)}` : '--',
+        target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target).toLocaleString()}` : '≥420000',
+        variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement) - parseFloat(volumeAchievementData.branch_target)).toLocaleString()}` : '-278673',
+        trend: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '↑' : '↓') : '↓',
+        status: volumeAchievementData ? (parseFloat(volumeAchievementData.normalized_score) >= 90 ? 'good' : parseFloat(volumeAchievementData.normalized_score) >= 70 ? 'warning' : 'critical') : 'warning'
+      },
       {
         name: 'Loan disbursement volume',
         institutionalAvg: '18 loans/month',
@@ -359,8 +517,13 @@ export function InstitutionalHealthSummary({
   recentActivities = [],
   overallScore,
   overallInstAvg,
-  overallTarget
-}: InstitutionalHealthSummaryProps) {
+  overallTarget,
+  staffAdequacyData,
+  productivityAchievementData,
+  vacancyImpactData,
+  volumeAchievementData,
+  loanPortfolioLoadData
+}: InstitutionalHealthSummaryProps & { staffAdequacyData?: any; productivityAchievementData?: any; vacancyImpactData?: any; volumeAchievementData?: any; loanPortfolioLoadData?: any }) {
   const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
@@ -411,51 +574,6 @@ export function InstitutionalHealthSummary({
       )}
       
 
-      {/* Key Metrics View (like the roadmap example) */}
-      {activeTab === 'metrics' && keyMetrics && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-              {levelLabel} Performance — Key Metrics
-            </h3>
-            <span className="text-xs text-gray-500 dark:text-gray-400">{userLevelLabel}</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900/50">
-                <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Headline Parameter</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Institutional Avg</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current Period</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variance</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trend</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {keyMetrics.map((metric, index) => (
-                  <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{metric.parameter}</p>
-                    </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-600 dark:text-gray-300">{metric.institutionalAvg}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">{metric.currentPeriod}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{metric.target}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`text-sm ${getVarianceColor(metric.variance)}`}>{metric.variance}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={getTrendBadge(metric.trend)}>{metric.trend}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* Five Headline Parameters View */}
       {(
@@ -481,13 +599,12 @@ export function InstitutionalHealthSummary({
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {parameters.map((param, index) => {
-                  const kpis = getParameterKPIs(param.name);
+                  const kpis = getParameterKPIs(param.name, staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData);
                   const isExpanded = expandedParam === param.name;
 
                   return (
-                    <>
+                    <React.Fragment key={index}>
                       <tr 
-                        key={index} 
                         className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer ${isExpanded ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
                         onClick={() => setExpandedParam(isExpanded ? null : param.name)}
                       >
@@ -538,6 +655,7 @@ export function InstitutionalHealthSummary({
                                         <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{levelLabel} Avg</th>
                                         <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
                                         <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
+                                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Contribution</th>
                                         <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Trend</th>
                                         <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Status</th>
                                       </tr>
@@ -556,10 +674,18 @@ export function InstitutionalHealthSummary({
                                         >
                                           <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">{kpi.name}</td>
                                           <td className="px-4 py-2 text-left text-sm text-gray-600 dark:text-gray-300">{kpi.institutionalAvg}</td>
-                                          <td className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">{kpi.currentPeriod}</td>
+                                          <td className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">{kpi.currentPeriod}%</td>
                                           <td className="px-4 py-2 text-left text-sm text-gray-500 dark:text-gray-400">{kpi.target}</td>
                                           <td className="px-4 py-2 text-left">
                                             <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
+                                          </td>
+                                          <td className="px-4 py-2 text-left text-sm">
+                                            {kpi.name === 'Staff Adequacy Score' && staffAdequacyData ? `${staffAdequacyData.percentage_point} of ${staffAdequacyData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Productivity Achievement' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Vacancy Impact' && vacancyImpactData ? `${vacancyImpactData.percentage_point} of ${vacancyImpactData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Volume Achievement' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point)} of ${volumeAchievementData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Portfolio Load Balance' && loanPortfolioLoadData ? `${loanPortfolioLoadData.percentage_point} of ${loanPortfolioLoadData.weight.replace('%','')}pp` : 
+                                             '-'}
                                           </td>
                                           <td className="px-4 py-2 text-left">
                                             <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
@@ -644,8 +770,8 @@ export function InstitutionalHealthSummary({
                             </div>
                           </td>
                         </tr>
-                      )}
-                    </>
+                       )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -909,151 +1035,5 @@ export function InstitutionalHealthSummary({
   );
 }
 
-// Mock data generators for each role level
-export function getInstitutionalSummaryData(level: 'institution' | 'province' | 'district' | 'branch' | 'consultant', label: string) {
-  const parameters: ParameterSummary[] = [
-    {
-      name: "Branch Structure & Staffing Index",
-      shortName: "BSSI",
-      institutionalAvg: "78%",
-      userLevelAvg: level === 'institution' ? "78%" : level === 'province' ? "76%" : level === 'district' ? "80%" : level === 'branch' ? "82%" : "N/A",
-      target: "85%",
-      variance: level === 'institution' ? "-7%" : level === 'province' ? "-9%" : level === 'district' ? "-5%" : level === 'branch' ? "-3%" : "N/A",
-      varianceAbs: level === 'institution' ? "-7pp" : level === 'province' ? "-9pp" : level === 'district' ? "-5pp" : level === 'branch' ? "-3pp" : "N/A",
-      trend: '↓',
-      status: 'warning'
-    },
-    {
-      name: "Loan Consultant Performance Index",
-      shortName: "LCPI",
-      institutionalAvg: "62%",
-      userLevelAvg: level === 'institution' ? "62%" : level === 'province' ? "58%" : level === 'district' ? "65%" : level === 'branch' ? "68%" : "85%",
-      target: "80%",
-      variance: level === 'institution' ? "-18%" : level === 'province' ? "-22%" : level === 'district' ? "-15%" : level === 'branch' ? "-12%" : "+5%",
-      varianceAbs: level === 'institution' ? "-18pp" : level === 'province' ? "-22pp" : level === 'district' ? "-15pp" : level === 'branch' ? "-12pp" : "+5pp",
-      trend: '↓',
-      status: 'critical'
-    },
-    {
-      name: "Loan Products & Interest Rates Index",
-      shortName: "LPIRI",
-      institutionalAvg: "74%",
-      userLevelAvg: level === 'institution' ? "74%" : level === 'province' ? "71%" : level === 'district' ? "76%" : level === 'branch' ? "82%" : "70%",
-      target: "80%",
-      variance: level === 'institution' ? "-6%" : level === 'province' ? "-9%" : level === 'district' ? "-4%" : level === 'branch' ? "+2%" : "-10%",
-      varianceAbs: level === 'institution' ? "-6pp" : level === 'province' ? "-9pp" : level === 'district' ? "-4pp" : level === 'branch' ? "+2pp" : "-10pp",
-      trend: '→',
-      status: 'warning'
-    },
-    {
-      name: "Risk Management & Defaults Index",
-      shortName: "RMDI",
-      institutionalAvg: "52%",
-      userLevelAvg: level === 'institution' ? "52%" : level === 'province' ? "48%" : level === 'district' ? "55%" : level === 'branch' ? "38%" : "60%",
-      target: "75%",
-      variance: level === 'institution' ? "-23%" : level === 'province' ? "-27%" : level === 'district' ? "-20%" : level === 'branch' ? "-37%" : "-15%",
-      varianceAbs: level === 'institution' ? "-23pp" : level === 'province' ? "-27pp" : level === 'district' ? "-20pp" : level === 'branch' ? "-37pp" : "-15pp",
-      trend: '↓',
-      status: 'critical'
-    },
-    {
-      name: "Revenue & Performance Metrics Index",
-      shortName: "RPMI",
-      institutionalAvg: "65%",
-      userLevelAvg: level === 'institution' ? "65%" : level === 'province' ? "61%" : level === 'district' ? "67%" : level === 'branch' ? "71%" : "58%",
-      target: "75%",
-      variance: level === 'institution' ? "-10%" : level === 'province' ? "-14%" : level === 'district' ? "-8%" : level === 'branch' ? "-4%" : "-17%",
-      varianceAbs: level === 'institution' ? "-10pp" : level === 'province' ? "-14pp" : level === 'district' ? "-8pp" : level === 'branch' ? "-4pp" : "-17pp",
-      trend: '→',
-      status: 'warning'
-    }
-  ];
 
-  // Key metrics (specific sub-metrics like the roadmap example)
-  const keyMetrics: KeyMetric[] = [
-    {
-      parameter: "Default Rate",
-      institutionalAvg: "28.36%",
-      currentPeriod: level === 'institution' ? "30.00%" : level === 'province' ? "32.00%" : level === 'district' ? "27.50%" : level === 'branch' ? "25.00%" : "20.00%",
-      target: "≤27%",
-      variance: level === 'institution' ? "+2%" : level === 'province' ? "+5%" : level === 'district' ? "+0.5%" : level === 'branch' ? "-2%" : "-7%",
-      trend: level === 'institution' ? '↑' : level === 'province' ? '↑' : level === 'district' ? '↑' : '↓'
-    },
-    {
-      parameter: "Recovery within 3 months",
-      institutionalAvg: "56.05%",
-      currentPeriod: level === 'institution' ? "51%" : level === 'province' ? "48%" : level === 'district' ? "55%" : level === 'branch' ? "60%" : "65%",
-      target: "≥60%",
-      variance: level === 'institution' ? "-9%" : level === 'province' ? "-12%" : level === 'district' ? "-5%" : level === 'branch' ? "0%" : "+5%",
-      trend: level === 'institution' ? '↓' : level === 'province' ? '↓' : level === 'district' ? '↓' : '↑'
-    },
-    {
-      parameter: "Collection Rate (Month-1)",
-      institutionalAvg: "71.64%",
-      currentPeriod: level === 'institution' ? "68%" : level === 'province' ? "65%" : level === 'district' ? "70%" : level === 'branch' ? "75%" : "80%",
-      target: "≥71.64%",
-      variance: level === 'institution' ? "-3.64%" : level === 'province' ? "-6.64%" : level === 'district' ? "-1.64%" : level === 'branch' ? "+3.36%" : "+8.36%",
-      trend: level === 'institution' ? '↓' : level === 'province' ? '↓' : '↑'
-    },
-    {
-      parameter: "Staff Adequacy Score",
-      institutionalAvg: "80%",
-      currentPeriod: level === 'institution' ? "78%" : level === 'province' ? "76%" : level === 'district' ? "82%" : level === 'branch' ? "80%" : "N/A",
-      target: "≥90%",
-      variance: level === 'institution' ? "-12%" : level === 'province' ? "-14%" : level === 'district' ? "-8%" : level === 'branch' ? "-10%" : "N/A",
-      trend: '↓'
-    },
-    {
-      parameter: "Revenue Achievement",
-      institutionalAvg: "85%",
-      currentPeriod: level === 'institution' ? "82%" : level === 'province' ? "79%" : level === 'district' ? "85%" : level === 'branch' ? "88%" : "92%",
-      target: "≥100%",
-      variance: level === 'institution' ? "-18%" : level === 'province' ? "-21%" : level === 'district' ? "-15%" : level === 'branch' ? "-12%" : "-8%",
-      trend: '→'
-    }
-  ];
 
-  const recentActivities: RecentActivity[] = [
-    {
-      time: "2 hours ago",
-      description: "Default rate increased from 28.36% to 30% — 60% of deviation from Eastern Province",
-      impact: 'negative',
-      parameter: "RMDI"
-    },
-    {
-      time: "Yesterday",
-      description: "Branch X disbursement spike detected — 3 LCs contributing 70% of new defaults",
-      impact: 'negative',
-      parameter: "LCPI"
-    },
-    {
-      time: "2 days ago",
-      description: "Recovery rate improved by 3.2% following intensified collections drive",
-      impact: 'positive',
-      parameter: "RMDI"
-    },
-    {
-      time: "3 days ago",
-      description: "New branch opened in Lusaka — staff adequacy score improved by 5pp",
-      impact: 'positive',
-      parameter: "BSSI"
-    }
-  ];
-
-  const overallScores = {
-    institution: 66,
-    province: 63,
-    district: 69,
-    branch: 68,
-    consultant: 72
-  };
-
-  return {
-    parameters,
-    keyMetrics,
-    recentActivities,
-    overallScore: overallScores[level],
-    overallInstAvg: 66,
-    overallTarget: 79
-  };
-}
