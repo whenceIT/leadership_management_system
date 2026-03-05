@@ -240,6 +240,7 @@ interface InstitutionalHealthSummaryProps {
   productivityAchievementData?: any;
   vacancyImpactData?: any;
   volumeAchievementData?: any;
+  loanPortfolioLoadData?: any;
 }
 
 function getTrendColor(trend: '↑' | '↓' | '→', status: 'good' | 'warning' | 'critical') {
@@ -284,13 +285,13 @@ function getVarianceColor(variance: string) {
   return 'text-gray-600 dark:text-gray-400';
 }
 
-function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, volumeAchievementData?: any): KPI[] {
+function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, volumeAchievementData?: any, loanPortfolioLoadData?: any): KPI[] {
   const kpis: ParameterKPIs = {
     'Branch Structure & Staffing Index': [
       {
         name: 'Staff Adequacy Score',
-        institutionalAvg: staffAdequacyData?.instAvg || '0%',
-        currentPeriod: staffAdequacyData?.normalized_score || '0%',
+        institutionalAvg: staffAdequacyData?.instAvg || '--',
+        currentPeriod: staffAdequacyData?.normalized_score || '--',
         target: staffAdequacyData?.target || 100+'%',
         variance: staffAdequacyData ? `${(staffAdequacyData.normalized_score - staffAdequacyData.target)}%` : 'N/a',
         trend: staffAdequacyData?.normalized_score >= staffAdequacyData?.target ? '↑' : '↓',
@@ -298,7 +299,7 @@ function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivi
       },
       {
         name: 'Productivity Achievement',
-        institutionalAvg: productivityAchievementData ? '0%' : '0%',
+        institutionalAvg: productivityAchievementData ? '--' : '--',
         currentPeriod: productivityAchievementData ? `${parseFloat(productivityAchievementData.normalized_score)}` : '0',
         target: productivityAchievementData ? '≥100%' : '≥100%',
         variance: productivityAchievementData ? `${(parseFloat(productivityAchievementData.normalized_score) - productivityAchievementData.target)}%` : '0%',
@@ -307,7 +308,7 @@ function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivi
       },
       {
         name: 'Vacancy Impact',
-        institutionalAvg: vacancyImpactData ? '94%' : '94%',
+        institutionalAvg: vacancyImpactData ? '--' : '--',
         currentPeriod: vacancyImpactData ? `${(vacancyImpactData.normalized_score * 100).toFixed(1)}%` : '90%',
         target: vacancyImpactData ? '0' : '0',
         variance: vacancyImpactData ? `${((vacancyImpactData.normalized_score * 100) - vacancyImpactData.target).toFixed(1)}` : '-10%',
@@ -316,19 +317,19 @@ function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivi
       },
       {
         name: 'Portfolio Load Balance',
-        institutionalAvg: '96%',
-        currentPeriod: '85%',
-        target: '100%',
-        variance: '-11%',
-        trend: '↓',
-        status: 'warning'
+        institutionalAvg: loanPortfolioLoadData ? '--' : '--',
+        currentPeriod: loanPortfolioLoadData ? `${parseFloat(loanPortfolioLoadData.score).toFixed(1)}` : '--%',
+        target: 'K40k - K70k per LC',
+        variance: loanPortfolioLoadData ? `${(parseFloat(loanPortfolioLoadData.score) - loanPortfolioLoadData.target).toFixed(1)}%` : '-11%',
+        trend: loanPortfolioLoadData ? (parseFloat(loanPortfolioLoadData.score) >= loanPortfolioLoadData.target ? '↑' : '↓') : '↓',
+        status: loanPortfolioLoadData ? (parseFloat(loanPortfolioLoadData.score) >= 90 ? 'good' : parseFloat(loanPortfolioLoadData.score) >= 70 ? 'warning' : 'critical') : 'warning'
       }
     ],
     'Loan Consultant Performance Index': [
       {
         name: 'Volume Achievement',
-        institutionalAvg: volumeAchievementData ? '100%' : '100%',
-        currentPeriod: volumeAchievementData ? `${parseFloat(volumeAchievementData.normalized_score).toFixed(1)}%` : '85%',
+        institutionalAvg: volumeAchievementData ? '--' : '--',
+        currentPeriod: volumeAchievementData ? `${parseFloat(volumeAchievementData.normalized_score).toFixed(1)}` : '--',
         target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target).toLocaleString()}` : '≥420000',
         variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement) - parseFloat(volumeAchievementData.branch_target)).toLocaleString()}` : '-278673',
         trend: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '↑' : '↓') : '↓',
@@ -520,8 +521,9 @@ export function InstitutionalHealthSummary({
   staffAdequacyData,
   productivityAchievementData,
   vacancyImpactData,
-  volumeAchievementData
-}: InstitutionalHealthSummaryProps & { staffAdequacyData?: any; productivityAchievementData?: any; vacancyImpactData?: any; volumeAchievementData?: any }) {
+  volumeAchievementData,
+  loanPortfolioLoadData
+}: InstitutionalHealthSummaryProps & { staffAdequacyData?: any; productivityAchievementData?: any; vacancyImpactData?: any; volumeAchievementData?: any; loanPortfolioLoadData?: any }) {
   const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
@@ -597,7 +599,7 @@ export function InstitutionalHealthSummary({
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {parameters.map((param, index) => {
-                  const kpis = getParameterKPIs(param.name, staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData);
+                  const kpis = getParameterKPIs(param.name, staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData);
                   const isExpanded = expandedParam === param.name;
 
                   return (
@@ -682,6 +684,7 @@ export function InstitutionalHealthSummary({
                                              kpi.name === 'Productivity Achievement' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
                                              kpi.name === 'Vacancy Impact' && vacancyImpactData ? `${vacancyImpactData.percentage_point} of ${vacancyImpactData.weight.replace('%','')}pp` : 
                                              kpi.name === 'Volume Achievement' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point)} of ${volumeAchievementData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Portfolio Load Balance' && loanPortfolioLoadData ? `${loanPortfolioLoadData.percentage_point} of ${loanPortfolioLoadData.weight.replace('%','')}pp` : 
                                              '-'}
                                           </td>
                                           <td className="px-4 py-2 text-left">

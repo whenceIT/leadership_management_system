@@ -10,6 +10,7 @@ import { useStaffAdequacy } from '@/hooks/useStaffAdequacy';
 import { useProductivityAchievement } from '@/hooks/useProductivityAchievement';
 import { useVacancyImpact } from '@/hooks/useVacancyImpact';
 import { useVolumeAchievement } from '@/hooks/useVolumeAchievement';
+import { useLoanPortfolioLoad } from '@/hooks/useLoanPortfolioLoad';
 
 interface BranchManagerDashboardProps {
   userTier?: string | null;
@@ -59,6 +60,9 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
   // Fetch volume achievement data
   const { data: volumeAchievementData, isLoading: isVolumeLoading, error: volumeError } = useVolumeAchievement(3); // Using branch id 3 as per example
+
+  // Fetch loan portfolio load data
+  const { data: loanPortfolioLoadData, isLoading: isLoanPortfolioLoading, error: loanPortfolioError } = useLoanPortfolioLoad(3); // Using branch id 3 as per example
 
   // Custom summary data with dynamic Staff Adequacy Score, Productivity Achievement, Vacancy Impact, and Volume Achievement
   const summaryData = useMemo(() => {
@@ -267,8 +271,59 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       };
     }
 
+    // Update the Portfolio Load Balance KPI with real data
+    if (loanPortfolioLoadData) {
+      const normalizedScore = parseFloat(loanPortfolioLoadData.score);
+      const percentagePoint = loanPortfolioLoadData.percentage_point;
+      const weight = parseFloat(loanPortfolioLoadData.weight.replace('%', ''));
+      const variance = normalizedScore - loanPortfolioLoadData.target;
+      
+      // Update parameters
+      const updatedParameters = updatedData.parameters.map(param => {
+        if (param.name === 'Branch Structure & Staffing Index') {
+          // Calculate new values based on API response
+          const trend = normalizedScore >= loanPortfolioLoadData.target ? '↑' : '↓';
+          const status = normalizedScore >= 90 ? 'good' : normalizedScore >= 70 ? 'warning' : 'critical';
+          
+          return {
+            ...param,
+            institutionalAvg: '96%', // Hardcoded institutional average
+            userLevelAvg: `${normalizedScore.toFixed(1)}%`,
+            variance: `${variance.toFixed(1)}%`,
+            varianceAbs: `${Math.abs(variance).toFixed(1)}pp`,
+            trend: trend as '↑' | '↓' | '→',
+            status: status as 'good' | 'warning' | 'critical'
+          };
+        }
+        return param;
+      });
+
+      // Update key metrics
+      const updatedKeyMetrics = updatedData.keyMetrics.map(metric => {
+        if (metric.parameter === 'Portfolio Load Balance') {
+          return {
+            ...metric,
+            institutionalAvg: '96%',
+            currentPeriod: `${normalizedScore.toFixed(1)}%`,
+            target: '100%',
+            variance: `${variance.toFixed(1)}%`,
+            trend: (normalizedScore >= loanPortfolioLoadData.target ? '↑' : '↓') as '↑' | '↓' | '→',
+            provAvg: '94%',
+            contribution: `${percentagePoint.toFixed(1)}/${weight}pp ${normalizedScore >= loanPortfolioLoadData.target ? '▲' : '▼'}`
+          };
+        }
+        return metric;
+      });
+
+      updatedData = {
+        ...updatedData,
+        parameters: updatedParameters,
+        keyMetrics: updatedKeyMetrics
+      };
+    }
+
     return updatedData;
-  }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData]);
+  }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData]);
 
   return (
     <DashboardBase
@@ -290,6 +345,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         productivityAchievementData={productivityAchievementData}
         vacancyImpactData={vacancyImpactData}
         volumeAchievementData={volumeAchievementData}
+        loanPortfolioLoadData={loanPortfolioLoadData}
       />
 
 
