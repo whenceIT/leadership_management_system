@@ -64,40 +64,21 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
   // Fetch loan portfolio load data
   const { data: loanPortfolioLoadData, isLoading: isLoanPortfolioLoading, error: loanPortfolioError } = useLoanPortfolioLoad(3); // Using branch id 3 as per example
 
-  // Custom summary data with dynamic Staff Adequacy Score, Productivity Achievement, Vacancy Impact, and Volume Achievement
+  // Custom summary data with dynamic aggregated Branch Structure & Staffing Index
   const summaryData = useMemo(() => {
-    const baseData = getInstitutionalSummaryData('branch', 'Branch View');
+    const baseData = getInstitutionalSummaryData('branch', 'Branch View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData);
     let updatedData = baseData;
 
-    // Update the Staff Adequacy Score KPI with real data
+    // Update key metrics with individual KPI data
+    let keyMetrics = [...updatedData.keyMetrics];
+    
+    // Update Staff Adequacy Score key metric
     if (staffAdequacyData) {
-      // Update parameters
-      const updatedParameters = updatedData.parameters.map(param => {
-        if (param.name === 'Branch Structure & Staffing Index') {
-          // Calculate new values based on API response
-          const variance = staffAdequacyData.normalized_score - staffAdequacyData.target;
-          const trend = variance >= 0 ? '↑' : '↓';
-          const status = staffAdequacyData.normalized_score >= 90 ? 'good' : staffAdequacyData.normalized_score >= 70 ? 'warning' : 'critical';
-          
-          return {
-            ...param,
-            institutionalAvg: '92%', // Hardcoded institutional average
-            userLevelAvg: `${staffAdequacyData.normalized_score}%`,
-            variance: `${variance}%`,
-            varianceAbs: `${variance}pp`,
-            trend: trend as '↑' | '↓' | '→',
-            status: status as 'good' | 'warning' | 'critical'
-          };
-        }
-        return param;
-      });
-
-      // Update key metrics
-      const updatedKeyMetrics = updatedData.keyMetrics.map(metric => {
+      keyMetrics = keyMetrics.map(metric => {
         if (metric.parameter === 'Staff Adequacy Score') {
           return {
             ...metric,
-            institutionalAvg: '92%',
+            institutionalAvg: staffAdequacyData?.instAvg || '92%',
             currentPeriod: `${staffAdequacyData.normalized_score}%`,
             target: '100%',
             variance: `${staffAdequacyData.normalized_score - staffAdequacyData.target}%`,
@@ -108,43 +89,15 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         }
         return metric;
       });
-
-      updatedData = {
-        ...updatedData,
-        parameters: updatedParameters,
-        keyMetrics: updatedKeyMetrics
-      };
     }
 
-    // Update the Productivity Achievement KPI with real data
+    // Update Productivity Achievement key metric
     if (productivityAchievementData) {
       const normalizedScore = parseFloat(productivityAchievementData.normalized_score);
       const percentagePoint = parseFloat(productivityAchievementData.percentage_point);
       const weight = parseFloat(productivityAchievementData.weight.replace('%', ''));
       
-      // Update parameters
-      const updatedParameters = updatedData.parameters.map(param => {
-        if (param.name === 'Loan Consultant Performance Index') {
-          // Calculate new values based on API response
-          const variance = normalizedScore - productivityAchievementData.target;
-          const trend = variance >= 0 ? '↑' : '↓';
-          const status = normalizedScore >= 90 ? 'good' : normalizedScore >= 70 ? 'warning' : 'critical';
-          
-          return {
-            ...param,
-            institutionalAvg: '95%', // Hardcoded institutional average
-            userLevelAvg: `${normalizedScore}%`,
-            variance: `${variance}%`,
-            varianceAbs: `${variance}pp`,
-            trend: trend as '↑' | '↓' | '→',
-            status: status as 'good' | 'warning' | 'critical'
-          };
-        }
-        return param;
-      });
-
-      // Update key metrics
-      const updatedKeyMetrics = updatedData.keyMetrics.map(metric => {
+      keyMetrics = keyMetrics.map(metric => {
         if (metric.parameter === 'Productivity Achievement') {
           return {
             ...metric,
@@ -159,43 +112,16 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         }
         return metric;
       });
-
-      updatedData = {
-        ...updatedData,
-        parameters: updatedParameters,
-        keyMetrics: updatedKeyMetrics
-      };
     }
 
-    // Update the Vacancy Impact KPI with real data
+    // Update Vacancy Impact key metric
     if (vacancyImpactData) {
       const normalizedScore = vacancyImpactData.normalized_score * 100; // Convert to percentage
       const percentagePoint = vacancyImpactData.percentage_point;
       const weight = parseFloat(vacancyImpactData.weight.replace('%', ''));
       const variance = normalizedScore - vacancyImpactData.target;
       
-      // Update parameters
-      const updatedParameters = updatedData.parameters.map(param => {
-        if (param.name === 'Branch Structure & Staffing Index') {
-          // Calculate new values based on API response
-          const trend = variance >= 0 ? '↑' : '↓';
-          const status = normalizedScore >= 90 ? 'good' : normalizedScore >= 70 ? 'warning' : 'critical';
-          
-          return {
-            ...param,
-            institutionalAvg: '94%', // Hardcoded institutional average
-            userLevelAvg: `${normalizedScore.toFixed(1)}%`,
-            variance: `${variance.toFixed(1)}%`,
-            varianceAbs: `${variance.toFixed(1)}pp`,
-            trend: trend as '↑' | '↓' | '→',
-            status: status as 'good' | 'warning' | 'critical'
-          };
-        }
-        return param;
-      });
-
-      // Update key metrics
-      const updatedKeyMetrics = updatedData.keyMetrics.map(metric => {
+      keyMetrics = keyMetrics.map(metric => {
         if (metric.parameter === 'Vacancy Impact') {
           return {
             ...metric,
@@ -210,45 +136,17 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         }
         return metric;
       });
-
-      updatedData = {
-        ...updatedData,
-        parameters: updatedParameters,
-        keyMetrics: updatedKeyMetrics
-      };
     }
 
-    // Update the Volume Achievement KPI with real data
+    // Update Volume Achievement key metric
     if (volumeAchievementData) {
       const normalizedScore = parseFloat(volumeAchievementData.normalized_score);
       const percentagePoint = parseFloat(volumeAchievementData.percentage_point);
       const weight = parseFloat(volumeAchievementData.weight.replace('%', ''));
       const branchTarget = parseFloat(volumeAchievementData.branch_target);
       const totalDisbursement = parseFloat(volumeAchievementData.total_disbursement);
-      const variance = normalizedScore - 100; // Target is 100% for normalized score
       
-      // Update parameters
-      const updatedParameters = updatedData.parameters.map(param => {
-        if (param.name === 'Loan Consultant Performance Index') {
-          // Calculate new values based on API response
-          const trend = normalizedScore >= 100 ? '↑' : '↓';
-          const status = normalizedScore >= 90 ? 'good' : normalizedScore >= 70 ? 'warning' : 'critical';
-          
-          return {
-            ...param,
-            institutionalAvg: '85%', // Hardcoded institutional average
-            userLevelAvg: `${normalizedScore.toFixed(1)}%`,
-            variance: `${variance.toFixed(1)}%`,
-            varianceAbs: `${Math.abs(variance).toFixed(1)}pp`,
-            trend: trend as '↑' | '↓' | '→',
-            status: status as 'good' | 'warning' | 'critical'
-          };
-        }
-        return param;
-      });
-
-      // Update key metrics
-      const updatedKeyMetrics = updatedData.keyMetrics.map(metric => {
+      keyMetrics = keyMetrics.map(metric => {
         if (metric.parameter === 'Volume Achievement') {
           return {
             ...metric,
@@ -263,43 +161,16 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         }
         return metric;
       });
-
-      updatedData = {
-        ...updatedData,
-        parameters: updatedParameters,
-        keyMetrics: updatedKeyMetrics
-      };
     }
 
-    // Update the Portfolio Load Balance KPI with real data
+    // Update Portfolio Load Balance key metric
     if (loanPortfolioLoadData) {
       const normalizedScore = parseFloat(loanPortfolioLoadData.score);
       const percentagePoint = loanPortfolioLoadData.percentage_point;
       const weight = parseFloat(loanPortfolioLoadData.weight.replace('%', ''));
       const variance = normalizedScore - loanPortfolioLoadData.target;
       
-      // Update parameters
-      const updatedParameters = updatedData.parameters.map(param => {
-        if (param.name === 'Branch Structure & Staffing Index') {
-          // Calculate new values based on API response
-          const trend = normalizedScore >= loanPortfolioLoadData.target ? '↑' : '↓';
-          const status = normalizedScore >= 90 ? 'good' : normalizedScore >= 70 ? 'warning' : 'critical';
-          
-          return {
-            ...param,
-            institutionalAvg: '96%', // Hardcoded institutional average
-            userLevelAvg: `${normalizedScore.toFixed(1)}%`,
-            variance: `${variance.toFixed(1)}%`,
-            varianceAbs: `${Math.abs(variance).toFixed(1)}pp`,
-            trend: trend as '↑' | '↓' | '→',
-            status: status as 'good' | 'warning' | 'critical'
-          };
-        }
-        return param;
-      });
-
-      // Update key metrics
-      const updatedKeyMetrics = updatedData.keyMetrics.map(metric => {
+      keyMetrics = keyMetrics.map(metric => {
         if (metric.parameter === 'Portfolio Load Balance') {
           return {
             ...metric,
@@ -314,15 +185,39 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         }
         return metric;
       });
+    }
 
+    // Update Loan Consultant Performance Index with Volume Achievement data
+    if (volumeAchievementData) {
+      const normalizedScore = parseFloat(volumeAchievementData.normalized_score);
+      const variance = normalizedScore - 100; // Target is 100% for normalized score
+      
       updatedData = {
         ...updatedData,
-        parameters: updatedParameters,
-        keyMetrics: updatedKeyMetrics
+        parameters: updatedData.parameters.map(param => {
+          if (param.name === 'Loan Consultant Performance Index') {
+            const trend = normalizedScore >= 100 ? '↑' : '↓';
+            const status = normalizedScore >= 90 ? 'good' : normalizedScore >= 70 ? 'warning' : 'critical';
+            
+            return {
+              ...param,
+              institutionalAvg: '85%', // Hardcoded institutional average
+              userLevelAvg: `${normalizedScore.toFixed(1)}%`,
+              variance: `${variance.toFixed(1)}%`,
+              varianceAbs: `${Math.abs(variance).toFixed(1)}pp`,
+              trend: trend as '↑' | '↓' | '→',
+              status: status as 'good' | 'warning' | 'critical'
+            };
+          }
+          return param;
+        })
       };
     }
 
-    return updatedData;
+    return {
+      ...updatedData,
+      keyMetrics
+    };
   }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData]);
 
   return (

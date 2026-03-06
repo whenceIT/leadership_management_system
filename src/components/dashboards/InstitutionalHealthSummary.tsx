@@ -51,7 +51,7 @@ interface ParameterSummary {
   shortName: string;
   institutionalAvg: string;
   userLevelAvg: string;
-  target: string;
+  target: string | number;
   variance: string;
   varianceAbs: string;
   trend: '↑' | '↓' | '→';
@@ -85,19 +85,23 @@ export interface InstitutionalSummaryData {
   overallTarget: number;
 }
 
-export function getInstitutionalSummaryData(userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant', userLevelLabel: string): InstitutionalSummaryData {
+export function getInstitutionalSummaryData(userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant', userLevelLabel: string, 
+  staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, loanPortfolioLoadData?: any): InstitutionalSummaryData {
+  // Calculate aggregated Branch Structure & Staffing Index values
+  const branchStructureAggregated = aggregateBranchStructureKPIs(staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData);
+
   // Base data that can be adjusted based on user level
   const baseParameters: ParameterSummary[] = [
     {
       name: 'Branch Structure & Staffing Index',
       shortName: 'Staffing & Structure',
-      institutionalAvg: '92%',
-      userLevelAvg: userLevel === 'branch' ? '88%' : userLevel === 'district' ? '90%' : userLevel === 'province' ? '91%' : '92%',
-      target: '≥95%',
-      variance: userLevel === 'branch' ? '-7%' : userLevel === 'district' ? '-5%' : userLevel === 'province' ? '-4%' : '0%',
-      varianceAbs: userLevel === 'branch' ? '7pp' : userLevel === 'district' ? '5pp' : userLevel === 'province' ? '4pp' : '0pp',
-      trend: userLevel === 'branch' ? '↓' : userLevel === 'district' ? '→' : userLevel === 'province' ? '↑' : '→',
-      status: userLevel === 'branch' ? 'warning' : userLevel === 'district' ? 'warning' : userLevel === 'province' ? 'good' : 'good'
+      institutionalAvg: branchStructureAggregated.institutionalAvg || '92%',
+      userLevelAvg: branchStructureAggregated.userLevelAvg || (userLevel === 'branch' ? '88%' : userLevel === 'district' ? '90%' : userLevel === 'province' ? '91%' : '92%'),
+      target: branchStructureAggregated.target || '≥95%',
+      variance: branchStructureAggregated.variance || (userLevel === 'branch' ? '-7%' : userLevel === 'district' ? '-5%' : userLevel === 'province' ? '-4%' : '0%'),
+      varianceAbs: branchStructureAggregated.varianceAbs || (userLevel === 'branch' ? '7pp' : userLevel === 'district' ? '5pp' : userLevel === 'province' ? '4pp' : '0pp'),
+      trend: branchStructureAggregated.trend || (userLevel === 'branch' ? '↓' : userLevel === 'district' ? '→' : userLevel === 'province' ? '↑' : '→'),
+      status: branchStructureAggregated.status || (userLevel === 'branch' ? 'warning' : userLevel === 'district' ? 'warning' : userLevel === 'province' ? 'good' : 'good')
     },
     {
       name: 'Loan Consultant Performance Index',
@@ -285,6 +289,71 @@ function getVarianceColor(variance: string) {
   return 'text-gray-600 dark:text-gray-400';
 }
 
+function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, loanPortfolioLoadData?: any): Partial<ParameterSummary> {
+  const kpis = [
+    { 
+      data: staffAdequacyData, 
+      getScore: (d: any) => parseFloat(d?.normalized_score || '0'),
+      weight: parseFloat(staffAdequacyData?.weight || '25') / 100
+    },
+    { 
+      data: productivityAchievementData, 
+      getScore: (d: any) => parseFloat(d?.normalized_score || '0'),
+      weight: parseFloat(productivityAchievementData?.weight || '25') / 100
+    },
+    { 
+      data: vacancyImpactData, 
+      getScore: (d: any) => parseFloat(d?.normalized_score || '0') * 100,
+      weight: parseFloat(vacancyImpactData?.weight || '25') / 100
+    },
+    { 
+      data: loanPortfolioLoadData, 
+      getScore: (d: any) => parseFloat(d?.score || '0'),
+      weight: parseFloat(loanPortfolioLoadData?.weight || '25') / 100
+    }
+  ].filter(kpi => kpi.data);
+
+  if (kpis.length === 0) {
+    return {
+      institutionalAvg: '--',
+      userLevelAvg: '--',
+      target: '--',
+      variance: '--',
+      varianceAbs: '--',
+      trend: '→',
+      status: 'warning'
+    };
+  }
+
+  const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
+  const overallScore = Math.round(weightedScore);
+  
+  const target = 95;
+  const variance = overallScore - target;
+  const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
+  const varianceAbs = `${Math.abs(variance)}pp`;
+  
+  const trend = overallScore >= target ? '↑' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+
+  const validInstitutionalAvgs = kpis
+    .map(kpi => parseFloat(kpi.data?.instAvg || '0'))
+    .filter(score => !isNaN(score));
+  const institutionalAvg = validInstitutionalAvgs.length > 0 
+    ? `${Math.round(validInstitutionalAvgs.reduce((a, b) => a + b, 0) / validInstitutionalAvgs.length)}%`
+    : '--';
+
+  return {
+    institutionalAvg,
+    userLevelAvg: `${overallScore}%`,
+    target: '≥95%',
+    variance: varianceStr,
+    varianceAbs,
+    trend,
+    status
+  };
+}
+
 function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, volumeAchievementData?: any, loanPortfolioLoadData?: any): KPI[] {
   const kpis: ParameterKPIs = {
     'Branch Structure & Staffing Index': [
@@ -292,8 +361,8 @@ function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivi
         name: 'Staff Adequacy Score',
         institutionalAvg: staffAdequacyData?.instAvg || '--',
         currentPeriod: staffAdequacyData?.normalized_score || '--',
-        target: staffAdequacyData?.target || 100+'%',
-        variance: staffAdequacyData ? `${(staffAdequacyData.normalized_score - staffAdequacyData.target)}%` : 'N/a',
+        target: staffAdequacyData?.target || 100,
+        variance: staffAdequacyData ? `${(staffAdequacyData.normalized_score - staffAdequacyData.target)}%` : '--',
         trend: staffAdequacyData?.normalized_score >= staffAdequacyData?.target ? '↑' : '↓',
         status: staffAdequacyData?.normalized_score >= 90 ? 'good' : staffAdequacyData?.normalized_score >= 70 ? 'warning' : 'critical'
       },
@@ -301,26 +370,26 @@ function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivi
         name: 'Productivity Achievement',
         institutionalAvg: productivityAchievementData ? '--' : '--',
         currentPeriod: productivityAchievementData ? `${parseFloat(productivityAchievementData.normalized_score)}` : '0',
-        target: productivityAchievementData ? '≥100%' : '≥100%',
-        variance: productivityAchievementData ? `${(parseFloat(productivityAchievementData.normalized_score) - productivityAchievementData.target)}%` : '0%',
+        target: productivityAchievementData ? 100 : '--',
+        variance: productivityAchievementData ? `${(parseFloat(productivityAchievementData.normalized_score) - productivityAchievementData.target)}%` : '--',
         trend: productivityAchievementData ? (parseFloat(productivityAchievementData.normalized_score) >= productivityAchievementData.target ? '↑' : '↓') : '↓',
         status: productivityAchievementData ? (parseFloat(productivityAchievementData.normalized_score) >= 90 ? 'good' : parseFloat(productivityAchievementData.normalized_score) >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Vacancy Impact',
         institutionalAvg: vacancyImpactData ? '--' : '--',
-        currentPeriod: vacancyImpactData ? `${(vacancyImpactData.normalized_score * 100).toFixed(1)}%` : '90%',
-        target: vacancyImpactData ? '0' : '0',
-        variance: vacancyImpactData ? `${((vacancyImpactData.normalized_score * 100) - vacancyImpactData.target).toFixed(1)}` : '-10%',
+        currentPeriod: vacancyImpactData ? `${(vacancyImpactData.normalized_score * 100).toFixed(1)}` : '--',
+        target: vacancyImpactData ? 0 : 0,
+        variance: vacancyImpactData ? `${((vacancyImpactData.normalized_score * 100) - vacancyImpactData.target).toFixed(1)}` : '--',
         trend: vacancyImpactData ? ((vacancyImpactData.normalized_score * 100) >= vacancyImpactData.target ? '↑' : '↓') : '↑',
         status: vacancyImpactData ? ((vacancyImpactData.normalized_score * 100) >= 90 ? 'good' : (vacancyImpactData.normalized_score * 100) >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Portfolio Load Balance',
         institutionalAvg: loanPortfolioLoadData ? '--' : '--',
-        currentPeriod: loanPortfolioLoadData ? `${parseFloat(loanPortfolioLoadData.score).toFixed(1)}` : '--%',
-        target: 'K40k - K70k per LC',
-        variance: loanPortfolioLoadData ? `${(parseFloat(loanPortfolioLoadData.score) - loanPortfolioLoadData.target).toFixed(1)}%` : '-11%',
+        currentPeriod: loanPortfolioLoadData ? `${parseFloat(loanPortfolioLoadData.score).toFixed(1)}` : '--',
+        target: 100,
+        variance: loanPortfolioLoadData ? `${(parseFloat(loanPortfolioLoadData.score) - loanPortfolioLoadData.target).toFixed(1)}%` : '--',
         trend: loanPortfolioLoadData ? (parseFloat(loanPortfolioLoadData.score) >= loanPortfolioLoadData.target ? '↑' : '↓') : '↓',
         status: loanPortfolioLoadData ? (parseFloat(loanPortfolioLoadData.score) >= 90 ? 'good' : parseFloat(loanPortfolioLoadData.score) >= 70 ? 'warning' : 'critical') : 'warning'
       }
@@ -331,52 +400,52 @@ function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivi
         institutionalAvg: volumeAchievementData ? '--' : '--',
         currentPeriod: volumeAchievementData ? `${parseFloat(volumeAchievementData.normalized_score).toFixed(1)}` : '--',
         target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target).toLocaleString()}` : '≥420000',
-        variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement) - parseFloat(volumeAchievementData.branch_target)).toLocaleString()}` : '-278673',
+        variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement) - parseFloat(volumeAchievementData.branch_target)).toLocaleString()}` : '--',
         trend: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '↑' : '↓') : '↓',
         status: volumeAchievementData ? (parseFloat(volumeAchievementData.normalized_score) >= 90 ? 'good' : parseFloat(volumeAchievementData.normalized_score) >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Loan disbursement volume',
-        institutionalAvg: '18 loans/month',
-        currentPeriod: '15 loans/month',
-        target: '≥20 loans/month',
-        variance: '-3 loans/month',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↓',
         status: 'critical'
       },
       {
         name: 'Portfolio quality',
-        institutionalAvg: '92%',
-        currentPeriod: '88%',
-        target: '≥95%',
-        variance: '-4%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↓',
         status: 'warning'
       },
       {
         name: 'Default contribution',
-        institutionalAvg: '12%',
-        currentPeriod: '15%',
-        target: '≤10%',
-        variance: '+3%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↑',
         status: 'critical'
       },
       {
         name: 'Collections efficiency',
-        institutionalAvg: '78%',
-        currentPeriod: '72%',
-        target: '≥80%',
-        variance: '-6%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↓',
         status: 'warning'
       },
       {
         name: 'Vetting compliance',
-        institutionalAvg: '95%',
-        currentPeriod: '90%',
-        target: '≥98%',
-        variance: '-5%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↓',
         status: 'critical'
       }
@@ -384,37 +453,37 @@ function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivi
     'Loan Products & Interest Rates Index': [
       {
         name: 'Product distribution mix',
-        institutionalAvg: '35%',
-        currentPeriod: '32%',
-        target: '≥40%',
-        variance: '-3%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↓',
         status: 'warning'
       },
       {
         name: 'Revenue yield per product',
-        institutionalAvg: '8.5%',
-        currentPeriod: '7.8%',
-        target: '≥9%',
-        variance: '-0.7%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↓',
         status: 'warning'
       },
       {
         name: 'Product risk contribution',
-        institutionalAvg: '15%',
-        currentPeriod: '18%',
-        target: '≤12%',
-        variance: '+3%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↑',
         status: 'critical'
       },
       {
         name: 'Margin alignment with strategy',
-        institutionalAvg: '4.2%',
-        currentPeriod: '3.8%',
-        target: '≥5%',
-        variance: '-0.4%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↓',
         status: 'warning'
       }
@@ -422,46 +491,46 @@ function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivi
     'Risk Management & Defaults Index': [
       {
         name: 'Default rate (branch, province, institutional)',
-        institutionalAvg: '28.36%',
-        currentPeriod: '30.00%',
-        target: '≤27%',
-        variance: '+2.64%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↑',
         status: 'critical'
       },
       {
         name: 'Default aging analysis',
-        institutionalAvg: '45%',
-        currentPeriod: '52%',
-        target: '≤40%',
-        variance: '+7%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↑',
         status: 'critical'
       },
       {
         name: 'Recovery rate within 1 month',
-        institutionalAvg: '65%',
-        currentPeriod: '58%',
-        target: '≥70%',
-        variance: '-7%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↓',
         status: 'critical'
       },
       {
         name: 'Recovery rate within 3 months',
-        institutionalAvg: '56.05%',
-        currentPeriod: '51%',
-        target: '≥60%',
-        variance: '-5.05%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↓',
         status: 'critical'
       },
       {
         name: 'Risk migration trends',
-        institutionalAvg: '12%',
-        currentPeriod: '15%',
-        target: '≤10%',
-        variance: '+3%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↑',
         status: 'warning'
       }
@@ -469,37 +538,37 @@ function getParameterKPIs(paramName: string, staffAdequacyData?: any, productivi
     'Revenue & Performance Metrics Index': [
       {
         name: 'Branch revenue',
-        institutionalAvg: '85%',
-        currentPeriod: '82%',
-        target: '≥100%',
-        variance: '-18%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '---',
         trend: '→',
         status: 'warning'
       },
       {
         name: 'Cost-to-income ratios',
-        institutionalAvg: '65%',
-        currentPeriod: '68%',
-        target: '≤60%',
-        variance: '+8%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↑',
         status: 'critical'
       },
       {
         name: 'Institutional average performance',
-        institutionalAvg: '66%',
-        currentPeriod: '63%',
-        target: '≥75%',
-        variance: '-12%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '---',
         trend: '↓',
         status: 'critical'
       },
       {
         name: 'Growth trajectory alignment',
-        institutionalAvg: '72%',
-        currentPeriod: '68%',
-        target: '≥80%',
-        variance: '-8%',
+        institutionalAvg: '--',
+        currentPeriod: '--',
+        target: '--',
+        variance: '--',
         trend: '↓',
         status: 'warning'
       }
@@ -586,6 +655,7 @@ export function InstitutionalHealthSummary({
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full">
+              {/* Overview stats */}
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameter</th>
@@ -594,13 +664,18 @@ export function InstitutionalHealthSummary({
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variance</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trend</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status & Distance to Target</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                 {parameters.map((param, index) => {
                   const kpis = getParameterKPIs(param.name, staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData);
                   const isExpanded = expandedParam === param.name;
+                  
+                  // Calculate progress percentage
+                  const userLevelScore = parseFloat(param.userLevelAvg.replace('%', ''));
+                  const targetScore = parseFloat(param.target.toString().replace('%', '').replace('≥', '').replace('≤', ''));
+                  const progress = Math.min(Math.max((userLevelScore / targetScore) * 100, 0), 100);
 
                   return (
                     <React.Fragment key={index}>
@@ -633,10 +708,29 @@ export function InstitutionalHealthSummary({
                         <td className="px-4 py-3 text-center">
                           <span className={getTrendBadge(param.trend)}>{param.trend}</span>
                         </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(param.status)}`}>
-                            {param.status === 'good' ? 'GOOD' : param.status === 'warning' ? 'WARNING' : 'CRITICAL'}
-                          </span>
+                        <td className="px-4 py-3">
+                          <div className="text-center">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(param.status)} mb-2 inline-block`}>
+                              {param.status === 'good' ? 'GOOD' : param.status === 'warning' ? 'WARNING' : 'CRITICAL'}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                                <div 
+                                  className={`h-2 rounded-full transition-all duration-300 ${
+                                    param.status === 'good' ? 'bg-green-500' :
+                                    param.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                              <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 min-w-[40px] text-center">
+                                {Math.round(progress)}%
+                              </span>
+                            </div>
+                            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              {`${Math.round(100 - progress)}% to target`}
+                            </div>
+                          </div>
                         </td>
                       </tr>
                        {isExpanded && (
