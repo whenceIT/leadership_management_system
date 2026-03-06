@@ -99,3 +99,7 @@ This design ensures leadership instantly sees:
 3)	Where (Eastern Province contributing 42%)
 4)	Who (Branch X, LCs Mukanda and Banda)
 5)	What to do (Portfolio reassignment)
+
+
+
+
