@@ -31,6 +31,13 @@ import { useProvincialVacancyImpact } from '@/hooks/useProvincialVacancyImpact';
 import { useProvincialVolumeAchievement } from '@/hooks/useProvincialVolumeAchievement';
 import { useProvincialYieldAchievements } from '@/hooks/useProvincialYieldAchievements';
 import { useProvincialLoanPortfolioLoad } from '@/hooks/useProvincialLoanPortfolioLoad';
+import { useProvincialMonth3RecoveryAchievements } from '@/hooks/useProvincialMonth3RecoveryAchievements';
+import { useProvincialEfficiencyRatio } from '@/hooks/useProvincialEfficiencyRatio';
+import { useProvincialGrowthTrajectory } from '@/hooks/useProvincialGrowthTrajectory';
+import { useProvincialLongTermDelinquency } from '@/hooks/useProvincialLongTermDelinquency';
+import { useProvincialRevenueAchievements } from '@/hooks/useProvincialRevenueAchievements';
+import { useProvincialProfitabilityContribution } from '@/hooks/useProvincialProfitabilityContribution';
+import { useProvincialRollRateControl } from '@/hooks/useProvincialRollRateControl';
 
 export default function ProvincialManagerDashboard() {
   const { user, positionName, isLoading: isPositionLoading } = useUserPosition();
@@ -301,6 +308,13 @@ export default function ProvincialManagerDashboard() {
   const { data: volumeAchievementData } = useProvincialVolumeAchievement(provinceId);
   const { data: yieldAchievementsData } = useProvincialYieldAchievements(provinceId);
   const { data: loanPortfolioLoadData } = useProvincialLoanPortfolioLoad(provinceId);
+  const { data: month3RecoveryAchievementsData } = useProvincialMonth3RecoveryAchievements(provinceId);
+  const { data: efficiencyRatioData } = useProvincialEfficiencyRatio(provinceId);
+  const { data: growthTrajectoryData } = useProvincialGrowthTrajectory(provinceId);
+  const { data: longTermDelinquencyData } = useProvincialLongTermDelinquency(provinceId);
+  const { data: revenueAchievementsData } = useProvincialRevenueAchievements(provinceId);
+  const { data: profitabilityContributionData } = useProvincialProfitabilityContribution(provinceId);
+  const { data: rollRateControlData } = useProvincialRollRateControl(provinceId);
 
   const summaryData = getInstitutionalSummaryData('province', 'Provincial View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData);
 
@@ -328,6 +342,13 @@ export default function ProvincialManagerDashboard() {
         productDiversificationData={productDiversificationData}
         productRiskScoreData={productRiskScoreData}
         yieldAchievementsData={yieldAchievementsData}
+        month3RecoveryAchievementsData={month3RecoveryAchievementsData}
+        efficiencyRatioData={efficiencyRatioData}
+        growthTrajectoryData={growthTrajectoryData}
+        longTermDelinquencyData={longTermDelinquencyData}
+        revenueAchievementsData={revenueAchievementsData}
+        profitabilityContributionData={profitabilityContributionData}
+        rollRateControlData={rollRateControlData}
       />
 
 

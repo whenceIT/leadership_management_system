@@ -103,3 +103,7 @@ This design ensures leadership instantly sees:
 
 
 
+<!-- display this some where -->
+<!--Total Institution Average Score %-->
+<!-- e.g Total percentage point for the consituent here (25pp) -->
+<!--pp scored, put it on contribution and calculate remaining contribution and prev month trend comparision-->

@@ -173,8 +173,8 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="District Default Rate"
-            value="2.8%"
-            change="-0.3% improvement"
+            value="--"
+            change="--"
             changeType="positive"
             icon={
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -194,8 +194,8 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="District Recovery Rate"
-            value="95.2%"
-            change="+0.8% above target"
+            value="--"
+            change="--"
             changeType="positive"
             icon={
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -215,8 +215,8 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="Active Branches"
-            value="4"
-            change="All operational"
+            value="--"
+            change="--"
             changeType="neutral"
             icon={
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -236,8 +236,8 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
         <div className="col-span-12 md:col-span-6 lg:col-span-3">
           <KPICard
             title="Issue Resolution Time"
-            value="2.3 days"
-            change="-0.5 days faster"
+            value="--"
+            change="--"
             changeType="positive"
             icon={
               <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
