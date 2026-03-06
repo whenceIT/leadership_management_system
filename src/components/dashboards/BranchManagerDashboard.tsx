@@ -11,6 +11,17 @@ import { useProductivityAchievement } from '@/hooks/useProductivityAchievement';
 import { useVacancyImpact } from '@/hooks/useVacancyImpact';
 import { useVolumeAchievement } from '@/hooks/useVolumeAchievement';
 import { useLoanPortfolioLoad } from '@/hooks/useLoanPortfolioLoad';
+import { useCollectionEfficiency } from '@/hooks/useCollectionEfficiency';
+import { useEfficiencyRatio } from '@/hooks/useEfficiencyRatio';
+import { useGrowthTrajectory } from '@/hooks/useGrowthTrajectory';
+import { useLongTermDelinquency } from '@/hooks/useLongTermDelinquency';
+import { useMonth1DefaultPerformance } from '@/hooks/useMonth1DefaultPerformance';
+import { useMonth3RecoveryAchievements } from '@/hooks/useMonth3RecoveryAchievements';
+import { usePortfolioQuality } from '@/hooks/usePortfolioQuality';
+import { useProductDiversification } from '@/hooks/useProductDiversification';
+import { useProductRiskScore } from '@/hooks/useProductRiskScore';
+import { useRollRateControl } from '@/hooks/useRollRateControl';
+import { useYieldAchievements } from '@/hooks/useYieldAchievements';
 
 interface BranchManagerDashboardProps {
   userTier?: string | null;
@@ -63,6 +74,39 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
   // Fetch loan portfolio load data
   const { data: loanPortfolioLoadData, isLoading: isLoanPortfolioLoading, error: loanPortfolioError } = useLoanPortfolioLoad(3); // Using branch id 3 as per example
+
+  // Fetch collection efficiency data
+  const { data: collectionEfficiencyData, isLoading: isCollectionEfficiencyLoading, error: collectionEfficiencyError } = useCollectionEfficiency(3);
+
+  // Fetch efficiency ratio data
+  const { data: efficiencyRatioData, isLoading: isEfficiencyRatioLoading, error: efficiencyRatioError } = useEfficiencyRatio(3);
+
+  // Fetch growth trajectory data
+  const { data: growthTrajectoryData, isLoading: isGrowthTrajectoryLoading, error: growthTrajectoryError } = useGrowthTrajectory(3);
+
+  // Fetch long term delinquency data
+  const { data: longTermDelinquencyData, isLoading: isLongTermDelinquencyLoading, error: longTermDelinquencyError } = useLongTermDelinquency(3);
+
+  // Fetch month 1 default performance data
+  const { data: month1DefaultPerformanceData, isLoading: isMonth1DefaultPerformanceLoading, error: month1DefaultPerformanceError } = useMonth1DefaultPerformance(3);
+
+  // Fetch month 3 recovery achievements data
+  const { data: month3RecoveryAchievementsData, isLoading: isMonth3RecoveryAchievementsLoading, error: month3RecoveryAchievementsError } = useMonth3RecoveryAchievements(3);
+
+  // Fetch portfolio quality data
+  const { data: portfolioQualityData, isLoading: isPortfolioQualityLoading, error: portfolioQualityError } = usePortfolioQuality(3);
+
+  // Fetch product diversification data
+  const { data: productDiversificationData, isLoading: isProductDiversificationLoading, error: productDiversificationError } = useProductDiversification(3);
+
+  // Fetch product risk score data
+  const { data: productRiskScoreData, isLoading: isProductRiskScoreLoading, error: productRiskScoreError } = useProductRiskScore(3);
+
+  // Fetch roll rate control data
+  const { data: rollRateControlData, isLoading: isRollRateControlLoading, error: rollRateControlError } = useRollRateControl(3);
+
+  // Fetch yield achievements data
+  const { data: yieldAchievementsData, isLoading: isYieldAchievementsLoading, error: yieldAchievementsError } = useYieldAchievements(3);
 
   // Custom summary data with dynamic aggregated Branch Structure & Staffing Index
   const summaryData = useMemo(() => {
@@ -241,6 +285,17 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         vacancyImpactData={vacancyImpactData}
         volumeAchievementData={volumeAchievementData}
         loanPortfolioLoadData={loanPortfolioLoadData}
+        collectionEfficiencyData={collectionEfficiencyData}
+        efficiencyRatioData={efficiencyRatioData}
+        growthTrajectoryData={growthTrajectoryData}
+        longTermDelinquencyData={longTermDelinquencyData}
+        month1DefaultPerformanceData={month1DefaultPerformanceData}
+        month3RecoveryAchievementsData={month3RecoveryAchievementsData}
+        portfolioQualityData={portfolioQualityData}
+        productDiversificationData={productDiversificationData}
+        productRiskScoreData={productRiskScoreData}
+        rollRateControlData={rollRateControlData}
+        yieldAchievementsData={yieldAchievementsData}
       />
 
 
