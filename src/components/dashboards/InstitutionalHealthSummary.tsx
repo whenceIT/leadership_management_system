@@ -290,6 +290,32 @@ function getVarianceColor(variance: string) {
 }
 
 function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, loanPortfolioLoadData?: any): Partial<ParameterSummary> {
+  // Check if we're dealing with provincial data (has average_normalized_score instead of normalized_score)
+  const isProvincialData = staffAdequacyData?.average_normalized_score !== undefined;
+
+  if (isProvincialData && staffAdequacyData) {
+    // For provincial data, we have a single aggregated score from the API
+    const overallScore = Math.round(staffAdequacyData.average_normalized_score);
+    const target = 95;
+    const variance = overallScore - target;
+    const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
+    const varianceAbs = `${Math.abs(variance)}pp`;
+    
+    const trend = overallScore >= target ? '↑' : '↓';
+    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+
+    return {
+      institutionalAvg: '--',
+      userLevelAvg: `${overallScore}%`,
+      target: '≥95%',
+      variance: varianceStr,
+      varianceAbs,
+      trend,
+      status
+    };
+  }
+
+  // For branch-level data, aggregate from individual metrics
   const kpis = [
     { 
       data: staffAdequacyData, 
@@ -371,182 +397,188 @@ function getParameterKPIs(paramName: string,
   productRiskScoreData?: any,
   rollRateControlData?: any,
   yieldAchievementsData?: any): KPI[] {
+  // Helper function to get score from data (handles both branch and provincial formats)
+  const getScore = (data: any, field1: string, field2?: string): number => {
+    const value = data?.[field1] || data?.[field2];
+    return typeof value === 'string' ? parseFloat(value) : (typeof value === 'number' ? value : 0);
+  };
+
   const kpis: ParameterKPIs = {
     'Branch Structure & Staffing Index': [
       {
         name: 'Staff Adequacy Score',
         institutionalAvg: staffAdequacyData?.instAvg || '--',
-        currentPeriod: staffAdequacyData?.normalized_score || '--',
+        currentPeriod: staffAdequacyData ? `${getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score').toFixed(2)}` : '--',
         target: staffAdequacyData?.target || 100,
-        variance: staffAdequacyData ? `${(staffAdequacyData.normalized_score - staffAdequacyData.target)}%` : '--',
-        trend: staffAdequacyData?.normalized_score >= staffAdequacyData?.target ? '↑' : '↓',
-        status: staffAdequacyData?.normalized_score >= 90 ? 'good' : staffAdequacyData?.normalized_score >= 70 ? 'warning' : 'critical'
+        variance: staffAdequacyData ? `${(getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') - (staffAdequacyData.target || 100)).toFixed(2)}%` : '--',
+        trend: getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= (staffAdequacyData?.target || 100) ? '↑' : '↓',
+        status: getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical'
       },
       {
         name: 'Productivity Achievement',
         institutionalAvg: productivityAchievementData ? '--' : '--',
-        currentPeriod: productivityAchievementData ? `${parseFloat(productivityAchievementData.normalized_score)}` : '0',
+        currentPeriod: productivityAchievementData ? `${getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score').toFixed(2)}` : '0',
         target: productivityAchievementData ? 100 : '--',
-        variance: productivityAchievementData ? `${(parseFloat(productivityAchievementData.normalized_score) - productivityAchievementData.target)}%` : '--',
-        trend: productivityAchievementData ? (parseFloat(productivityAchievementData.normalized_score) >= productivityAchievementData.target ? '↑' : '↓') : '↓',
-        status: productivityAchievementData ? (parseFloat(productivityAchievementData.normalized_score) >= 90 ? 'good' : parseFloat(productivityAchievementData.normalized_score) >= 70 ? 'warning' : 'critical') : 'warning'
+        variance: productivityAchievementData ? `${(getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') - productivityAchievementData.target).toFixed(2)}%` : '--',
+        trend: productivityAchievementData ? (getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= productivityAchievementData.target ? '↑' : '↓') : '↓',
+        status: productivityAchievementData ? (getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Vacancy Impact',
         institutionalAvg: vacancyImpactData ? '--' : '--',
-        currentPeriod: vacancyImpactData ? `${(vacancyImpactData.normalized_score * 100).toFixed(1)}` : '--',
+        currentPeriod: vacancyImpactData ? `${(getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100).toFixed(2)}` : '--',
         target: vacancyImpactData ? 0 : 0,
-        variance: vacancyImpactData ? `${((vacancyImpactData.normalized_score * 100) - vacancyImpactData.target).toFixed(1)}` : '--',
-        trend: vacancyImpactData ? ((vacancyImpactData.normalized_score * 100) >= vacancyImpactData.target ? '↑' : '↓') : '↑',
-        status: vacancyImpactData ? ((vacancyImpactData.normalized_score * 100) >= 90 ? 'good' : (vacancyImpactData.normalized_score * 100) >= 70 ? 'warning' : 'critical') : 'warning'
+        variance: vacancyImpactData ? `${((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) - vacancyImpactData.target).toFixed(2)}` : '--',
+        trend: vacancyImpactData ? ((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= vacancyImpactData.target ? '↑' : '↓') : '↑',
+        status: vacancyImpactData ? ((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= 90 ? 'good' : (getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Portfolio Load Balance',
         institutionalAvg: loanPortfolioLoadData ? '--' : '--',
-        currentPeriod: loanPortfolioLoadData ? `${parseFloat(loanPortfolioLoadData.score).toFixed(1)}` : '--',
+        currentPeriod: loanPortfolioLoadData ? `${getScore(loanPortfolioLoadData, 'score', 'average_score').toFixed(2)}` : '--',
         target: 100,
-        variance: loanPortfolioLoadData ? `${(parseFloat(loanPortfolioLoadData.score) - loanPortfolioLoadData.target).toFixed(1)}%` : '--',
-        trend: loanPortfolioLoadData ? (parseFloat(loanPortfolioLoadData.score) >= loanPortfolioLoadData.target ? '↑' : '↓') : '↓',
-        status: loanPortfolioLoadData ? (parseFloat(loanPortfolioLoadData.score) >= 90 ? 'good' : parseFloat(loanPortfolioLoadData.score) >= 70 ? 'warning' : 'critical') : 'warning'
+        variance: loanPortfolioLoadData ? `${(getScore(loanPortfolioLoadData, 'score', 'average_score') - loanPortfolioLoadData.target).toFixed(2)}%` : '--',
+        trend: loanPortfolioLoadData ? (getScore(loanPortfolioLoadData, 'score', 'average_score') >= loanPortfolioLoadData.target ? '↑' : '↓') : '↓',
+        status: loanPortfolioLoadData ? (getScore(loanPortfolioLoadData, 'score', 'average_score') >= 90 ? 'good' : getScore(loanPortfolioLoadData, 'score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning'
       }
     ],
     'Loan Consultant Performance Index': [
       {
         name: 'Volume Achievement',
         institutionalAvg: volumeAchievementData ? '--' : '--',
-        currentPeriod: volumeAchievementData ? `${parseFloat(volumeAchievementData.normalized_score).toFixed(1)}` : '--',
-        target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target).toLocaleString()}` : '≥420000',
-        variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement) - parseFloat(volumeAchievementData.branch_target)).toLocaleString()}` : '--',
-        trend: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '↑' : '↓') : '↓',
-        status: volumeAchievementData ? (parseFloat(volumeAchievementData.normalized_score) >= 90 ? 'good' : parseFloat(volumeAchievementData.normalized_score) >= 70 ? 'warning' : 'critical') : 'warning'
+        currentPeriod: volumeAchievementData ? `${getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score').toFixed(2)}` : '--',
+        target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target || '0').toLocaleString()}` : '≥420000',
+        variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement || '0') - parseFloat(volumeAchievementData.branch_target || '0')).toLocaleString()}` : '--',
+        trend: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') ? '↑' : '↓') : '↓',
+        status: volumeAchievementData ? (getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Loan disbursement volume',
         institutionalAvg: '--',
-        currentPeriod: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement).toLocaleString()}` : '--',
-        target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target).toLocaleString()}` : '≥420000',
-        variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement) - parseFloat(volumeAchievementData.branch_target)).toLocaleString()}` : '--',
-        trend: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? '↑' : '↓') : '↓',
-        status: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) ? 'good' : parseFloat(volumeAchievementData.total_disbursement) >= parseFloat(volumeAchievementData.branch_target) * 0.8 ? 'warning' : 'critical') : 'critical'
+        currentPeriod: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement || '0').toLocaleString()}` : '--',
+        target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target || '0').toLocaleString()}` : '≥420000',
+        variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement || '0') - parseFloat(volumeAchievementData.branch_target || '0')).toLocaleString()}` : '--',
+        trend: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') ? '↑' : '↓') : '↓',
+        status: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') ? 'good' : parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') * 0.8 ? 'warning' : 'critical') : 'critical'
       },
       {
         name: 'Portfolio quality',
         institutionalAvg: '--',
-        currentPeriod: portfolioQualityData ? portfolioQualityData.PAR : '--',
+        currentPeriod: portfolioQualityData ? `${getScore(portfolioQualityData, 'PAR', 'average_score').toFixed(2)}` : '--',
         target: '≤5%',
-        variance: portfolioQualityData ? `${(parseFloat(portfolioQualityData.PAR) - 5).toFixed(1)}` : '--',
-        trend: portfolioQualityData ? (parseFloat(portfolioQualityData.PAR) <= 5 ? '↑' : '↓') : '↓',
-        status: portfolioQualityData ? (parseFloat(portfolioQualityData.PAR) <= 5 ? 'good' : parseFloat(portfolioQualityData.PAR) <= 10 ? 'warning' : 'critical') : 'warning'
+        variance: portfolioQualityData ? `${(getScore(portfolioQualityData, 'PAR', 'average_score') - 5).toFixed(2)}` : '--',
+        trend: portfolioQualityData ? (getScore(portfolioQualityData, 'PAR', 'average_score') <= 5 ? '↑' : '↓') : '↓',
+        status: portfolioQualityData ? (getScore(portfolioQualityData, 'PAR', 'average_score') <= 5 ? 'good' : getScore(portfolioQualityData, 'PAR', 'average_score') <= 10 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Default contribution',
         institutionalAvg: '--',
-        currentPeriod: month1DefaultPerformanceData ? month1DefaultPerformanceData.month_1_default_rate : '--',
+        currentPeriod: month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0').toFixed(2)}` : '--',
         target: '≤15%',
-        variance: month1DefaultPerformanceData ? `${(parseFloat(month1DefaultPerformanceData.month_1_default_rate) - 15).toFixed(1)}` : '--',
-        trend: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.month_1_default_rate) <= 15 ? '↑' : '↓') : '↑',
-        status: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.month_1_default_rate) <= 15 ? 'good' : parseFloat(month1DefaultPerformanceData.month_1_default_rate) <= 20 ? 'warning' : 'critical') : 'critical'
+        variance: month1DefaultPerformanceData ? `${(parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') - 15).toFixed(2)}` : '--',
+        trend: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') <= 15 ? '↑' : '↓') : '↑',
+        status: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') <= 15 ? 'good' : parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') <= 20 ? 'warning' : 'critical') : 'critical'
       },
       {
         name: 'Collections efficiency',
         institutionalAvg: '--',
-        currentPeriod: collectionEfficiencyData ? collectionEfficiencyData.benchmark : '--',
+        currentPeriod: collectionEfficiencyData ? `${getScore(collectionEfficiencyData, 'benchmark', 'average_score').toFixed(2)}` : '--',
         target: '≥75%',
-        variance: collectionEfficiencyData ? `${(parseFloat(collectionEfficiencyData.benchmark) - 75).toFixed(1)}` : '--',
-        trend: collectionEfficiencyData ? (parseFloat(collectionEfficiencyData.benchmark) >= 75 ? '↑' : '↓') : '↓',
-        status: collectionEfficiencyData ? (parseFloat(collectionEfficiencyData.benchmark) >= 75 ? 'good' : parseFloat(collectionEfficiencyData.benchmark) >= 65 ? 'warning' : 'critical') : 'warning'
+        variance: collectionEfficiencyData ? `${(getScore(collectionEfficiencyData, 'benchmark', 'average_score') - 75).toFixed(2)}` : '--',
+        trend: collectionEfficiencyData ? (getScore(collectionEfficiencyData, 'benchmark', 'average_score') >= 75 ? '↑' : '↓') : '↓',
+        status: collectionEfficiencyData ? (getScore(collectionEfficiencyData, 'benchmark', 'average_score') >= 75 ? 'good' : getScore(collectionEfficiencyData, 'benchmark', 'average_score') >= 65 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Vetting compliance',
         institutionalAvg: '--',
-        currentPeriod: productRiskScoreData ? productRiskScoreData.defaulted_rate : '--',
+        currentPeriod: productRiskScoreData ? `${getScore(productRiskScoreData, 'defaulted_rate', 'average_score').toFixed(2)}` : '--',
         target: '≤1.0',
-        variance: productRiskScoreData ? `${(parseFloat(productRiskScoreData.defaulted_rate) - 1.0).toFixed(1)}` : '--',
-        trend: productRiskScoreData ? (parseFloat(productRiskScoreData.defaulted_rate) <= 1.0 ? '↑' : '↓') : '↓',
-        status: productRiskScoreData ? (parseFloat(productRiskScoreData.defaulted_rate) <= 1.0 ? 'good' : parseFloat(productRiskScoreData.defaulted_rate) <= 1.5 ? 'warning' : 'critical') : 'critical'
+        variance: productRiskScoreData ? `${(getScore(productRiskScoreData, 'defaulted_rate', 'average_score') - 1.0).toFixed(2)}` : '--',
+        trend: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? '↑' : '↓') : '↓',
+        status: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? 'good' : getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.5 ? 'warning' : 'critical') : 'critical'
       }
     ],
     'Loan Products & Interest Rates Index': [
       {
         name: 'Product distribution mix',
         institutionalAvg: '--',
-        currentPeriod: productDiversificationData ? productDiversificationData.HHI : '--',
+        currentPeriod: productDiversificationData ? `${getScore(productDiversificationData, 'HHI', 'average_HHI').toFixed(3)}` : '--',
         target: 'HHI < 0.3',
-        variance: productDiversificationData ? `${(parseFloat(productDiversificationData.HHI) - 0.3).toFixed(3)}` : '--',
-        trend: productDiversificationData ? (parseFloat(productDiversificationData.HHI) < 0.3 ? '↑' : '↓') : '↓',
-        status: productDiversificationData ? (parseFloat(productDiversificationData.HHI) < 0.3 ? 'good' : parseFloat(productDiversificationData.HHI) < 0.4 ? 'warning' : 'critical') : 'warning'
+        variance: productDiversificationData ? `${(getScore(productDiversificationData, 'HHI', 'average_HHI') - 0.3).toFixed(3)}` : '--',
+        trend: productDiversificationData ? (getScore(productDiversificationData, 'HHI', 'average_HHI') < 0.3 ? '↑' : '↓') : '↓',
+        status: productDiversificationData ? (getScore(productDiversificationData, 'HHI', 'average_HHI') < 0.3 ? 'good' : getScore(productDiversificationData, 'HHI', 'average_HHI') < 0.4 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Revenue yield per product',
         institutionalAvg: '--',
-        currentPeriod: yieldAchievementsData ? yieldAchievementsData.effective_interest_rate : '--',
+        currentPeriod: yieldAchievementsData ? `${getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score').toFixed(2)}` : '--',
         target: yieldAchievementsData ? yieldAchievementsData.target : '≥38.2%',
-        variance: yieldAchievementsData ? `${(parseFloat(yieldAchievementsData.effective_interest_rate) - parseFloat(yieldAchievementsData.target)).toFixed(1)}` : '--',
-        trend: yieldAchievementsData ? (parseFloat(yieldAchievementsData.effective_interest_rate) >= parseFloat(yieldAchievementsData.target) ? '↑' : '↓') : '↓',
-        status: yieldAchievementsData ? (parseFloat(yieldAchievementsData.effective_interest_rate) >= parseFloat(yieldAchievementsData.target) ? 'good' : parseFloat(yieldAchievementsData.effective_interest_rate) >= parseFloat(yieldAchievementsData.target) * 0.9 ? 'warning' : 'critical') : 'warning'
+        variance: yieldAchievementsData ? `${(getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') - parseFloat(yieldAchievementsData.target || '0')).toFixed(2)}` : '--',
+        trend: yieldAchievementsData ? (getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') >= parseFloat(yieldAchievementsData.target || '0') ? '↑' : '↓') : '↓',
+        status: yieldAchievementsData ? (getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') >= parseFloat(yieldAchievementsData.target || '0') ? 'good' : getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') >= parseFloat(yieldAchievementsData.target || '0') * 0.9 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Product risk contribution',
         institutionalAvg: '--',
-        currentPeriod: productRiskScoreData ? productRiskScoreData.defaulted_rate : '--',
+        currentPeriod: productRiskScoreData ? `${getScore(productRiskScoreData, 'defaulted_rate', 'average_score').toFixed(2)}` : '--',
         target: '≤1.0',
-        variance: productRiskScoreData ? `${(parseFloat(productRiskScoreData.defaulted_rate) - 1.0).toFixed(1)}` : '--',
-        trend: productRiskScoreData ? (parseFloat(productRiskScoreData.defaulted_rate) <= 1.0 ? '↑' : '↓') : '↑',
-        status: productRiskScoreData ? (parseFloat(productRiskScoreData.defaulted_rate) <= 1.0 ? 'good' : parseFloat(productRiskScoreData.defaulted_rate) <= 1.5 ? 'warning' : 'critical') : 'critical'
+        variance: productRiskScoreData ? `${(getScore(productRiskScoreData, 'defaulted_rate', 'average_score') - 1.0).toFixed(2)}` : '--',
+        trend: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? '↑' : '↓') : '↑',
+        status: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? 'good' : getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.5 ? 'warning' : 'critical') : 'critical'
       },
       {
         name: 'Margin alignment with strategy',
         institutionalAvg: '--',
-        currentPeriod: efficiencyRatioData ? efficiencyRatioData.CIR : '--',
+        currentPeriod: efficiencyRatioData ? `${parseFloat(efficiencyRatioData.CIR || '0').toFixed(2)}` : '--',
         target: efficiencyRatioData ? efficiencyRatioData.target : '≤55%',
-        variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.CIR) - parseFloat(efficiencyRatioData.target)).toFixed(1)}` : '--',
-        trend: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR) <= parseFloat(efficiencyRatioData.target) ? '↑' : '↓') : '↓',
-        status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR) <= parseFloat(efficiencyRatioData.target) ? 'good' : parseFloat(efficiencyRatioData.CIR) <= parseFloat(efficiencyRatioData.target) * 1.1 ? 'warning' : 'critical') : 'warning'
+        variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.CIR || '0') - parseFloat(efficiencyRatioData.target || '0')).toFixed(2)}` : '--',
+        trend: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR || '0') <= parseFloat(efficiencyRatioData.target || '0') ? '↑' : '↓') : '↓',
+        status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR || '0') <= parseFloat(efficiencyRatioData.target || '0') ? 'good' : parseFloat(efficiencyRatioData.CIR || '0') <= parseFloat(efficiencyRatioData.target || '0') * 1.1 ? 'warning' : 'critical') : 'warning'
       }
     ],
     'Risk Management & Defaults Index': [
       {
         name: 'Default rate (branch, province, institutional)',
         institutionalAvg: '--',
-        currentPeriod: month1DefaultPerformanceData ? month1DefaultPerformanceData.month_1_default_rate : '--',
+        currentPeriod: month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.month_1_default_rate).toFixed(2)}` : '--',
         target: '≤15%',
-        variance: month1DefaultPerformanceData ? `${(parseFloat(month1DefaultPerformanceData.month_1_default_rate) - 15).toFixed(1)}` : '--',
+        variance: month1DefaultPerformanceData ? `${(parseFloat(month1DefaultPerformanceData.month_1_default_rate) - 15).toFixed(2)}` : '--',
         trend: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.month_1_default_rate) <= 15 ? '↑' : '↓') : '↑',
         status: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.month_1_default_rate) <= 15 ? 'good' : parseFloat(month1DefaultPerformanceData.month_1_default_rate) <= 20 ? 'warning' : 'critical') : 'critical'
       },
       {
         name: 'Default aging analysis',
         institutionalAvg: '--',
-        currentPeriod: longTermDelinquencyData ? longTermDelinquencyData.long_term_default_rate : '--',
+        currentPeriod: longTermDelinquencyData ? `${parseFloat(longTermDelinquencyData.long_term_default_rate).toFixed(2)}` : '--',
         target: longTermDelinquencyData ? longTermDelinquencyData.target : '≤43.95%',
-        variance: longTermDelinquencyData ? `${(parseFloat(longTermDelinquencyData.long_term_default_rate) - parseFloat(longTermDelinquencyData.target)).toFixed(1)}%` : '--',
+        variance: longTermDelinquencyData ? `${(parseFloat(longTermDelinquencyData.long_term_default_rate) - parseFloat(longTermDelinquencyData.target)).toFixed(2)}%` : '--',
         trend: longTermDelinquencyData ? (parseFloat(longTermDelinquencyData.long_term_default_rate) <= parseFloat(longTermDelinquencyData.target) ? '↑' : '↓') : '↑',
         status: longTermDelinquencyData ? (parseFloat(longTermDelinquencyData.long_term_default_rate) <= parseFloat(longTermDelinquencyData.target) ? 'good' : parseFloat(longTermDelinquencyData.long_term_default_rate) <= parseFloat(longTermDelinquencyData.target) * 1.1 ? 'warning' : 'critical') : 'critical'
       },
       {
         name: 'Recovery rate within 1 month',
         institutionalAvg: '--',
-        currentPeriod: month3RecoveryAchievementsData ? month3RecoveryAchievementsData.recovery_rate_3_months : '--',
+        currentPeriod: month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months).toFixed(2)}` : '--',
         target: '≥70%',
-        variance: month3RecoveryAchievementsData ? `${(parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months) - 70).toFixed(1)}` : '--',
+        variance: month3RecoveryAchievementsData ? `${(parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months) - 70).toFixed(2)}` : '--',
         trend: month3RecoveryAchievementsData ? (parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months) >= 70 ? '↑' : '↓') : '↓',
         status: month3RecoveryAchievementsData ? (parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months) >= 70 ? 'good' : parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months) >= 60 ? 'warning' : 'critical') : 'critical'
       },
       {
         name: 'Recovery rate within 3 months',
         institutionalAvg: '--',
-        currentPeriod: month3RecoveryAchievementsData ? month3RecoveryAchievementsData.recovery_rate_3_months : '--',
+        currentPeriod: month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months).toFixed(2)}` : '--',
         target: '≥100%',
-        variance: month3RecoveryAchievementsData ? `${(parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months) - 100).toFixed(1)}` : '--',
+        variance: month3RecoveryAchievementsData ? `${(parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months) - 100).toFixed(2)}` : '--',
         trend: month3RecoveryAchievementsData ? (parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months) >= 100 ? '↑' : '↓') : '↓',
         status: month3RecoveryAchievementsData ? (parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months) >= 100 ? 'good' : parseFloat(month3RecoveryAchievementsData.recovery_rate_3_months) >= 90 ? 'warning' : 'critical') : 'critical'
       },
       {
         name: 'Risk migration trends',
         institutionalAvg: '--',
-        currentPeriod: rollRateControlData ? rollRateControlData.score : '--',
+        currentPeriod: rollRateControlData ? `${parseFloat(rollRateControlData.score).toFixed(2)}` : '--',
         target: '≤20%',
-        variance: rollRateControlData ? `${(parseFloat(rollRateControlData.score) - 20).toFixed(1)}` : '--',
+        variance: rollRateControlData ? `${(parseFloat(rollRateControlData.score) - 20).toFixed(2)}` : '--',
         trend: rollRateControlData ? (parseFloat(rollRateControlData.score) <= 20 ? '↑' : '↓') : '↑',
         status: rollRateControlData ? (parseFloat(rollRateControlData.score) <= 20 ? 'good' : parseFloat(rollRateControlData.score) <= 30 ? 'warning' : 'critical') : 'warning'
       }
@@ -557,34 +589,34 @@ function getParameterKPIs(paramName: string,
         institutionalAvg: '--',
         currentPeriod: growthTrajectoryData ? `K${growthTrajectoryData.current_month_revenue.toLocaleString()}` : '--',
         target: '≥2.5% MoM growth',
-        variance: growthTrajectoryData ? `${(growthTrajectoryData.mom_revenue * 100).toFixed(1)}` : '--',
+        variance: growthTrajectoryData ? `${(growthTrajectoryData.mom_revenue * 100).toFixed(2)}` : '--',
         trend: growthTrajectoryData ? (growthTrajectoryData.mom_revenue >= 0.025 ? '↑' : '↓') : '→',
         status: growthTrajectoryData ? (growthTrajectoryData.mom_revenue >= 0.025 ? 'good' : growthTrajectoryData.mom_revenue >= 0 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Cost-to-income ratios',
         institutionalAvg: '--',
-        currentPeriod: efficiencyRatioData ? efficiencyRatioData.CIR : '--',
+        currentPeriod: efficiencyRatioData ? `${parseFloat(efficiencyRatioData.CIR).toFixed(2)}` : '--',
         target: efficiencyRatioData ? efficiencyRatioData.target : '≤55%',
-        variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.CIR) - parseFloat(efficiencyRatioData.target)).toFixed(1)}` : '--',
+        variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.CIR) - parseFloat(efficiencyRatioData.target)).toFixed(2)}` : '--',
         trend: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR) <= parseFloat(efficiencyRatioData.target) ? '↑' : '↓') : '↑',
         status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR) <= parseFloat(efficiencyRatioData.target) ? 'good' : parseFloat(efficiencyRatioData.CIR) <= parseFloat(efficiencyRatioData.target) * 1.1 ? 'warning' : 'critical') : 'critical'
       },
       {
         name: 'Institutional average performance',
         institutionalAvg: '--',
-        currentPeriod: productivityAchievementData ? `${parseFloat(productivityAchievementData.normalized_score)}%` : '--',
+        currentPeriod: productivityAchievementData ? `${parseFloat(productivityAchievementData.normalized_score).toFixed(2)}%` : '--',
         target: '≥100%',
-        variance: productivityAchievementData ? `${(parseFloat(productivityAchievementData.normalized_score) - 100).toFixed(1)}` : '--',
+        variance: productivityAchievementData ? `${(parseFloat(productivityAchievementData.normalized_score) - 100).toFixed(2)}` : '--',
         trend: productivityAchievementData ? (parseFloat(productivityAchievementData.normalized_score) >= 100 ? '↑' : '↓') : '↓',
         status: productivityAchievementData ? (parseFloat(productivityAchievementData.normalized_score) >= 100 ? 'good' : parseFloat(productivityAchievementData.normalized_score) >= 90 ? 'warning' : 'critical') : 'critical'
       },
       {
         name: 'Growth trajectory alignment',
         institutionalAvg: '--',
-        currentPeriod: growthTrajectoryData ? `${(growthTrajectoryData.mom_revenue * 100).toFixed(1)}` : '--',
+        currentPeriod: growthTrajectoryData ? `${(growthTrajectoryData.mom_revenue * 100).toFixed(2)}` : '--',
         target: '≥2.5%',
-        variance: growthTrajectoryData ? `${(growthTrajectoryData.mom_revenue * 100 - 2.5).toFixed(1)}` : '--',
+        variance: growthTrajectoryData ? `${(growthTrajectoryData.mom_revenue * 100 - 2.5).toFixed(2)}` : '--',
         trend: growthTrajectoryData ? (growthTrajectoryData.mom_revenue >= 0.025 ? '↑' : '↓') : '↓',
         status: growthTrajectoryData ? (growthTrajectoryData.mom_revenue >= 0.025 ? 'good' : growthTrajectoryData.mom_revenue >= 0 ? 'warning' : 'critical') : 'warning'
       }
@@ -834,29 +866,29 @@ export function InstitutionalHealthSummary({
                                             <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
                                           </td>
                                           <td className="px-4 py-2 text-left text-sm">
-                                            {kpi.name === 'Staff Adequacy Score' && staffAdequacyData ? `${staffAdequacyData.percentage_point} of ${staffAdequacyData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Productivity Achievement' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Vacancy Impact' && vacancyImpactData ? `${vacancyImpactData.percentage_point} of ${vacancyImpactData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Volume Achievement' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point)} of ${volumeAchievementData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Portfolio Load Balance' && loanPortfolioLoadData ? `${loanPortfolioLoadData.percentage_point} of ${loanPortfolioLoadData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Loan disbursement volume' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point)} of ${volumeAchievementData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Portfolio quality' && portfolioQualityData ? `${parseFloat(portfolioQualityData.percentage_point)} of ${portfolioQualityData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Default contribution' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point)} of ${month1DefaultPerformanceData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Collections efficiency' && collectionEfficiencyData ? `${parseFloat(collectionEfficiencyData.percentage_point)} of ${collectionEfficiencyData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Vetting compliance' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point)} of ${productRiskScoreData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Product distribution mix' && productDiversificationData ? `${parseFloat(productDiversificationData.percentage_point)} of ${productDiversificationData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Revenue yield per product' && yieldAchievementsData ? `${parseFloat(yieldAchievementsData.percentage_point)} of ${yieldAchievementsData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Product risk contribution' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point)} of ${productRiskScoreData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Margin alignment with strategy' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point)} of ${efficiencyRatioData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Default rate (branch, province, institutional)' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point)} of ${month1DefaultPerformanceData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Default aging analysis' && longTermDelinquencyData ? `${parseFloat(longTermDelinquencyData.percentage_point)} of ${longTermDelinquencyData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Recovery rate within 1 month' && month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.percentage_point)} of ${month3RecoveryAchievementsData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Recovery rate within 3 months' && month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.percentage_point)} of ${month3RecoveryAchievementsData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Risk migration trends' && rollRateControlData ? `${parseFloat(rollRateControlData.percentage_point)} of ${rollRateControlData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Branch revenue' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP)} of 10pp` : 
-                                             kpi.name === 'Cost-to-income ratios' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point)} of ${efficiencyRatioData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Institutional average performance' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Growth trajectory alignment' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP)} of 10pp` : 
+                                            {kpi.name === 'Staff Adequacy Score' && staffAdequacyData ? `${parseFloat(staffAdequacyData.percentage_point).toFixed(2)} of ${staffAdequacyData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Productivity Achievement' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Vacancy Impact' && vacancyImpactData ? `${parseFloat(vacancyImpactData.percentage_point).toFixed(2)} of ${vacancyImpactData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Volume Achievement' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point).toFixed(2)} of ${volumeAchievementData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Portfolio Load Balance' && loanPortfolioLoadData ? `${parseFloat(loanPortfolioLoadData.percentage_point).toFixed(2)} of ${loanPortfolioLoadData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Loan disbursement volume' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point).toFixed(2)} of ${volumeAchievementData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Portfolio quality' && portfolioQualityData ? `${parseFloat(portfolioQualityData.percentage_point).toFixed(2)} of ${portfolioQualityData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Default contribution' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point).toFixed(2)} of ${month1DefaultPerformanceData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Collections efficiency' && collectionEfficiencyData ? `${parseFloat(collectionEfficiencyData.percentage_point).toFixed(2)} of ${collectionEfficiencyData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Vetting compliance' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point).toFixed(2)} of ${productRiskScoreData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Product distribution mix' && productDiversificationData ? `${parseFloat(productDiversificationData.percentage_point).toFixed(2)} of ${productDiversificationData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Revenue yield per product' && yieldAchievementsData ? `${parseFloat(yieldAchievementsData.percentage_point).toFixed(2)} of ${yieldAchievementsData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Product risk contribution' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point).toFixed(2)} of ${productRiskScoreData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Margin alignment with strategy' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Default rate (branch, province, institutional)' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point).toFixed(2)} of ${month1DefaultPerformanceData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Default aging analysis' && longTermDelinquencyData ? `${parseFloat(longTermDelinquencyData.percentage_point).toFixed(2)} of ${longTermDelinquencyData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Recovery rate within 1 month' && month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.percentage_point).toFixed(2)} of ${month3RecoveryAchievementsData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Recovery rate within 3 months' && month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.percentage_point).toFixed(2)} of ${month3RecoveryAchievementsData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Risk migration trends' && rollRateControlData ? `${parseFloat(rollRateControlData.percentage_point).toFixed(2)} of ${rollRateControlData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Branch revenue' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` : 
+                                             kpi.name === 'Cost-to-income ratios' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Institutional average performance' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Growth trajectory alignment' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` : 
                                              '-'}
                                           </td>
                                           <td className="px-4 py-2 text-left">

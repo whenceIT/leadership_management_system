@@ -21,6 +21,16 @@ import ProvincialDataService, {
 import { useUserPosition } from '@/hooks/useUserPosition';
 import { useOffice } from '@/hooks/useOffice';
 import { useUserKPI, ProcessedKPI } from '@/hooks/useUserKPI';
+import { useProvincialStaffAdequacy } from '@/hooks/useStaffAdequacy';
+import { useProvincialCollectionEfficiency } from '@/hooks/useProvincialCollectionEfficiency';
+import { useProvincialPortfolioQuality } from '@/hooks/useProvincialPortfolioQuality';
+import { useProvincialProductDiversification } from '@/hooks/useProvincialProductDiversification';
+import { useProvincialProductRiskScore } from '@/hooks/useProvincialProductRiskScore';
+import { useProvincialProductivityAchievement } from '@/hooks/useProvincialProductivityAchievement';
+import { useProvincialVacancyImpact } from '@/hooks/useProvincialVacancyImpact';
+import { useProvincialVolumeAchievement } from '@/hooks/useProvincialVolumeAchievement';
+import { useProvincialYieldAchievements } from '@/hooks/useProvincialYieldAchievements';
+import { useProvincialLoanPortfolioLoad } from '@/hooks/useProvincialLoanPortfolioLoad';
 
 export default function ProvincialManagerDashboard() {
   const { user, positionName, isLoading: isPositionLoading } = useUserPosition();
@@ -280,7 +290,19 @@ export default function ProvincialManagerDashboard() {
     );
   };
 
-  const summaryData = getInstitutionalSummaryData('province', 'Provincial View');
+  const provinceId = getProvinceIdFromUser();
+  const { data: staffAdequacyData, isLoading: isStaffAdequacyLoading } = useProvincialStaffAdequacy(provinceId);
+  const { data: collectionEfficiencyData } = useProvincialCollectionEfficiency(provinceId);
+  const { data: portfolioQualityData } = useProvincialPortfolioQuality(provinceId);
+  const { data: productDiversificationData } = useProvincialProductDiversification(provinceId);
+  const { data: productRiskScoreData } = useProvincialProductRiskScore(provinceId);
+  const { data: productivityAchievementData } = useProvincialProductivityAchievement(provinceId);
+  const { data: vacancyImpactData } = useProvincialVacancyImpact(provinceId);
+  const { data: volumeAchievementData } = useProvincialVolumeAchievement(provinceId);
+  const { data: yieldAchievementsData } = useProvincialYieldAchievements(provinceId);
+  const { data: loanPortfolioLoadData } = useProvincialLoanPortfolioLoad(provinceId);
+
+  const summaryData = getInstitutionalSummaryData('province', 'Provincial View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData);
 
   return (
     <DashboardBase
@@ -296,6 +318,16 @@ export default function ProvincialManagerDashboard() {
         overallScore={summaryData.overallScore}
         overallInstAvg={summaryData.overallInstAvg}
         overallTarget={summaryData.overallTarget}
+        staffAdequacyData={staffAdequacyData}
+        productivityAchievementData={productivityAchievementData}
+        vacancyImpactData={vacancyImpactData}
+        volumeAchievementData={volumeAchievementData}
+        loanPortfolioLoadData={loanPortfolioLoadData}
+        collectionEfficiencyData={collectionEfficiencyData}
+        portfolioQualityData={portfolioQualityData}
+        productDiversificationData={productDiversificationData}
+        productRiskScoreData={productRiskScoreData}
+        yieldAchievementsData={yieldAchievementsData}
       />
 
 

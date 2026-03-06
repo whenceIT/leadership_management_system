@@ -1,9 +1,13 @@
 export interface VacancyImpactData {
-  office_id: string;
-  actual_lcs: number;
-  authorized_positions: number;
-  vacancies: number;
-  normalized_score: number;
+  office_id?: string;
+  province_id?: string;
+  offices_count?: number;
+  actual_lcs?: number;
+  authorized_positions?: number;
+  authorized_positions_per_office?: number;
+  vacancies?: number;
+  normalized_score?: number;
+  average_normalized_score?: number;
   weight: string;
   percentage_point: number;
   target: number; // Fixed target of 0 (greater or equal to 0)
@@ -14,6 +18,22 @@ export async function fetchVacancyImpact(branchId: number): Promise<VacancyImpac
   
   if (!response.ok) {
     throw new Error(`Failed to fetch vacancy impact: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  
+  // Add fixed target of 0 since it's not in the API response
+  return {
+    ...data,
+    target: 0
+  };
+}
+
+export async function fetchProvincialVacancyImpact(provinceId: number): Promise<VacancyImpactData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/vacancy-impact/province/${provinceId}`);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch provincial vacancy impact: ${response.statusText}`);
   }
   
   const data = await response.json();
