@@ -1130,8 +1130,9 @@ export function InstitutionalHealthSummary({
                               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                 <div 
                                   className={`h-2 rounded-full transition-all duration-300 ${
-                                    param.status === 'good' ? 'bg-green-500' :
-                                    param.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                                    progress < 40 ? 'bg-red-500' :
+                                    progress < 60 ? 'bg-yellow-500' :
+                                    progress < 70 ? 'bg-yellow-600' : 'bg-green-500'
                                   }`}
                                   style={{ width: `${progress}%` }}
                                 />
