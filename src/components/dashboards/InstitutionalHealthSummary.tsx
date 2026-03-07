@@ -1054,9 +1054,6 @@ export function InstitutionalHealthSummary({
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameter</th>
-                  {userLevel === 'institution' && (
-                    <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Inst. Avg</th>
-                  )}
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{levelLabel} Avg</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variance</th>
@@ -1109,11 +1106,10 @@ export function InstitutionalHealthSummary({
                             </div>
                           </div>
                         </td>
-                        {userLevel === 'institution' && (
-                          <td className="px-4 py-3 text-center text-sm text-gray-600 dark:text-gray-300">{param.institutionalAvg}</td>
-                        )}
                         <td className="px-4 py-3 text-center">
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">{param.userLevelAvg}</span>
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {param.userLevelAvg}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{param.target}</td>
                         <td className="px-4 py-3 text-center">
@@ -1162,9 +1158,7 @@ export function InstitutionalHealthSummary({
                                      <thead className="bg-blue-100 dark:bg-blue-900/30">
                                       <tr>
                                         <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Metric</th>
-                                        {userLevel === 'institution' && (
-                                          <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Inst. Avg</th>
-                                        )}
+                               
                                         <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{levelLabel} Avg</th>
                                         <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
                                         <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
@@ -1186,9 +1180,7 @@ export function InstitutionalHealthSummary({
                                           }}
                                         >
                                           <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">{kpi.name}</td>
-                                          {userLevel === 'institution' && (
-                                            <td className="px-4 py-2 text-left text-sm text-gray-600 dark:text-gray-300">{kpi.institutionalAvg}</td>
-                                          )}
+                                      
                                           <td className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
                                           <td className="px-4 py-2 text-left text-sm text-gray-500 dark:text-gray-400">{kpi.target}</td>
                                           <td className="px-4 py-2 text-left">
@@ -1217,9 +1209,9 @@ export function InstitutionalHealthSummary({
                                              kpi.name === 'Branch revenue' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` : 
                                              kpi.name === 'Cost-to-income ratios' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%','')}pp` : 
                                              kpi.name === 'Institutional average performance' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
-                                              kpi.name === 'Growth trajectory alignment' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` : 
-                                              kpi.name === 'Revenue achievement' && revenueAchievementsData ? `${parseFloat(revenueAchievementsData.percentage_point).toFixed(2)} of ${revenueAchievementsData.weight.replace('%','')}pp` : 
-                                              kpi.name === 'Profitability contribution' && profitabilityContributionData ? `${parseFloat(profitabilityContributionData.percentage_point).toFixed(2)} of ${profitabilityContributionData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Growth trajectory alignment' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` : 
+                                             kpi.name === 'Revenue achievement' && revenueAchievementsData ? `${parseFloat(revenueAchievementsData.percentage_point).toFixed(2)} of ${revenueAchievementsData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Profitability contribution' && profitabilityContributionData ? `${parseFloat(profitabilityContributionData.percentage_point).toFixed(2)} of ${profitabilityContributionData.weight.replace('%','')}pp` : 
                                               '-'}
                                           </td>
                                           <td className="px-4 py-2 text-left">
