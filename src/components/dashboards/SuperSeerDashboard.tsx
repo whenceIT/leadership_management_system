@@ -258,14 +258,14 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
 
   // Institution metrics
   const institutionMetrics = [
-    { title: "Total Branches", value: "42", change: "+3 new this year", changeType: "positive" as const },
-    { title: "Total Staff", value: "245", change: "+12% this year", changeType: "positive" as const },
-    { title: "Active Loans", value: "3,245", change: "+8.5% growth", changeType: "positive" as const },
-    { title: "Portfolio Value", value: "K45M", change: "+15% YoY", changeType: "positive" as const },
-    { title: "Collection Rate", value: "91.2%", change: "+3.2% improvement", changeType: "positive" as const },
-    { title: "M1 Default Rate", value: "3.8%", change: "-1.2% improvement", changeType: "positive" as const },
-    { title: "Net Profit Margin", value: "34.1%", change: "+2.3% improvement", changeType: "positive" as const },
-    { title: "Avg Loan Size", value: "K3,850", change: "+5.2% increase", changeType: "positive" as const }
+    { title: "Total Branches", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Total Staff", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Active Loans", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Portfolio Value", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Collection Rate", value: "--", change: "--", changeType: "positive" as const },
+    { title: "M1 Default Rate", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Net Profit Margin", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Avg Loan Size", value: "--", change: "--", changeType: "positive" as const }
   ];
 
   return (
@@ -307,10 +307,10 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
           <CollapsibleCard title="Average Loan Rates by Cycle">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { cycle: "Current", rate: "18.5%", change: "-0.5% from last cycle" },
-                { cycle: "Last Month", rate: "19.0%", change: "+1.2% from previous" },
-                { cycle: "Last Quarter", rate: "18.8%", change: "Stable" },
-                { cycle: "Year to Date", rate: "18.7%", change: "-0.3% improvement" }
+                { cycle: "Current", rate: "--", change: "--" },
+                { cycle: "Last Month", rate: "--", change: "--" },
+                { cycle: "Last Quarter", rate: "--", change: "--" },
+                { cycle: "Year to Date", rate: "--", change: "--" }
               ].map((period, index) => (
                 <div key={index} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
                   <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{period.cycle}</h4>

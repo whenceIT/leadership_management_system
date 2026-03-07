@@ -15,6 +15,26 @@ import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './Insti
 import { useUserKPI } from '@/hooks/useUserKPI';
 import ProvincialDataService, { ProvincialPerformanceData } from '@/services/ProvincialDataService';
 
+// Institutional level API hooks
+import { useInstitutionalStaffAdequacy } from '@/hooks/useInstitutionalStaffAdequacy';
+import { useInstitutionalProductivityAchievement } from '@/hooks/useInstitutionalProductivityAchievement';
+import { useInstitutionalVacancyImpact } from '@/hooks/useInstitutionalVacancyImpact';
+import { useInstitutionalVolumeAchievement } from '@/hooks/useInstitutionalVolumeAchievement';
+import { useInstitutionalPortfolioLoadBalance } from '@/hooks/useInstitutionalPortfolioLoadBalance';
+import { useInstitutionalCollectionEfficiency } from '@/hooks/useInstitutionalCollectionEfficiency';
+import { useInstitutionalPortfolioQuality } from '@/hooks/useInstitutionalPortfolioQuality';
+import { useInstitutionalProductDiversification } from '@/hooks/useInstitutionalProductDiversification';
+import { useInstitutionalProductRiskScore } from '@/hooks/useInstitutionalProductRiskScore';
+import { useInstitutionalYieldAchievement } from '@/hooks/useInstitutionalYieldAchievement';
+import { useInstitutionalMonth3RecoveryAchievements } from '@/hooks/useInstitutionalMonth3RecoveryAchievements';
+import { useInstitutionalEfficiencyRatio } from '@/hooks/useInstitutionalEfficiencyRatio';
+import { useInstitutionalGrowthTrajectory } from '@/hooks/useInstitutionalGrowthTrajectory';
+import { useInstitutionalLongTermDelinquency } from '@/hooks/useInstitutionalLongTermDelinquency';
+import { useInstitutionalMonth1DefaultRate } from '@/hooks/useInstitutionalMonth1DefaultRate';
+import { useInstitutionalRevenueAchievements } from '@/hooks/useInstitutionalRevenueAchievements';
+import { useInstitutionalProfitabilityContribution } from '@/hooks/useInstitutionalProfitabilityContribution';
+import { useInstitutionalRollRateControl } from '@/hooks/useInstitutionalRollRateControl';
+
 export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?: string }) {
   const [provincialData, setProvincialData] = useState<ProvincialPerformanceData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,6 +49,26 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
     target: kpi.target.toString(),
     weight: `${kpi.weight}%`
   })) : [];
+
+  // Institutional level API data fetching
+  const { data: staffAdequacyData } = useInstitutionalStaffAdequacy();
+  const { data: productivityAchievementData } = useInstitutionalProductivityAchievement();
+  const { data: vacancyImpactData } = useInstitutionalVacancyImpact();
+  const { data: volumeAchievementData } = useInstitutionalVolumeAchievement();
+  const { data: portfolioLoadBalanceData } = useInstitutionalPortfolioLoadBalance();
+  const { data: collectionEfficiencyData } = useInstitutionalCollectionEfficiency();
+  const { data: portfolioQualityData } = useInstitutionalPortfolioQuality();
+  const { data: productDiversificationData } = useInstitutionalProductDiversification();
+  const { data: productRiskScoreData } = useInstitutionalProductRiskScore();
+  const { data: yieldAchievementData } = useInstitutionalYieldAchievement();
+  const { data: month3RecoveryData } = useInstitutionalMonth3RecoveryAchievements();
+  const { data: efficiencyRatioData } = useInstitutionalEfficiencyRatio();
+  const { data: growthTrajectoryData } = useInstitutionalGrowthTrajectory();
+  const { data: longTermDelinquencyData } = useInstitutionalLongTermDelinquency();
+  const { data: month1DefaultData } = useInstitutionalMonth1DefaultRate();
+  const { data: revenueAchievementsData } = useInstitutionalRevenueAchievements();
+  const { data: profitabilityContributionData } = useInstitutionalProfitabilityContribution();
+  const { data: rollRateControlData } = useInstitutionalRollRateControl();
 
   // Fetch provincial performance data
   useEffect(() => {
@@ -101,7 +141,7 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
 
   const mockOfficers = (branchId: number) => Array.from({length: 10}, (_, i) => ({
     id: i + 1,
-    name: `Officer ${i + 1} in Branch ${branchId}`,
+    name: `Officer ${i + 1} in   ${branchId}`,
     performance: (70 + Math.random() * 30).toFixed(2),
   }));
 
@@ -254,18 +294,39 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
     );
   };
 
-  const summaryData = getInstitutionalSummaryData('institution', 'Whence Financial Services — Institutional View');
+  const summaryData = getInstitutionalSummaryData(
+    'institution', 
+    'Whence Financial Services — Institutional View',
+    staffAdequacyData,
+    productivityAchievementData,
+    vacancyImpactData,
+    portfolioLoadBalanceData,
+    volumeAchievementData,
+    collectionEfficiencyData,
+    efficiencyRatioData,
+    growthTrajectoryData,
+    longTermDelinquencyData,
+    month1DefaultData,
+    month3RecoveryData,
+    portfolioQualityData,
+    productDiversificationData,
+    productRiskScoreData,
+    rollRateControlData,
+    yieldAchievementData,
+    revenueAchievementsData,
+    profitabilityContributionData
+  );
 
   // Institution metrics
   const institutionMetrics = [
-    { title: "Total Branches", value: "42", change: "+3 new this year", changeType: "positive" as const },
-    { title: "Total Staff", value: "245", change: "+12% this year", changeType: "positive" as const },
-    { title: "Active Loans", value: "3,245", change: "+8.5% growth", changeType: "positive" as const },
-    { title: "Portfolio Value", value: "K45M", change: "+15% YoY", changeType: "positive" as const },
-    { title: "Collection Rate", value: "91.2%", change: "+3.2% improvement", changeType: "positive" as const },
-    { title: "M1 Default Rate", value: "3.8%", change: "-1.2% improvement", changeType: "positive" as const },
-    { title: "Net Profit Margin", value: "34.1%", change: "+2.3% improvement", changeType: "positive" as const },
-    { title: "Avg Loan Size", value: "K3,850", change: "+5.2% increase", changeType: "positive" as const }
+    { title: "Total Branches", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Total Staff", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Active Loans", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Portfolio Value", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Collection Rate", value: "--", change: "--", changeType: "positive" as const },
+    { title: "M1 Default Rate", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Net Profit Margin", value: "--", change: "--", changeType: "positive" as const },
+    { title: "Avg Loan Size", value: "--", change: "--", changeType: "positive" as const }
   ];
 
   return (
@@ -282,47 +343,29 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
         overallScore={summaryData.overallScore}
         overallInstAvg={summaryData.overallInstAvg}
         overallTarget={summaryData.overallTarget}
+        staffAdequacyData={staffAdequacyData}
+        productivityAchievementData={productivityAchievementData}
+        vacancyImpactData={vacancyImpactData}
+        volumeAchievementData={volumeAchievementData}
+        loanPortfolioLoadData={portfolioLoadBalanceData}
+        collectionEfficiencyData={collectionEfficiencyData}
+        efficiencyRatioData={efficiencyRatioData}
+        growthTrajectoryData={growthTrajectoryData}
+        longTermDelinquencyData={longTermDelinquencyData}
+        month1DefaultPerformanceData={month1DefaultData}
+        month3RecoveryAchievementsData={month3RecoveryData}
+        portfolioQualityData={portfolioQualityData}
+        productDiversificationData={productDiversificationData}
+        productRiskScoreData={productRiskScoreData}
+        rollRateControlData={rollRateControlData}
+        yieldAchievementsData={yieldAchievementData}
+        revenueAchievementsData={revenueAchievementsData}
+        profitabilityContributionData={profitabilityContributionData}
       />
     
     
 
-      <div className="grid grid-cols-12 gap-4 md:gap-6 mt-6">
-        {/* Institution Metrics - Headline Figures */}
-        <div className="col-span-12">
-          <CollapsibleCard title="Institution Metrics — Headline Figures">
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-              {institutionMetrics.map((metric, index) => (
-                <div key={index} className="text-center p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">{metric.value}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{metric.title}</p>
-                  <p className={`text-xs mt-1 ${metric.changeType === 'positive' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{metric.change}</p>
-                </div>
-              ))}
-            </div>
-          </CollapsibleCard>
-        </div>
-
-
-        {/* Average Loan Rates by Cycle */}
-        <div className="col-span-12">
-          <CollapsibleCard title="Average Loan Rates by Cycle">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                { cycle: "Current", rate: "18.5%", change: "-0.5% from last cycle" },
-                { cycle: "Last Month", rate: "19.0%", change: "+1.2% from previous" },
-                { cycle: "Last Quarter", rate: "18.8%", change: "Stable" },
-                { cycle: "Year to Date", rate: "18.7%", change: "-0.3% improvement" }
-              ].map((period, index) => (
-                <div key={index} className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-100 dark:border-gray-700">
-                  <h4 className="font-semibold text-gray-900 dark:text-white mb-2">{period.cycle}</h4>
-                  <div className="text-3xl font-bold text-brand-500 mb-1">{period.rate}</div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{period.change}</p>
-                </div>
-              ))}
-            </div>
-          </CollapsibleCard>
-        </div>
-      </div>
+      
     </DashboardBase>
   );
 }

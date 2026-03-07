@@ -111,7 +111,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
   // Custom summary data with dynamic aggregated Branch Structure & Staffing Index
   const summaryData = useMemo(() => {
     const baseData = getInstitutionalSummaryData('branch', 'Branch View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData);
-    let updatedData = baseData;
+    let updatedData = { ...baseData };
 
     // Update key metrics with individual KPI data
     let keyMetrics = [...updatedData.keyMetrics];
@@ -122,13 +122,13 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         if (metric.parameter === 'Staff Adequacy Score') {
           return {
             ...metric,
-            institutionalAvg: staffAdequacyData?.instAvg || '92%',
-            currentPeriod: `${staffAdequacyData.normalized_score}%`,
+            institutionalAvg: staffAdequacyData?.instAvg || '--',
+            currentPeriod: `${staffAdequacyData?.normalized_score || 0}%`,
             target: '100%',
-            variance: `${staffAdequacyData.normalized_score - staffAdequacyData.target}%`,
-            trend: (staffAdequacyData.normalized_score >= staffAdequacyData.target ? '↑' : '↓') as '↑' | '↓' | '→',
+            variance: `${(staffAdequacyData?.normalized_score || 0) - (staffAdequacyData?.target || 100)}%`,
+            trend: ((staffAdequacyData?.normalized_score || 0) >= (staffAdequacyData?.target || 100) ? '↑' : '↓') as '↑' | '↓' | '→',
             provAvg: '90%',
-            contribution: `${staffAdequacyData.percentage_point}/25pp ${staffAdequacyData.normalized_score >= staffAdequacyData.target ? '▲' : '▼'}`
+            contribution: `${staffAdequacyData?.percentage_point || 0}/25pp ${(staffAdequacyData?.normalized_score || 0) >= (staffAdequacyData?.target || 100) ? '▲' : '▼'}`
           };
         }
         return metric;
@@ -137,15 +137,15 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
     // Update Productivity Achievement key metric
     if (productivityAchievementData) {
-      const normalizedScore = parseFloat(productivityAchievementData.normalized_score);
-      const percentagePoint = parseFloat(productivityAchievementData.percentage_point);
-      const weight = parseFloat(productivityAchievementData.weight.replace('%', ''));
+      const normalizedScore = parseFloat(productivityAchievementData.normalized_score || '0');
+      const percentagePoint = parseFloat(productivityAchievementData.percentage_point || '0');
+      const weight = parseFloat((productivityAchievementData.weight || '0%').replace('%', ''));
       
       keyMetrics = keyMetrics.map(metric => {
         if (metric.parameter === 'Productivity Achievement') {
           return {
             ...metric,
-            institutionalAvg: '95%',
+            institutionalAvg: '--',
             currentPeriod: `${normalizedScore}%`,
             target: '≥100%',
             variance: `${normalizedScore - productivityAchievementData.target}%`,
@@ -160,16 +160,16 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
     // Update Vacancy Impact key metric
     if (vacancyImpactData) {
-      const normalizedScore = vacancyImpactData.normalized_score * 100; // Convert to percentage
-      const percentagePoint = vacancyImpactData.percentage_point;
-      const weight = parseFloat(vacancyImpactData.weight.replace('%', ''));
-      const variance = normalizedScore - vacancyImpactData.target;
+      const normalizedScore = (vacancyImpactData.normalized_score || 0) * 100; // Convert to percentage
+      const percentagePoint = vacancyImpactData.percentage_point || 0;
+      const weight = parseFloat((vacancyImpactData.weight || '0%').replace('%', ''));
+      const variance = normalizedScore - (vacancyImpactData.target || 0);
       
       keyMetrics = keyMetrics.map(metric => {
         if (metric.parameter === 'Vacancy Impact') {
           return {
             ...metric,
-            institutionalAvg: '94%',
+            institutionalAvg: '--',
             currentPeriod: `${normalizedScore.toFixed(1)}%`,
             target: '≥0%',
             variance: `${variance.toFixed(1)}%`,
@@ -184,17 +184,17 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
     // Update Volume Achievement key metric
     if (volumeAchievementData) {
-      const normalizedScore = parseFloat(volumeAchievementData.normalized_score);
-      const percentagePoint = parseFloat(volumeAchievementData.percentage_point);
-      const weight = parseFloat(volumeAchievementData.weight.replace('%', ''));
-      const branchTarget = parseFloat(volumeAchievementData.branch_target);
-      const totalDisbursement = parseFloat(volumeAchievementData.total_disbursement);
+      const normalizedScore = parseFloat(volumeAchievementData.normalized_score || '0');
+      const percentagePoint = parseFloat(volumeAchievementData.percentage_point || '0');
+      const weight = parseFloat((volumeAchievementData.weight || '0%').replace('%', ''));
+      const branchTarget = parseFloat(volumeAchievementData.branch_target || '0');
+      const totalDisbursement = parseFloat(volumeAchievementData.total_disbursement || '0');
       
       keyMetrics = keyMetrics.map(metric => {
         if (metric.parameter === 'Volume Achievement') {
           return {
             ...metric,
-            institutionalAvg: '85%',
+            institutionalAvg: '--',
             currentPeriod: `${normalizedScore.toFixed(1)}%`,
             target: `≥${branchTarget.toLocaleString()}`,
             variance: `${totalDisbursement >= branchTarget ? '+' : ''}${(totalDisbursement - branchTarget).toLocaleString()}`,
@@ -209,16 +209,16 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
     // Update Portfolio Load Balance key metric
     if (loanPortfolioLoadData) {
-      const normalizedScore = parseFloat(loanPortfolioLoadData.score);
-      const percentagePoint = loanPortfolioLoadData.percentage_point;
-      const weight = parseFloat(loanPortfolioLoadData.weight.replace('%', ''));
-      const variance = normalizedScore - loanPortfolioLoadData.target;
+      const normalizedScore = parseFloat(loanPortfolioLoadData.score || '0');
+      const percentagePoint = loanPortfolioLoadData.percentage_point || 0;
+      const weight = parseFloat((loanPortfolioLoadData.weight || '0%').replace('%', ''));
+      const variance = normalizedScore - (loanPortfolioLoadData.target || 0);
       
       keyMetrics = keyMetrics.map(metric => {
         if (metric.parameter === 'Portfolio Load Balance') {
           return {
             ...metric,
-            institutionalAvg: '96%',
+            institutionalAvg: '--',
             currentPeriod: `${normalizedScore.toFixed(1)}%`,
             target: '100%',
             variance: `${variance.toFixed(1)}%`,
@@ -233,7 +233,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
     // Update Loan Consultant Performance Index with Volume Achievement data
     if (volumeAchievementData) {
-      const normalizedScore = parseFloat(volumeAchievementData.normalized_score);
+      const normalizedScore = parseFloat(volumeAchievementData.normalized_score || '0');
       const variance = normalizedScore - 100; // Target is 100% for normalized score
       
       updatedData = {
@@ -245,7 +245,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
             
             return {
               ...param,
-              institutionalAvg: '85%', // Hardcoded institutional average
+              institutionalAvg: '--', // Hardcoded institutional average
               userLevelAvg: `${normalizedScore.toFixed(1)}%`,
               variance: `${variance.toFixed(1)}%`,
               varianceAbs: `${Math.abs(variance).toFixed(1)}pp`,
@@ -258,9 +258,27 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       };
     }
 
+    // Recalculate overall score based on updated parameters
+    const overallScore = Math.round(
+      updatedData.parameters.reduce((sum, param) => {
+        const score = parseFloat(param.userLevelAvg.replace('%', ''));
+        return sum + (isNaN(score) ? 0 : score);
+      }, 0) / updatedData.parameters.length
+    );
+
+    // Recalculate overall institutional average
+    const overallInstAvg = Math.round(
+      updatedData.parameters.reduce((sum, param) => {
+        const score = parseFloat(param.institutionalAvg.replace('%', ''));
+        return sum + (isNaN(score) ? 0 : score);
+      }, 0) / updatedData.parameters.length
+    );
+
     return {
       ...updatedData,
-      keyMetrics
+      keyMetrics,
+      overallScore,
+      overallInstAvg
     };
   }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData]);
 
