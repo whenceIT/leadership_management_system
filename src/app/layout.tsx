@@ -4,6 +4,7 @@ import "flatpickr/dist/flatpickr.css";
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { GlobalPageLoader } from '@/components/ui/loader/GlobalLoading';
+import InternetStatus from '@/components/InternetStatus/InternetStatus';
 import type { Metadata } from 'next';
 
 const outfit = Outfit({
@@ -29,6 +30,7 @@ export default function RootLayout({
         <ThemeProvider>
           <SidebarProvider>
             <GlobalPageLoader />
+            <InternetStatus />
             {children}
           </SidebarProvider>
         </ThemeProvider>
