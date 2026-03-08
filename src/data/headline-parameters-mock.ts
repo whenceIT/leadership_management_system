@@ -24,7 +24,7 @@ export interface HeadlineParameter {
   trend: '↑' | '↓' | '→';
   trendValue: string;
   constituents: Constituent[];
-  colorScheme: 'blue' | 'green' | 'yellow' | 'red' | 'purple';
+  colorScheme: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'cyan';
   onDrillDown?: () => void;
 }
 
@@ -38,6 +38,7 @@ export function getHeadlineParameters(options?: {
   onProductsDrillDown?: () => void;
   onRiskDrillDown?: () => void;
   onRevenueDrillDown?: () => void;
+  onCashLiquidityDrillDown?: () => void;
 }): HeadlineParameter[] {
   return [
     {
@@ -303,6 +304,59 @@ export function getHeadlineParameters(options?: {
           instAvg: "1.8% MoM",
           provAvg: "1.0% MoM",
           branchAvg: "0% MoM"
+        }
+       ]
+    },
+    {
+      title: "Cash & Liquidity Management Index",
+      shortTitle: "CLMI",
+      indexScore: 62,
+      instAvg: 70,
+      target: 95,
+      trend: '↓',
+      trendValue: "-5pp from last month",
+      colorScheme: 'cyan',
+      onDrillDown: options?.onCashLiquidityDrillDown,
+      constituents: [
+        {
+          name: "Cash Position Score",
+          score: 35,
+          weight: 40,
+          current: "K35,000",
+          target: "K20,000-K30,000",
+          instAvg: "K25,000",
+          provAvg: "K28,000",
+          branchAvg: "K35,000"
+        },
+        {
+          name: "Above-Threshold Risk",
+          score: 94,
+          weight: 30,
+          current: "K5,000 unapproved",
+          target: "Zero unapproved excess",
+          instAvg: "K2,000",
+          provAvg: "K3,000",
+          branchAvg: "K5,000"
+        },
+        {
+          name: "Below-Threshold Risk",
+          score: 62,
+          weight: 20,
+          current: "K15,000",
+          target: "≥ K20,000",
+          instAvg: "K22,000",
+          provAvg: "K21,000",
+          branchAvg: "K15,000"
+        },
+        {
+          name: "Approved Exception Ratio",
+          score: 76,
+          weight: 10,
+          current: "67% approved",
+          target: "100% approved",
+          instAvg: "85%",
+          provAvg: "80%",
+          branchAvg: "67%"
         }
       ]
     }

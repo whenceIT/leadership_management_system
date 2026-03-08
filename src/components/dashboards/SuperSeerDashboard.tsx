@@ -282,6 +282,7 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
         overallScore={summaryData.overallScore}
         overallInstAvg={summaryData.overallInstAvg}
         overallTarget={summaryData.overallTarget}
+        isLoading={isLoading || isKpiLoading}
       />
     
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import ApiLoader from '@/components/ApiLoader/ApiLoader';
 
 interface KPI { 
   name: string;
@@ -90,7 +91,8 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
   volumeAchievementData?: any, collectionEfficiencyData?: any, efficiencyRatioData?: any, growthTrajectoryData?: any,
   longTermDelinquencyData?: any, month1DefaultPerformanceData?: any, month3RecoveryAchievementsData?: any,
   portfolioQualityData?: any, productDiversificationData?: any, productRiskScoreData?: any, rollRateControlData?: any,
-  yieldAchievementsData?: any, revenueAchievementsData?: any, profitabilityContributionData?: any): InstitutionalSummaryData {
+  yieldAchievementsData?: any, revenueAchievementsData?: any, profitabilityContributionData?: any,
+  cashPositionData?: any, aboveThresholdRiskData?: any, belowThresholdRiskData?: any, approvedExceptionRatioData?: any): InstitutionalSummaryData {
   
   // Calculate aggregated scores for each parameter
   const branchStructureAggregated = aggregateBranchStructureKPIs(staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData);
@@ -98,6 +100,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
   const loanProductsAggregated = aggregateLoanProductsKPIs(productDiversificationData, yieldAchievementsData, productRiskScoreData, efficiencyRatioData);
   const riskManagementAggregated = aggregateRiskManagementKPIs(month1DefaultPerformanceData, longTermDelinquencyData, month3RecoveryAchievementsData, rollRateControlData);
   const revenuePerformanceAggregated = aggregateRevenuePerformanceKPIs(growthTrajectoryData, efficiencyRatioData, productivityAchievementData, revenueAchievementsData, profitabilityContributionData);
+  const cashLiquidityAggregated = aggregateCashLiquidityManagementKPIs(cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData);
 
   // Base data that can be adjusted based on user level
   const baseParameters: ParameterSummary[] = [
@@ -155,6 +158,17 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       varianceAbs: revenuePerformanceAggregated.varianceAbs || '--',
       trend: revenuePerformanceAggregated.trend || '→',
       status: revenuePerformanceAggregated.status || 'warning'
+    },
+    {
+      name: 'Cash & Liquidity Management Index',
+      shortName: 'Cash & Liquidity',
+      institutionalAvg: cashLiquidityAggregated.institutionalAvg || '--',
+      userLevelAvg: cashLiquidityAggregated.userLevelAvg || '--',
+      target: cashLiquidityAggregated.target || '--',
+      variance: cashLiquidityAggregated.variance || '--',
+      varianceAbs: cashLiquidityAggregated.varianceAbs || '--',
+      trend: cashLiquidityAggregated.trend || '→',
+      status: cashLiquidityAggregated.status || 'warning'
     }
   ];
 
@@ -284,6 +298,11 @@ interface InstitutionalHealthSummaryProps {
   yieldAchievementsData?: any;
   revenueAchievementsData?: any;
   profitabilityContributionData?: any;
+  cashPositionData?: any;
+  aboveThresholdRiskData?: any;
+  belowThresholdRiskData?: any;
+  approvedExceptionRatioData?: any;
+  isLoading?: boolean;
 }
 
 function getTrendColor(trend: '↑' | '↓' | '→', status: 'good' | 'warning' | 'critical') {
@@ -635,6 +654,76 @@ function aggregateRiskManagementKPIs(
   };
 }
 
+function aggregateCashLiquidityManagementKPIs(
+  cashPositionData?: any,
+  aboveThresholdRiskData?: any,
+  belowThresholdRiskData?: any,
+  approvedExceptionRatioData?: any
+): Partial<ParameterSummary> {
+  const kpis = [
+    { 
+      data: cashPositionData, 
+      getScore: (d: any) => parseFloat(d?.average_score || '0'),
+      weight: parseFloat(cashPositionData?.weight || '40') / 100
+    },
+    { 
+      data: aboveThresholdRiskData, 
+      getScore: (d: any) => parseFloat(d?.average_score || '0'),
+      weight: parseFloat(aboveThresholdRiskData?.weight || '30') / 100
+    },
+    { 
+      data: belowThresholdRiskData, 
+      getScore: (d: any) => parseFloat(d?.average_score || '0'),
+      weight: parseFloat(belowThresholdRiskData?.weight || '20') / 100
+    },
+    { 
+      data: approvedExceptionRatioData, 
+      getScore: (d: any) => parseFloat(d?.average_score || '0'),
+      weight: parseFloat(approvedExceptionRatioData?.weight || '10') / 100
+    }
+  ].filter(kpi => kpi.data);
+
+  if (kpis.length === 0) {
+    return {
+      institutionalAvg: '--',
+      userLevelAvg: '--',
+      target: '--',
+      variance: '--',
+      varianceAbs: '--',
+      trend: '→',
+      status: 'warning'
+    };
+  }
+
+  const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
+  const overallScore = Math.round(weightedScore);
+  
+  const target = 95;
+  const variance = overallScore - target;
+  const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
+  const varianceAbs = `${Math.abs(variance)}pp`;
+  
+  const trend = overallScore >= target ? '↑' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+
+  const validInstitutionalAvgs = kpis
+    .map(kpi => parseFloat(kpi.data?.instAvg || '0'))
+    .filter(score => !isNaN(score));
+  const institutionalAvg = validInstitutionalAvgs.length > 0 
+    ? `${Math.round(validInstitutionalAvgs.reduce((a, b) => a + b, 0) / validInstitutionalAvgs.length)}%`
+    : '--';
+
+  return {
+    institutionalAvg,
+    userLevelAvg: `${overallScore}%`,
+    target: '≥95%',
+    variance: varianceStr,
+    varianceAbs,
+    trend,
+    status
+  };
+}
+
 function aggregateRevenuePerformanceKPIs(
   growthTrajectoryData?: any,
   efficiencyRatioData?: any,
@@ -729,7 +818,11 @@ function getParameterKPIs(paramName: string,
   rollRateControlData?: any,
   yieldAchievementsData?: any,
   revenueAchievementsData?: any,
-  profitabilityContributionData?: any): KPI[] {
+  profitabilityContributionData?: any,
+  cashPositionData?: any,
+  aboveThresholdRiskData?: any,
+  belowThresholdRiskData?: any,
+  approvedExceptionRatioData?: any): KPI[] {
   // Helper function to get score from data (handles both branch and institutional formats)
   const getScore = (data: any, field1: string, field2?: string): number => {
     if (!data) return 0;
@@ -954,6 +1047,44 @@ function getParameterKPIs(paramName: string,
         trend: profitabilityContributionData ? (getScore(profitabilityContributionData, 'normalized_score', 'average_normalized_score') >= parseFloat(profitabilityContributionData.target || '0') ? '↑' : '↓') : '↓',
         status: profitabilityContributionData ? (getScore(profitabilityContributionData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(profitabilityContributionData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical') : 'warning'
       }
+    ],
+    'Cash & Liquidity Management Index': [
+      {
+        name: 'Cash Position Score',
+        institutionalAvg: cashPositionData ? '--' : '--',
+        currentPeriod: cashPositionData ? `${getScore(cashPositionData, 'normalized_score', 'average_score').toFixed(2)}` : '--',
+        target: 'Within K20,000-K30,000',
+        variance: cashPositionData ? `${(getScore(cashPositionData, 'normalized_score', 'average_score') - 100).toFixed(2)}%` : '--',
+        trend: cashPositionData ? (getScore(cashPositionData, 'normalized_score', 'average_score') >= 90 ? '↑' : '↓') : '→',
+        status: cashPositionData ? (getScore(cashPositionData, 'normalized_score', 'average_score') >= 90 ? 'good' : getScore(cashPositionData, 'normalized_score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning'
+      },
+      {
+        name: 'Above-Threshold Risk',
+        institutionalAvg: aboveThresholdRiskData ? '--' : '--',
+        currentPeriod: aboveThresholdRiskData ? `${getScore(aboveThresholdRiskData, 'normalized_score', 'average_score').toFixed(2)}` : '--',
+        target: 'Zero unapproved excess',
+        variance: aboveThresholdRiskData ? `${(getScore(aboveThresholdRiskData, 'normalized_score', 'average_score') - 100).toFixed(2)}%` : '--',
+        trend: aboveThresholdRiskData ? (getScore(aboveThresholdRiskData, 'normalized_score', 'average_score') >= 90 ? '↑' : '↓') : '→',
+        status: aboveThresholdRiskData ? (getScore(aboveThresholdRiskData, 'normalized_score', 'average_score') >= 90 ? 'good' : getScore(aboveThresholdRiskData, 'normalized_score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning'
+      },
+      {
+        name: 'Below-Threshold Risk',
+        institutionalAvg: belowThresholdRiskData ? '--' : '--',
+        currentPeriod: belowThresholdRiskData ? `${getScore(belowThresholdRiskData, 'normalized_score', 'average_score').toFixed(2)}` : '--',
+        target: '≥ K20,000',
+        variance: belowThresholdRiskData ? `${(getScore(belowThresholdRiskData, 'normalized_score', 'average_score') - 100).toFixed(2)}%` : '--',
+        trend: belowThresholdRiskData ? (getScore(belowThresholdRiskData, 'normalized_score', 'average_score') >= 90 ? '↑' : '↓') : '→',
+        status: belowThresholdRiskData ? (getScore(belowThresholdRiskData, 'normalized_score', 'average_score') >= 90 ? 'good' : getScore(belowThresholdRiskData, 'normalized_score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning'
+      },
+      {
+        name: 'Approved Exception Ratio',
+        institutionalAvg: approvedExceptionRatioData ? '--' : '--',
+        currentPeriod: approvedExceptionRatioData ? `${getScore(approvedExceptionRatioData, 'normalized_score', 'average_score').toFixed(2)}` : '--',
+        target: '100% approved',
+        variance: approvedExceptionRatioData ? `${(getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') - 100).toFixed(2)}%` : '--',
+        trend: approvedExceptionRatioData ? (getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') >= 90 ? '↑' : '↓') : '→',
+        status: approvedExceptionRatioData ? (getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') >= 90 ? 'good' : getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning'
+      }
     ]
   };
   
@@ -986,7 +1117,12 @@ export function InstitutionalHealthSummary({
   rollRateControlData,
   yieldAchievementsData,
   revenueAchievementsData,
-  profitabilityContributionData
+  profitabilityContributionData,
+  cashPositionData,
+  aboveThresholdRiskData,
+  belowThresholdRiskData,
+  approvedExceptionRatioData,
+  isLoading = false
 }: InstitutionalHealthSummaryProps) {
   const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
@@ -1005,6 +1141,7 @@ export function InstitutionalHealthSummary({
 
   return (
     <div className="space-y-4">
+      <ApiLoader isLoading={isLoading} text="Loading institutional health data..." />
       {/* Overall Health Banner */}
       {overallScore !== undefined && (
         <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-5 text-white">
@@ -1044,7 +1181,7 @@ export function InstitutionalHealthSummary({
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-              Five Headline Parameters — {levelLabel} Level
+              Six Headline Parameters — {levelLabel} Level
             </h3>
             <span className="text-xs text-gray-500 dark:text-gray-400">{userLevelLabel}</span>
           </div>
@@ -1054,6 +1191,7 @@ export function InstitutionalHealthSummary({
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameter</th>
+                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Institution Avg</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{levelLabel} Avg</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variance</th>
@@ -1081,7 +1219,11 @@ export function InstitutionalHealthSummary({
                     rollRateControlData,
                     yieldAchievementsData,
                     revenueAchievementsData,
-                    profitabilityContributionData);
+                    profitabilityContributionData,
+                    cashPositionData,
+                    aboveThresholdRiskData,
+                    belowThresholdRiskData,
+                    approvedExceptionRatioData);
                   const isExpanded = expandedParam === param.name;
                   
                   // Calculate progress percentage
@@ -1105,6 +1247,11 @@ export function InstitutionalHealthSummary({
                               <p className="text-xs text-gray-500 dark:text-gray-400">{param.shortName}</p>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                            {param.institutionalAvg}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">

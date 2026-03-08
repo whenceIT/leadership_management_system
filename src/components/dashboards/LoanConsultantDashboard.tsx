@@ -132,7 +132,7 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
     defaultRate: (2 + Math.random() * 5).toFixed(2),
   }));
 
-  const summaryData = getInstitutionalSummaryData('consultant', 'Personal Performance View');
+  const summaryData = getInstitutionalSummaryData('consultant', 'Personal Performance View', undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined);
 
   return (
     <DashboardBase
@@ -149,6 +149,7 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
         overallScore={summaryData.overallScore}
         overallInstAvg={summaryData.overallInstAvg}
         overallTarget={summaryData.overallTarget}
+        isLoading={isLoading || isKpiLoading || isLoadingMetrics || isLoadingStats}
       />
 
       {/* Quick Info Bar */}
