@@ -1191,7 +1191,7 @@ export function InstitutionalHealthSummary({
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameter</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Institution Avg</th>
+                  {/* <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Institution Avg</th> */}
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{levelLabel} Avg</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variance</th>
@@ -1248,11 +1248,11 @@ export function InstitutionalHealthSummary({
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-center">
+                        {/* <td className="px-4 py-3 text-center">
                           <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
                             {param.institutionalAvg}
                           </span>
-                        </td>
+                        </td> */}
                         <td className="px-4 py-3 text-center">
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
                             {param.userLevelAvg}
