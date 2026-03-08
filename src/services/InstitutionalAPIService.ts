@@ -163,3 +163,35 @@ export async function fetchInstitutionalRollRateControl(): Promise<Institutional
   }
   return response.json();
 }
+
+export async function fetchInstitutionalCashPosition(): Promise<InstitutionalAPIResponse> {
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/cash-position/company');
+  if (!response.ok) {
+    throw new Error('Failed to fetch institutional cash position');
+  }
+  return response.json();
+}
+
+export async function fetchInstitutionalAboveThresholdRisk(): Promise<InstitutionalAPIResponse> {
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/above-threshold-risk/company');
+  if (!response.ok) {
+    throw new Error('Failed to fetch institutional above-threshold risk');
+  }
+  return response.json();
+}
+
+export async function fetchInstitutionalBelowThresholdRisk(): Promise<InstitutionalAPIResponse> {
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/below-threshold-risk/company');
+  if (!response.ok) {
+    throw new Error('Failed to fetch institutional below-threshold risk');
+  }
+  return response.json();
+}
+
+export async function fetchInstitutionalApprovedExceptionRatio(): Promise<InstitutionalAPIResponse> {
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/approved-exception-ratio/company');
+  if (!response.ok) {
+    throw new Error('Failed to fetch institutional approved exception ratio');
+  }
+  return response.json();
+}

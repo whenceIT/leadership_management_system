@@ -150,6 +150,7 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
         overallScore={summaryData.overallScore}
         overallInstAvg={summaryData.overallInstAvg}
         overallTarget={summaryData.overallTarget}
+        isLoading={isKpiLoading}
       />
 
       {/* Quick Info Bar */}

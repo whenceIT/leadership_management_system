@@ -22,6 +22,10 @@ import { useProductDiversification } from '@/hooks/useProductDiversification';
 import { useProductRiskScore } from '@/hooks/useProductRiskScore';
 import { useRollRateControl } from '@/hooks/useRollRateControl';
 import { useYieldAchievements } from '@/hooks/useYieldAchievements';
+import { useCashPosition } from '@/hooks/useCashPosition';
+import { useAboveThresholdRisk } from '@/hooks/useAboveThresholdRisk';
+import { useBelowThresholdRisk } from '@/hooks/useBelowThresholdRisk';
+import { useApprovedExceptionRatio } from '@/hooks/useApprovedExceptionRatio';
 
 interface BranchManagerDashboardProps {
   userTier?: string | null;
@@ -108,9 +112,21 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
   // Fetch yield achievements data
   const { data: yieldAchievementsData, isLoading: isYieldAchievementsLoading, error: yieldAchievementsError } = useYieldAchievements(3);
 
+  // Fetch cash position data
+  const { data: cashPositionData, isLoading: isCashPositionLoading, error: cashPositionError } = useCashPosition(3);
+
+  // Fetch above threshold risk data
+  const { data: aboveThresholdRiskData, isLoading: isAboveThresholdRiskLoading, error: aboveThresholdRiskError } = useAboveThresholdRisk(3);
+
+  // Fetch below threshold risk data
+  const { data: belowThresholdRiskData, isLoading: isBelowThresholdRiskLoading, error: belowThresholdRiskError } = useBelowThresholdRisk(3);
+
+  // Fetch approved exception ratio data
+  const { data: approvedExceptionRatioData, isLoading: isApprovedExceptionRatioLoading, error: approvedExceptionRatioError } = useApprovedExceptionRatio(3);
+
   // Custom summary data with dynamic aggregated Branch Structure & Staffing Index
   const summaryData = useMemo(() => {
-    const baseData = getInstitutionalSummaryData('branch', 'Branch View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData);
+    const baseData = getInstitutionalSummaryData('branch', 'Branch View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData);
     let updatedData = { ...baseData };
 
     // Update key metrics with individual KPI data
@@ -314,7 +330,12 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         productRiskScoreData={productRiskScoreData}
         rollRateControlData={rollRateControlData}
         yieldAchievementsData={yieldAchievementsData}
-      />
+         cashPositionData={cashPositionData}
+         aboveThresholdRiskData={aboveThresholdRiskData}
+         belowThresholdRiskData={belowThresholdRiskData}
+         approvedExceptionRatioData={approvedExceptionRatioData}
+         isLoading={isLoading || isKpiLoading || isStaffAdequacyLoading || isProductivityLoading || isVacancyLoading || isVolumeLoading || isLoanPortfolioLoading || isCollectionEfficiencyLoading || isEfficiencyRatioLoading || isGrowthTrajectoryLoading || isLongTermDelinquencyLoading || isMonth1DefaultPerformanceLoading || isMonth3RecoveryAchievementsLoading || isPortfolioQualityLoading || isProductDiversificationLoading || isProductRiskScoreLoading || isRollRateControlLoading || isYieldAchievementsLoading || isCashPositionLoading || isAboveThresholdRiskLoading || isBelowThresholdRiskLoading || isApprovedExceptionRatioLoading}
+       />
 
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">
