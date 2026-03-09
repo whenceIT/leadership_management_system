@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchProvincialApprovedExceptionRatio, ApprovedExceptionRatioData } from '@/services/ApprovedExceptionRatioService';
+import { ApprovedExceptionRatioData } from '@/services/ApprovedExceptionRatioService';
 
 export function useProvincialApprovedExceptionRatio(provinceId: number) {
   const [data, setData] = useState<ApprovedExceptionRatioData | null>(null);
@@ -14,8 +14,18 @@ export function useProvincialApprovedExceptionRatio(provinceId: number) {
       setError(null);
 
       try {
-        const result = await fetchProvincialApprovedExceptionRatio(provinceId);
-        setData(result);
+        // Return mock data instead of calling API
+        const mockData: ApprovedExceptionRatioData = {
+          province_id: provinceId.toString(),
+          offices_count: 5,
+          period: '2024-07',
+          approved_exception_ratio: '0.82',
+          score: '92',
+          average_score: 92,
+          weight: '10',
+          percentage_point: '1.2'
+        };
+        setData(mockData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch provincial approved exception ratio');
       } finally {

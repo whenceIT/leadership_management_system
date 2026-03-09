@@ -274,6 +274,72 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       };
     }
 
+      // Update Cash Position Score key metric
+     if (cashPositionData) {
+       const score = parseFloat(cashPositionData.score || '0');
+       const percentagePoints = parseFloat(cashPositionData.percentage_points || '0');
+       
+       keyMetrics = keyMetrics.map(metric => {
+         if (metric.parameter === 'Cash Position Score') {
+           return {
+             ...metric,
+             institutionalAvg: '--',
+             currentPeriod: `${score.toFixed(1)}%`,
+             target: '20000 to 30000',
+             variance: `${(score - 100).toFixed(1)}%`,
+             trend: (score >= 90 ? '↑' : '↓') as '↑' | '↓' | '→',
+             provAvg: '90%',
+             contribution: `${percentagePoints.toFixed(1)}/40pp ${score >= 90 ? '▲' : '▼'}`
+           };
+         }
+         return metric;
+       });
+     }
+
+     // Update Above-Threshold Risk key metric
+     if (aboveThresholdRiskData) {
+       const score = parseFloat(aboveThresholdRiskData.score || '0');
+       const percentagePoints = parseFloat(aboveThresholdRiskData.percentage_points || '0');
+       
+       keyMetrics = keyMetrics.map(metric => {
+         if (metric.parameter === 'Above-Threshold Risk') {
+           return {
+             ...metric,
+             institutionalAvg: '--',
+             currentPeriod: `${score.toFixed(1)}%`,
+             target: 'Zero',
+             variance: `${(score - 100).toFixed(1)}%`,
+             trend: (score >= 90 ? '↑' : '↓') as '↑' | '↓' | '→',
+             provAvg: '90%',
+             contribution: `${percentagePoints.toFixed(1)}/30pp ${score >= 90 ? '▲' : '▼'}`
+           };
+         }
+         return metric;
+       });
+     }
+
+     // Update Below-Threshold Risk key metric
+     if (belowThresholdRiskData) {
+       const score = parseFloat(belowThresholdRiskData.score || '0');
+       const percentagePoints = parseFloat(belowThresholdRiskData.percentage_points || '0');
+       
+       keyMetrics = keyMetrics.map(metric => {
+         if (metric.parameter === 'Below-Threshold Risk') {
+           return {
+             ...metric,
+             institutionalAvg: '--',
+             currentPeriod: `${score.toFixed(1)}%`,
+             target: 'Zero',
+             variance: `${(score - 100).toFixed(1)}%`,
+             trend: (score >= 90 ? '↑' : '↓') as '↑' | '↓' | '→',
+             provAvg: '90%',
+             contribution: `${percentagePoints.toFixed(1)}/20pp ${score >= 90 ? '▲' : '▼'}`
+           };
+         }
+         return metric;
+       });
+     }
+
     // Recalculate overall score based on updated parameters
     const overallScore = Math.round(
       updatedData.parameters.reduce((sum, param) => {
@@ -296,7 +362,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       overallScore,
       overallInstAvg
     };
-  }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData]);
+  }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData, cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData]);
 
   return (
     <DashboardBase

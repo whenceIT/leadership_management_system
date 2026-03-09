@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchInstitutionalCashPosition, InstitutionalAPIResponse } from '@/services/InstitutionalAPIService';
+import { fetchInstitutionalCashPosition, CashPositionData } from '@/services/CashPositionService';
 
 export function useInstitutionalCashPosition() {
-  const [data, setData] = useState<InstitutionalAPIResponse | null>(null);
+  const [data, setData] = useState<CashPositionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
