@@ -359,7 +359,7 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
     const varianceAbs = `${Math.abs(variance)}pp`;
     
-    const trend = overallScore >= target ? '↑' : '↓';
+    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
     const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
     return {
@@ -417,8 +417,8 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
   
-  const trend = overallScore >= target ? '↑' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   const validInstitutionalAvgs = kpis
     .map(kpi => parseFloat(kpi.data?.instAvg || '0'))
@@ -493,8 +493,8 @@ function aggregateLoanConsultantPerformanceKPIs(
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
   
-  const trend = overallScore >= target ? '↑' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   const validInstitutionalAvgs = kpis
     .map(kpi => parseFloat(kpi.data?.instAvg || '0'))
@@ -563,8 +563,8 @@ function aggregateLoanProductsKPIs(
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
   
-  const trend = overallScore >= target ? '↑' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   const validInstitutionalAvgs = kpis
     .map(kpi => parseFloat(kpi.data?.instAvg || '0'))
@@ -633,8 +633,8 @@ function aggregateRiskManagementKPIs(
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
   
-  const trend = overallScore >= target ? '↑' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   const validInstitutionalAvgs = kpis
     .map(kpi => parseFloat(kpi.data?.instAvg || '0'))
@@ -703,8 +703,8 @@ function aggregateCashLiquidityManagementKPIs(
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
   
-  const trend = overallScore >= target ? '↑' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   const validInstitutionalAvgs = kpis
     .map(kpi => parseFloat(kpi.data?.instAvg || '0'))
@@ -779,8 +779,8 @@ function aggregateRevenuePerformanceKPIs(
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
   
-  const trend = overallScore >= target ? '↑' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   const validInstitutionalAvgs = kpis
     .map(kpi => parseFloat(kpi.data?.instAvg || '0'))
@@ -1277,9 +1277,8 @@ export function InstitutionalHealthSummary({
                               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                                 <div 
                                   className={`h-2 rounded-full transition-all duration-300 ${
-                                    progress < 40 ? 'bg-red-500' :
-                                    progress < 60 ? 'bg-yellow-500' :
-                                    progress < 70 ? 'bg-yellow-600' : 'bg-green-500'
+                                    param.status === 'critical' ? 'bg-red-500' :
+                                    param.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
                                   }`}
                                   style={{ width: `${progress}%` }}
                                 />

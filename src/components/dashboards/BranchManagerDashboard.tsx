@@ -256,7 +256,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         ...updatedData,
         parameters: updatedData.parameters.map(param => {
           if (param.name === 'Loan Consultant Performance Index') {
-            const trend = normalizedScore >= 100 ? '↑' : '↓';
+            const trend = normalizedScore >= 90 ? '↑' : normalizedScore >= 70 ? '→' : '↓';
             const status = normalizedScore >= 90 ? 'good' : normalizedScore >= 70 ? 'warning' : 'critical';
             
             return {
