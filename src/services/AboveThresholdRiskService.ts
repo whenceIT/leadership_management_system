@@ -2,12 +2,14 @@ export interface AboveThresholdRiskData {
   office_id?: string;
   province_id?: string;
   offices_count?: number;
-  period: string;
+  period?: string;
   above_threshold_risk?: string;
   score?: string;
-  average_score?: number;
-  weight: string;
-  percentage_point: string;
+  average_score?: string;
+  percentage_points?: string;
+  closing_balance?: string;
+  weight?: string;
+  percentage_point?: string;
 }
 
 export async function fetchAboveThresholdRisk(branchId: number): Promise<AboveThresholdRiskData> {
@@ -25,6 +27,16 @@ export async function fetchProvincialAboveThresholdRisk(provinceId: number): Pro
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial above threshold risk: ${response.statusText}`);
+  }
+  
+  return await response.json();
+}
+
+export async function fetchInstitutionalAboveThresholdRisk(): Promise<AboveThresholdRiskData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/above-threshold-risk/company`);
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch institutional above threshold risk: ${response.statusText}`);
   }
   
   return await response.json();

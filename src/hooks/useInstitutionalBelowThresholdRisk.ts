@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchInstitutionalBelowThresholdRisk, InstitutionalAPIResponse } from '@/services/InstitutionalAPIService';
+import { fetchInstitutionalBelowThresholdRisk, BelowThresholdRiskData } from '@/services/BelowThresholdRiskService';
 
 export function useInstitutionalBelowThresholdRisk() {
-  const [data, setData] = useState<InstitutionalAPIResponse | null>(null);
+  const [data, setData] = useState<BelowThresholdRiskData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
