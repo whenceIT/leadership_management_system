@@ -335,6 +335,7 @@ export default function ProvincialManagerDashboard() {
       <InstitutionalHealthSummary
         userLevel="province"
         userLevelLabel="Provincial View"
+        userProvinceId={provinceId}
         parameters={summaryData.parameters}
         recentActivities={summaryData.recentActivities}
         overallScore={summaryData.overallScore}

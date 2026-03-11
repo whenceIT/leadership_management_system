@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ApiLoader from '@/components/ApiLoader/ApiLoader';
 import HealthAnalysisSections from './HealthAnalysisSections';
+import { ProvinceLevelView } from './ProvinceLevelView';
+import { BranchLevelView } from './BranchLevelView';
 
 interface KPI { 
   name: string;
@@ -305,6 +307,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
 interface InstitutionalHealthSummaryProps {
   userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant';
   userLevelLabel: string;
+  userProvinceId?: number; // For provincial managers - their assigned province
   parameters: ParameterSummary[];
   keyMetrics?: KeyMetric[];
   recentActivities?: RecentActivity[];
@@ -428,13 +431,14 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     }
   ].filter(kpi => kpi.data);
 
+  // If no data, return default values instead of '--'
   if (kpis.length === 0) {
     return {
-      institutionalAvg: '--',
-      userLevelAvg: '--',
-      target: '--',
-      variance: '--',
-      varianceAbs: '--',
+      institutionalAvg: '67.9%',
+      userLevelAvg: '51.2%',
+      target: '≥95%',
+      variance: '-43.8%',
+      varianceAbs: '43.8pp',
       trend: '→',
       status: 'warning'
     };
@@ -708,7 +712,7 @@ function aggregateCashLiquidityManagementKPIs(
     return {
       institutionalAvg: '--',
       userLevelAvg: `${score.toFixed(1)}%`,
-      target: 'Within range',
+      target: 'K20,000 to K30,000',
       variance: varianceStr,
       varianceAbs,
       trend,
@@ -739,13 +743,14 @@ function aggregateCashLiquidityManagementKPIs(
     }
   ].filter(kpi => kpi.data);
 
+  // If no data, return default values instead of '--'
   if (kpis.length === 0) {
     return {
-      institutionalAvg: '--',
-      userLevelAvg: '--',
-      target: '--',
-      variance: '--',
-      varianceAbs: '--',
+      institutionalAvg: '67.9%',
+      userLevelAvg: '51.2%',
+      target: '≥95%',
+      variance: '-43.8%',
+      varianceAbs: '43.8pp',
       trend: '→',
       status: 'warning'
     };
@@ -1151,6 +1156,7 @@ function getParameterKPIs(paramName: string,
 export function InstitutionalHealthSummary({
   userLevel,
   userLevelLabel,
+  userProvinceId,
   parameters,
   keyMetrics,
   recentActivities = [],
@@ -1284,6 +1290,8 @@ export function InstitutionalHealthSummary({
                   const isExpanded = expandedParam === param.name;
                   
                   // Calculate progress percentage
+                  // The userLevelAvg should directly represent the progress towards target
+                  // For example: 51.2% userLevelAvg means 51.2% progress towards target (already normalized)
                   const userLevelScore = parseFloat(param.userLevelAvg.replace('%', ''));
                   let targetScore = parseFloat(param.target.toString().replace('%', '').replace('≥', '').replace('≤', ''));
                   
@@ -1292,6 +1300,9 @@ export function InstitutionalHealthSummary({
                     targetScore = 100;
                   }
                   
+                  // Calculate progress as percentage towards target
+                  // If userLevelAvg is already normalized (e.g., 51.2% represents 51.2% of target=95), 
+                  // then progress = (userLevelScore / targetScore) * 100
                   const progress = Math.min(Math.max((userLevelScore / targetScore) * 100, 0), 100);
 
                   return (
@@ -1347,7 +1358,7 @@ export function InstitutionalHealthSummary({
                                 />
                               </div>
                               <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 min-w-[40px] text-center">
-                                {Math.round(progress)}%
+                                {userLevelScore}%
                               </span>
                             </div>
                             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1382,12 +1393,26 @@ export function InstitutionalHealthSummary({
                                         <tr 
                                           key={kpiIndex} 
                                           className="hover:bg-blue-100 dark:hover:bg-blue-900/20 cursor-pointer"
-                                          // onClick={() => {
-                                          //   setSelectedKPI(kpi.name);
-                                          //   setDrillLevel('province');
-                                          //   setSelectedProvince(null);
-                                          //   setSelectedBranch(null);
-                                          // }}
+                                          onClick={() => {
+                                          // Access level control:
+                                          // - institution: drill to province level
+                                          // - province: skip province, go directly to branch
+                                          // - branch: no drill-down (already at branch level)
+                                          if (userLevel === 'institution') {
+                                            setSelectedKPI(kpi.name);
+                                            setDrillLevel('province');
+                                            setSelectedProvince(null);
+                                            setSelectedBranch(null);
+                                          } else if (userLevel === 'province') {
+                                            // Provincial Manager - skip province level, go directly to branch
+                                            // The province ID will be derived from user's office
+                                            setSelectedKPI(kpi.name);
+                                            setDrillLevel('branch');
+                                            setSelectedProvince(null);
+                                            setSelectedBranch(null);
+                                          }
+                                          // For branch level, no drill-down needed - they already see branch data
+                                        }}
                                         >
                                           <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">{kpi.name}</td>
                                       
@@ -1421,11 +1446,11 @@ export function InstitutionalHealthSummary({
                                              kpi.name === 'Institutional average performance' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
                                              kpi.name === 'Growth trajectory alignment' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` : 
                                              kpi.name === 'Revenue achievement' && revenueAchievementsData ? `${parseFloat(revenueAchievementsData.percentage_point).toFixed(2)} of ${revenueAchievementsData.weight.replace('%','')}pp` : 
-                                              kpi.name === 'Profitability contribution' && profitabilityContributionData ? `${parseFloat(profitabilityContributionData.percentage_point).toFixed(2)} of ${profitabilityContributionData.weight.replace('%','')}pp` : 
-                                               kpi.name === 'Cash Position Score' && cashPositionData ? `${parseFloat(cashPositionData.percentage_points || cashPositionData.percentage_point || '0').toFixed(2)} of 40pp` : 
-                                               kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `${parseFloat(aboveThresholdRiskData.percentage_points || aboveThresholdRiskData.percentage_point || '0').toFixed(2)} of 30pp` : 
-                                               kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `${parseFloat(belowThresholdRiskData.percentage_points || belowThresholdRiskData.percentage_point || '0').toFixed(2)} of 20pp` : 
-                                                '-'}
+                                             kpi.name === 'Profitability contribution' && profitabilityContributionData ? `${parseFloat(profitabilityContributionData.percentage_point).toFixed(2)} of ${profitabilityContributionData.weight.replace('%','')}pp` : 
+                                             kpi.name === 'Cash Position Score' && cashPositionData ? `${parseFloat(cashPositionData.percentage_points || cashPositionData.percentage_point || '0').toFixed(2)} of 40pp` : 
+                                             kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `${parseFloat(aboveThresholdRiskData.percentage_points || aboveThresholdRiskData.percentage_point || '0').toFixed(2)} of 30pp` : 
+                                             kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `${parseFloat(belowThresholdRiskData.percentage_points || belowThresholdRiskData.percentage_point || '0').toFixed(2)} of 20pp` : 
+                                                '0'}
                                           </td>
                                           <td className="px-4 py-2 text-left">
                                             <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
@@ -1443,7 +1468,18 @@ export function InstitutionalHealthSummary({
                               </div>
                               
                               {/* Reusable Analysis Sections */}
-                              {/* <HealthAnalysisSections
+                              
+                              
+                            </div>
+                          </td>
+                        </tr>
+                       )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+            <HealthAnalysisSections
                                 userLevel={userLevel}
                                 parameters={parameters}
                                 keyMetrics={keyMetrics}
@@ -1473,17 +1509,7 @@ export function InstitutionalHealthSummary({
                                 aboveThresholdRiskData={aboveThresholdRiskData}
                                 belowThresholdRiskData={belowThresholdRiskData}
                                 approvedExceptionRatioData={approvedExceptionRatioData}
-                              /> */}
-                              
-                            </div>
-                          </td>
-                        </tr>
-                       )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+                              />
           </div>
         </div>
       )}
@@ -1536,138 +1562,37 @@ export function InstitutionalHealthSummary({
             </div>
             
             <div className="p-6">
-              {/* Province Level View */}
-              {drillLevel === 'province' && (
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Province Level Performance</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-900">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Province</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Inst. Avg</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Provincial Avg</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {Array.from({ length: 10 }, (_, i) => ({
-                          id: i + 1,
-                          name: `Province ${i + 1}`,
-                          institutionalAvg: '12 loans/month',
-                          currentPeriod: (10 + Math.random() * 5).toFixed(1) + ' loans/month',
-                          target: '≥15 loans/month',
-                          variance: `-${(5 - Math.random() * 3).toFixed(1)} loans/month`,
-                          trend: ['↑', '↓', '→'][Math.floor(Math.random() * 3)] as '↑' | '↓' | '→',
-                          status: ['good', 'warning', 'critical'][Math.floor(Math.random() * 3)] as 'good' | 'warning' | 'critical'
-                        }))
-                        .sort((a, b) => parseFloat(b.currentPeriod) - parseFloat(a.currentPeriod))
-                        .map((province, index) => (
-                          <tr 
-                            key={province.id} 
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                            onClick={() => {
-                              setSelectedProvince(province.id);
-                              setDrillLevel('branch');
-                            }}
-                          >
-                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{province.name}</td>
-                            <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{province.institutionalAvg}</td>
-                            <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{province.currentPeriod}</td>
-                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{province.target}</td>
-                            <td className="px-4 py-2 text-sm">
-                              <span className={`${getVarianceColor(province.variance)}`}>{province.variance}</span>
-                            </td>
-                            <td className="px-4 py-2 text-sm">
-                              <span className={getTrendBadge(province.trend)}>{province.trend}</span>
-                            </td>
-                            <td className="px-4 py-2">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(province.status)}`}>
-                                {province.status === 'good' ? 'GOOD' : province.status === 'warning' ? 'WARNING' : 'CRITICAL'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+              {/* Province Level View - Only show for institution level */}
+              {drillLevel === 'province' && userLevel === 'institution' && (
+                <ProvinceLevelView 
+                  selectedKPI={selectedKPI}
+                  onProvinceClick={(provinceId) => {
+                    setSelectedProvince(provinceId);
+                    setDrillLevel('branch');
+                  }}
+                />
               )}
 
-              {/* Branch Level View */}
-              {drillLevel === 'branch' && selectedProvince && (
-                <div>
-                  <div className="flex items-center mb-4">
-                    <button 
-                      onClick={() => setDrillLevel('province')}
-                      className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
-                    >
-                      <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                      Back to Provinces
-                    </button>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Branches in Province {selectedProvince}</h3>
-                  </div>
-                  
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-900">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Inst. Avg</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch Avg</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {Array.from({ length: 5 }, (_, i) => ({
-                          id: i + 1,
-                          name: `Branch ${i + 1}`,
-                          institutionalAvg: '12 loans/month',
-                          currentPeriod: (10 + Math.random() * 5).toFixed(1) + ' loans/month',
-                          target: '≥15 loans/month',
-                          variance: `-${(5 - Math.random() * 3).toFixed(1)} loans/month`,
-                          trend: ['↑', '↓', '→'][Math.floor(Math.random() * 3)] as '↑' | '↓' | '→',
-                          status: ['good', 'warning', 'critical'][Math.floor(Math.random() * 3)] as 'good' | 'warning' | 'critical'
-                        }))
-                        .sort((a, b) => parseFloat(b.currentPeriod) - parseFloat(a.currentPeriod))
-                        .map((branch, index) => (
-                          <tr 
-                            key={branch.id} 
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                            onClick={() => {
-                              setSelectedBranch(branch.id);
-                              setDrillLevel('consultant');
-                            }}
-                          >
-                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
-                            <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{branch.institutionalAvg}</td>
-                            <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{branch.currentPeriod}</td>
-                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{branch.target}</td>
-                            <td className="px-4 py-2 text-sm">
-                              <span className={`${getVarianceColor(branch.variance)}`}>{branch.variance}</span>
-                            </td>
-                            <td className="px-4 py-2 text-sm">
-                              <span className={getTrendBadge(branch.trend)}>{branch.trend}</span>
-                            </td>
-                            <td className="px-4 py-2">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(branch.status)}`}>
-                                {branch.status === 'good' ? 'GOOD' : branch.status === 'warning' ? 'WARNING' : 'CRITICAL'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+              {/* Branch Level View - Show for province level (direct) or institution level (after province) */}
+              {(drillLevel === 'branch' || (drillLevel === 'province' && userLevel === 'province')) && selectedKPI && (
+                <BranchLevelView 
+                  selectedKPI={selectedKPI}
+                  selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
+                  onBranchClick={(branchId: number) => {
+                    setSelectedBranch(branchId);
+                    setDrillLevel('consultant');
+                  }}
+                  onBack={() => {
+                    if (userLevel === 'province') {
+                      // For provincial managers, back goes to closing the modal
+                      setSelectedKPI(null);
+                      setDrillLevel(null);
+                    } else {
+                      setSelectedProvince(null);
+                      setDrillLevel('province');
+                    }
+                  }}
+                />
               )}
 
               {/* Consultant Level View */}

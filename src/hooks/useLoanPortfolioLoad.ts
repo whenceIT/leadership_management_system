@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchLoanPortfolioLoad, LoanPortfolioLoadData } from '@/services/LoanPortfolioLoadService';
+import { 
+  fetchLoanPortfolioLoad, 
+  fetchProvincialLoanPortfolioLoad, 
+  LoanPortfolioLoadData 
+} from '@/services/LoanPortfolioLoadService';
 
 export function useLoanPortfolioLoad(branchId: number) {
   const [data, setData] = useState<LoanPortfolioLoadData | null>(null);
@@ -27,6 +31,38 @@ export function useLoanPortfolioLoad(branchId: number) {
       fetchData();
     }
   }, [branchId]);
+
+  return {
+    data,
+    isLoading,
+    error
+  };
+}
+
+export function useProvincialLoanPortfolioLoad(provinceId: number) {
+  const [data, setData] = useState<LoanPortfolioLoadData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result = await fetchProvincialLoanPortfolioLoad(provinceId);
+        setData(result);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch provincial loan portfolio load');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (provinceId > 0) {
+      fetchData();
+    }
+  }, [provinceId]);
 
   return {
     data,
