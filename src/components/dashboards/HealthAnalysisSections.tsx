@@ -517,18 +517,18 @@ function HealthAnalysisSections({
   };
 
   // Render timeline tracking
-  const renderTimelineTracking = () => {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-blue-200 dark:border-blue-800 md:col-span-2">
-        <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">⏰ TIMELINE TRACKING:</h4>
-        <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
-          {timelineEvents.map((event, index) => (
-            <p key={index}>• {event.actor} {event.action}: {event.timestamp}</p>
-          ))}
-        </div>
-      </div>
-    );
-  };
+  // const renderTimelineTracking = () => {
+  //   return (
+  //     <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-blue-200 dark:border-blue-800 md:col-span-2">
+  //       <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">⏰ TIMELINE TRACKING:</h4>
+  //       <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
+  //         {timelineEvents.map((event, index) => (
+  //           <p key={index}>• {event.actor} {event.action}: {event.timestamp}</p>
+  //         ))}
+  //       </div>
+  //     </div>
+  //   );
+  // };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -545,7 +545,7 @@ function HealthAnalysisSections({
       {(userLevel === 'branch' || userLevel === 'province') && renderRecommendedActions()}
 
       {/* Timeline Tracking */}
-      {(userLevel === 'branch' || userLevel === 'province') && renderTimelineTracking()}
+      {/* {(userLevel === 'branch' || userLevel === 'province') && renderTimelineTracking()} */}
     </div>
   );
 }
