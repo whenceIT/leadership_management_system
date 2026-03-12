@@ -10,7 +10,10 @@ export interface RevenueAchievementsData {
 }
 
 export async function fetchRevenueAchievements(branchId: number): Promise<RevenueAchievementsData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/revenue-achievement/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/revenue-achievement/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch revenue achievements: ${response.statusText}`);
@@ -20,7 +23,10 @@ export async function fetchRevenueAchievements(branchId: number): Promise<Revenu
 }
 
 export async function fetchProvincialRevenueAchievements(provinceId: number): Promise<RevenueAchievementsData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/revenue-achievement/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/revenue-achievement/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial revenue achievements: ${response.statusText}`);

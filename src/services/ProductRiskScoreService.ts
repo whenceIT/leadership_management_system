@@ -12,7 +12,10 @@ export interface ProductRiskScoreData {
 }
 
 export async function fetchProductRiskScore(branchId: number): Promise<ProductRiskScoreData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-risk-score/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-risk-score/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch product risk score: ${response.statusText}`);
@@ -22,7 +25,10 @@ export async function fetchProductRiskScore(branchId: number): Promise<ProductRi
 }
 
 export async function fetchProvincialProductRiskScore(provinceId: number): Promise<ProductRiskScoreData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-risk-score/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-risk-score/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial product risk score: ${response.statusText}`);

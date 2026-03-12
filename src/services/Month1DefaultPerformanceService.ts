@@ -12,7 +12,10 @@ export interface Month1DefaultPerformanceData {
 }
 
 export async function fetchMonth1DefaultPerformance(branchId: number): Promise<Month1DefaultPerformanceData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/month-1-default-performance/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/month-1-default-performance/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch month 1 default performance: ${response.statusText}`);
@@ -22,7 +25,10 @@ export async function fetchMonth1DefaultPerformance(branchId: number): Promise<M
 }
 
 export async function fetchProvincialMonth1DefaultPerformance(provinceId: number): Promise<Month1DefaultPerformanceData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/month-1-default-performance/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/month-1-default-performance/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial month 1 default performance: ${response.statusText}`);

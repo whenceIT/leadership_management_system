@@ -21,7 +21,10 @@ export interface InstitutionalAPIResponse {
 }
 
 export async function fetchInstitutionalStaffAdequacy(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/staff-adequacy/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/staff-adequacy/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional staff adequacy');
   }
@@ -29,7 +32,10 @@ export async function fetchInstitutionalStaffAdequacy(): Promise<InstitutionalAP
 }
 
 export async function fetchInstitutionalProductivityAchievement(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/productivity-achievement/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/productivity-achievement/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional productivity achievement');
   }
@@ -37,7 +43,10 @@ export async function fetchInstitutionalProductivityAchievement(): Promise<Insti
 }
 
 export async function fetchInstitutionalVacancyImpact(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/vacancy-impact/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/vacancy-impact/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional vacancy impact');
   }
@@ -45,7 +54,10 @@ export async function fetchInstitutionalVacancyImpact(): Promise<InstitutionalAP
 }
 
 export async function fetchInstitutionalVolumeAchievement(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/volume-achievement/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/volume-achievement/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional volume achievement');
   }
@@ -53,7 +65,10 @@ export async function fetchInstitutionalVolumeAchievement(): Promise<Institution
 }
 
 export async function fetchInstitutionalPortfolioLoadBalance(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/portfolio-load-balance/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/portfolio-load-balance/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional portfolio load balance');
   }
@@ -61,7 +76,10 @@ export async function fetchInstitutionalPortfolioLoadBalance(): Promise<Institut
 }
 
 export async function fetchInstitutionalCollectionEfficiency(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/collection-efficiency/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/collection-efficiency/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional collection efficiency');
   }
@@ -69,7 +87,10 @@ export async function fetchInstitutionalCollectionEfficiency(): Promise<Institut
 }
 
 export async function fetchInstitutionalPortfolioQuality(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/portfolio-quality/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/portfolio-quality/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional portfolio quality');
   }
@@ -77,7 +98,10 @@ export async function fetchInstitutionalPortfolioQuality(): Promise<Institutiona
 }
 
 export async function fetchInstitutionalProductDiversification(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/product-diversification/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/product-diversification/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional product diversification');
   }
@@ -85,7 +109,10 @@ export async function fetchInstitutionalProductDiversification(): Promise<Instit
 }
 
 export async function fetchInstitutionalProductRiskScore(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/product-risk-score/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/product-risk-score/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional product risk score');
   }
@@ -93,7 +120,10 @@ export async function fetchInstitutionalProductRiskScore(): Promise<Institutiona
 }
 
 export async function fetchInstitutionalYieldAchievement(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/yield-achievement/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/yield-achievement/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional yield achievement');
   }
@@ -101,7 +131,10 @@ export async function fetchInstitutionalYieldAchievement(): Promise<Institutiona
 }
 
 export async function fetchInstitutionalMonth3RecoveryAchievements(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/3-month-recovery-achievement/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/3-month-recovery-achievement/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional 3-month recovery achievements');
   }
@@ -109,7 +142,10 @@ export async function fetchInstitutionalMonth3RecoveryAchievements(): Promise<In
 }
 
 export async function fetchInstitutionalEfficiencyRatio(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/efficiency-ratio/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/efficiency-ratio/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional efficiency ratio');
   }
@@ -117,7 +153,10 @@ export async function fetchInstitutionalEfficiencyRatio(): Promise<Institutional
 }
 
 export async function fetchInstitutionalGrowthTrajectory(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/growth-trajectory/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/growth-trajectory/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional growth trajectory');
   }
@@ -125,7 +164,10 @@ export async function fetchInstitutionalGrowthTrajectory(): Promise<Institutiona
 }
 
 export async function fetchInstitutionalLongTermDelinquency(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/long-term-delinquency-risk/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/long-term-delinquency-risk/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional long-term delinquency');
   }
@@ -133,7 +175,10 @@ export async function fetchInstitutionalLongTermDelinquency(): Promise<Instituti
 }
 
 export async function fetchInstitutionalMonth1DefaultRate(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/month-1-default-performance/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/month-1-default-performance/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional month-1 default rate');
   }
@@ -141,7 +186,10 @@ export async function fetchInstitutionalMonth1DefaultRate(): Promise<Institution
 }
 
 export async function fetchInstitutionalRevenueAchievements(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/revenue-achievement/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/revenue-achievement/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional revenue achievements');
   }
@@ -149,7 +197,10 @@ export async function fetchInstitutionalRevenueAchievements(): Promise<Instituti
 }
 
 export async function fetchInstitutionalProfitabilityContribution(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/profitability-contribution/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/profitability-contribution/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional profitability contribution');
   }
@@ -157,7 +208,10 @@ export async function fetchInstitutionalProfitabilityContribution(): Promise<Ins
 }
 
 export async function fetchInstitutionalRollRateControl(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/roll-rate-control/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/roll-rate-control/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional roll rate control');
   }
@@ -165,7 +219,10 @@ export async function fetchInstitutionalRollRateControl(): Promise<Institutional
 }
 
 export async function fetchInstitutionalCashPosition(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/cash-position/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/cash-position/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional cash position');
   }
@@ -173,7 +230,10 @@ export async function fetchInstitutionalCashPosition(): Promise<InstitutionalAPI
 }
 
 export async function fetchInstitutionalAboveThresholdRisk(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/above-threshold-risk/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/above-threshold-risk/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional above-threshold risk');
   }
@@ -181,7 +241,10 @@ export async function fetchInstitutionalAboveThresholdRisk(): Promise<Institutio
 }
 
 export async function fetchInstitutionalBelowThresholdRisk(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/below-threshold-risk/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/below-threshold-risk/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional below-threshold risk');
   }
@@ -189,7 +252,10 @@ export async function fetchInstitutionalBelowThresholdRisk(): Promise<Institutio
 }
 
 export async function fetchInstitutionalApprovedExceptionRatio(): Promise<InstitutionalAPIResponse> {
-  const response = await fetch('https://smartbackend.whencefinancesystem.com/approved-exception-ratio/company');
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/approved-exception-ratio/company', {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   if (!response.ok) {
     throw new Error('Failed to fetch institutional approved exception ratio');
   }

@@ -13,7 +13,10 @@ export interface AboveThresholdRiskData {
 }
 
 export async function fetchAboveThresholdRisk(branchId: number): Promise<AboveThresholdRiskData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/above-threshold-risk/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/above-threshold-risk/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch above threshold risk: ${response.statusText}`);
@@ -23,7 +26,10 @@ export async function fetchAboveThresholdRisk(branchId: number): Promise<AboveTh
 }
 
 export async function fetchProvincialAboveThresholdRisk(provinceId: number): Promise<AboveThresholdRiskData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/above-threshold-risk/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/above-threshold-risk/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial above threshold risk: ${response.statusText}`);
@@ -33,7 +39,10 @@ export async function fetchProvincialAboveThresholdRisk(provinceId: number): Pro
 }
 
 export async function fetchInstitutionalAboveThresholdRisk(): Promise<AboveThresholdRiskData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/above-threshold-risk/company`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/above-threshold-risk/company`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch institutional above threshold risk: ${response.statusText}`);

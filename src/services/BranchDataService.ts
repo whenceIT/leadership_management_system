@@ -358,6 +358,8 @@ export class BranchDataService {
           headers: {
             'Content-Type': 'application/json',
           },
+          cache: "force-cache",
+          next: { revalidate: 600 }
         }
       );
 
@@ -415,6 +417,8 @@ export class BranchDataService {
           headers: {
             'Content-Type': 'application/json',
           },
+          cache: "force-cache",
+          next: { revalidate: 600 }
         }
       );
 

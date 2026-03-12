@@ -14,7 +14,10 @@ export interface VacancyImpactData {
 }
 
 export async function fetchVacancyImpact(branchId: number): Promise<VacancyImpactData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/vacancy-impact/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/vacancy-impact/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch vacancy impact: ${response.statusText}`);
@@ -30,7 +33,10 @@ export async function fetchVacancyImpact(branchId: number): Promise<VacancyImpac
 }
 
 export async function fetchProvincialVacancyImpact(provinceId: number): Promise<VacancyImpactData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/vacancy-impact/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/vacancy-impact/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial vacancy impact: ${response.statusText}`);

@@ -12,7 +12,10 @@ export interface VolumeAchievementData {
 }
 
 export async function fetchVolumeAchievement(branchId: number): Promise<VolumeAchievementData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/volume-achievement/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/volume-achievement/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch volume achievement: ${response.statusText}`);
@@ -23,7 +26,10 @@ export async function fetchVolumeAchievement(branchId: number): Promise<VolumeAc
 }
 
 export async function fetchProvincialVolumeAchievement(provinceId: number): Promise<VolumeAchievementData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/volume-achievement/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/volume-achievement/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial volume achievement: ${response.statusText}`);

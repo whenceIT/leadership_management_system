@@ -13,7 +13,10 @@ export interface YieldAchievementsData {
 }
 
 export async function fetchYieldAchievements(branchId: number): Promise<YieldAchievementsData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/yield-achievement/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/yield-achievement/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch yield achievements: ${response.statusText}`);
@@ -23,7 +26,10 @@ export async function fetchYieldAchievements(branchId: number): Promise<YieldAch
 }
 
 export async function fetchProvincialYieldAchievements(provinceId: number): Promise<YieldAchievementsData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/yield-achievement/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/yield-achievement/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial yield achievements: ${response.statusText}`);

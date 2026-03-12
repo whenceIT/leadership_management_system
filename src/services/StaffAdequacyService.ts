@@ -12,7 +12,10 @@ export interface StaffAdequacyData {
 }
 
 export async function fetchStaffAdequacyPerformance(branchId: number): Promise<StaffAdequacyData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/staff-adequacy/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/staff-adequacy/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch staff adequacy performance: ${response.statusText}`);
@@ -28,7 +31,10 @@ export async function fetchStaffAdequacyPerformance(branchId: number): Promise<S
 }
 
 export async function fetchProvincialStaffAdequacyPerformance(provinceId: number): Promise<StaffAdequacyData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/staff-adequacy/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/staff-adequacy/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial staff adequacy performance: ${response.statusText}`);

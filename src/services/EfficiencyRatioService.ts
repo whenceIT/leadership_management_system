@@ -16,7 +16,10 @@ export interface EfficiencyRatioData {
 }
 
 export async function fetchEfficiencyRatio(branchId: number): Promise<EfficiencyRatioData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/efficiency-ratio/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/efficiency-ratio/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch efficiency ratio: ${response.statusText}`);
@@ -26,7 +29,10 @@ export async function fetchEfficiencyRatio(branchId: number): Promise<Efficiency
 }
 
 export async function fetchProvincialEfficiencyRatio(provinceId: number): Promise<EfficiencyRatioData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/efficiency-ratio/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/efficiency-ratio/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial efficiency ratio: ${response.statusText}`);

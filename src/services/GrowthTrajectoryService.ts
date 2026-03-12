@@ -15,7 +15,10 @@ export interface GrowthTrajectoryData {
 }
 
 export async function fetchGrowthTrajectory(branchId: number): Promise<GrowthTrajectoryData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/growth-trajectory/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/growth-trajectory/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch growth trajectory: ${response.statusText}`);
@@ -25,7 +28,10 @@ export async function fetchGrowthTrajectory(branchId: number): Promise<GrowthTra
 }
 
 export async function fetchProvincialGrowthTrajectory(provinceId: number): Promise<GrowthTrajectoryData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/growth-trajectory/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/growth-trajectory/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial growth trajectory: ${response.statusText}`);

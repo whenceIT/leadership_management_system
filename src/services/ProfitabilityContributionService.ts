@@ -10,7 +10,10 @@ export interface ProfitabilityContributionData {
 }
 
 export async function fetchProfitabilityContribution(branchId: number): Promise<ProfitabilityContributionData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/profitability-contribution/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/profitability-contribution/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch profitability contribution: ${response.statusText}`);
@@ -20,7 +23,10 @@ export async function fetchProfitabilityContribution(branchId: number): Promise<
 }
 
 export async function fetchProvincialProfitabilityContribution(provinceId: number): Promise<ProfitabilityContributionData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/profitability-contribution/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/profitability-contribution/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial profitability contribution: ${response.statusText}`);

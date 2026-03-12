@@ -22,7 +22,10 @@ export interface RollRateControlData {
 }
 
 export async function fetchRollRateControl(branchId: number): Promise<RollRateControlData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/roll-rate-control/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/roll-rate-control/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch roll rate control: ${response.statusText}`);
@@ -32,7 +35,10 @@ export async function fetchRollRateControl(branchId: number): Promise<RollRateCo
 }
 
 export async function fetchProvincialRollRateControl(provinceId: number): Promise<RollRateControlData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/roll-rate-control/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/roll-rate-control/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial roll rate control: ${response.statusText}`);

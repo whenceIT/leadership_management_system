@@ -12,7 +12,10 @@ export interface PortfolioQualityData {
 }
 
 export async function fetchPortfolioQuality(branchId: number): Promise<PortfolioQualityData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-quality/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-quality/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch portfolio quality: ${response.statusText}`);
@@ -22,7 +25,10 @@ export async function fetchPortfolioQuality(branchId: number): Promise<Portfolio
 }
 
 export async function fetchProvincialPortfolioQuality(provinceId: number): Promise<PortfolioQualityData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-quality/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-quality/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial portfolio quality: ${response.statusText}`);

@@ -13,7 +13,10 @@ export interface Month3RecoveryAchievementsData {
 }
 
 export async function fetchMonth3RecoveryAchievements(branchId: number): Promise<Month3RecoveryAchievementsData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/3-month-recovery-achievement/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/3-month-recovery-achievement/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch month 3 recovery achievements: ${response.statusText}`);
@@ -23,7 +26,10 @@ export async function fetchMonth3RecoveryAchievements(branchId: number): Promise
 }
 
 export async function fetchProvincialMonth3RecoveryAchievements(provinceId: number): Promise<Month3RecoveryAchievementsData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/3-month-recovery-achievement/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/3-month-recovery-achievement/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial month 3 recovery achievements: ${response.statusText}`);

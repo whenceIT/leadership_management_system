@@ -10,7 +10,10 @@ export interface ProductDiversificationData {
 }
 
 export async function fetchProductDiversification(branchId: number): Promise<ProductDiversificationData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-diversification/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-diversification/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch product diversification: ${response.statusText}`);
@@ -20,7 +23,10 @@ export async function fetchProductDiversification(branchId: number): Promise<Pro
 }
 
 export async function fetchProvincialProductDiversification(provinceId: number): Promise<ProductDiversificationData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-diversification/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-diversification/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial product diversification: ${response.statusText}`);

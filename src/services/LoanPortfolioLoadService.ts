@@ -13,7 +13,10 @@ export interface LoanPortfolioLoadData {
 }
 
 export async function fetchLoanPortfolioLoad(branchId: number): Promise<LoanPortfolioLoadData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-load-balance/${branchId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-load-balance/${branchId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch loan portfolio load: ${response.statusText}`);
@@ -28,7 +31,10 @@ export async function fetchLoanPortfolioLoad(branchId: number): Promise<LoanPort
 }
 
 export async function fetchProvincialLoanPortfolioLoad(provinceId: number): Promise<LoanPortfolioLoadData> {
-  const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-load-balance/province/${provinceId}`);
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-load-balance/province/${provinceId}`, {
+    cache: "force-cache",
+    next: { revalidate: 600 }
+  });
   
   if (!response.ok) {
     throw new Error(`Failed to fetch provincial loan portfolio load: ${response.statusText}`);
