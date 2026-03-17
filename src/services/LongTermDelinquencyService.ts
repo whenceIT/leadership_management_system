@@ -16,7 +16,7 @@ export interface LongTermDelinquencyData {
 export async function fetchLongTermDelinquency(branchId: number): Promise<LongTermDelinquencyData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/long-term-delinquency-risk/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -29,7 +29,7 @@ export async function fetchLongTermDelinquency(branchId: number): Promise<LongTe
 export async function fetchProvincialLongTermDelinquency(provinceId: number): Promise<LongTermDelinquencyData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/long-term-delinquency-risk/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

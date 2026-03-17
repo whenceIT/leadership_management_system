@@ -14,7 +14,7 @@ export interface CollectionEfficiencyData {
 export async function fetchCollectionEfficiency(branchId: number): Promise<CollectionEfficiencyData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/collection-efficiency/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -27,7 +27,7 @@ export async function fetchCollectionEfficiency(branchId: number): Promise<Colle
 export async function fetchProvincialCollectionEfficiency(provinceId: number): Promise<CollectionEfficiencyData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/collection-efficiency/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

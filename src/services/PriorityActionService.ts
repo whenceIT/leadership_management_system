@@ -169,7 +169,7 @@ export class PriorityActionService {
             'Content-Type': 'application/json',
           },
           cache: "force-cache",
-          next: { revalidate: 600 }
+          next: { revalidate: 300 }
         }
       );
       
@@ -321,7 +321,7 @@ export class PriorityActionService {
             'Content-Type': 'application/json',
           },
           cache: "force-cache",
-          next: { revalidate: 600 }
+          next: { revalidate: 300 }
         }
       );
 

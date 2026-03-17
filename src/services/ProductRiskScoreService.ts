@@ -14,7 +14,7 @@ export interface ProductRiskScoreData {
 export async function fetchProductRiskScore(branchId: number): Promise<ProductRiskScoreData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-risk-score/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -27,7 +27,7 @@ export async function fetchProductRiskScore(branchId: number): Promise<ProductRi
 export async function fetchProvincialProductRiskScore(provinceId: number): Promise<ProductRiskScoreData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-risk-score/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

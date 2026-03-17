@@ -442,8 +442,8 @@ function HealthAnalysisSections({
           ) : (
             <p>• Primary Declines: None - Performance stable or improving</p>
           )}
-          <p>• Geographic Origin: {trendAnalysis.geographicOrigin.percentage}% of decline from {trendAnalysis.geographicOrigin.provinceName} Province</p>
-          <p>• Branch-Level: {trendAnalysis.branchLevel.map(b => `${b.officeName} (${b.provinceName}) ▼${b.change}%`).join(', ')}</p>
+          {/* <p>• Geographic Origin: {trendAnalysis.geographicOrigin.percentage}% of decline from {trendAnalysis.geographicOrigin.provinceName} Province</p>
+          <p>• Branch-Level: {trendAnalysis.branchLevel.map(b => `${b.officeName} (${b.provinceName}) ▼${b.change}%`).join(', ')}</p> */}
         </div>
       </div>
     );

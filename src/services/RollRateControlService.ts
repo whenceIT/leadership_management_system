@@ -24,7 +24,7 @@ export interface RollRateControlData {
 export async function fetchRollRateControl(branchId: number): Promise<RollRateControlData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/roll-rate-control/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -37,7 +37,7 @@ export async function fetchRollRateControl(branchId: number): Promise<RollRateCo
 export async function fetchProvincialRollRateControl(provinceId: number): Promise<RollRateControlData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/roll-rate-control/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

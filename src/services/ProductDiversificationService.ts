@@ -12,7 +12,7 @@ export interface ProductDiversificationData {
 export async function fetchProductDiversification(branchId: number): Promise<ProductDiversificationData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-diversification/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -25,7 +25,7 @@ export async function fetchProductDiversification(branchId: number): Promise<Pro
 export async function fetchProvincialProductDiversification(provinceId: number): Promise<ProductDiversificationData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-diversification/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

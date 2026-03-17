@@ -14,7 +14,7 @@ export interface ProductivityAchievementData {
 export async function fetchProductivityAchievement(branchId: number): Promise<ProductivityAchievementData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/productivity-achievement/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -33,7 +33,7 @@ export async function fetchProductivityAchievement(branchId: number): Promise<Pr
 export async function fetchProvincialProductivityAchievement(provinceId: number): Promise<ProductivityAchievementData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/productivity-achievement/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

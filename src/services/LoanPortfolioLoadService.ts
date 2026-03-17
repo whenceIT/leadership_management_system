@@ -15,7 +15,7 @@ export interface LoanPortfolioLoadData {
 export async function fetchLoanPortfolioLoad(branchId: number): Promise<LoanPortfolioLoadData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-load-balance/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -33,7 +33,7 @@ export async function fetchLoanPortfolioLoad(branchId: number): Promise<LoanPort
 export async function fetchProvincialLoanPortfolioLoad(provinceId: number): Promise<LoanPortfolioLoadData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-load-balance/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

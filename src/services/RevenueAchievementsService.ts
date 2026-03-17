@@ -12,7 +12,7 @@ export interface RevenueAchievementsData {
 export async function fetchRevenueAchievements(branchId: number): Promise<RevenueAchievementsData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/revenue-achievement/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -25,7 +25,7 @@ export async function fetchRevenueAchievements(branchId: number): Promise<Revenu
 export async function fetchProvincialRevenueAchievements(provinceId: number): Promise<RevenueAchievementsData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/revenue-achievement/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

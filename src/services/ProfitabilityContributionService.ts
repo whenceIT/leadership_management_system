@@ -12,7 +12,7 @@ export interface ProfitabilityContributionData {
 export async function fetchProfitabilityContribution(branchId: number): Promise<ProfitabilityContributionData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/profitability-contribution/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -25,7 +25,7 @@ export async function fetchProfitabilityContribution(branchId: number): Promise<
 export async function fetchProvincialProfitabilityContribution(provinceId: number): Promise<ProfitabilityContributionData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/profitability-contribution/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

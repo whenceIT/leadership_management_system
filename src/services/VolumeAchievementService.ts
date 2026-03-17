@@ -14,7 +14,7 @@ export interface VolumeAchievementData {
 export async function fetchVolumeAchievement(branchId: number): Promise<VolumeAchievementData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/volume-achievement/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -28,7 +28,7 @@ export async function fetchVolumeAchievement(branchId: number): Promise<VolumeAc
 export async function fetchProvincialVolumeAchievement(provinceId: number): Promise<VolumeAchievementData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/volume-achievement/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

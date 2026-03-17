@@ -15,7 +15,7 @@ export interface YieldAchievementsData {
 export async function fetchYieldAchievements(branchId: number): Promise<YieldAchievementsData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/yield-achievement/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -28,7 +28,7 @@ export async function fetchYieldAchievements(branchId: number): Promise<YieldAch
 export async function fetchProvincialYieldAchievements(provinceId: number): Promise<YieldAchievementsData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/yield-achievement/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

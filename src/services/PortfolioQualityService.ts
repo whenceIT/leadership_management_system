@@ -14,7 +14,7 @@ export interface PortfolioQualityData {
 export async function fetchPortfolioQuality(branchId: number): Promise<PortfolioQualityData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-quality/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -27,7 +27,7 @@ export async function fetchPortfolioQuality(branchId: number): Promise<Portfolio
 export async function fetchProvincialPortfolioQuality(provinceId: number): Promise<PortfolioQualityData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-quality/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

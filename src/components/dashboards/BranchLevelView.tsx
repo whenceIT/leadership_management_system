@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useOffice } from '@/hooks/useOffice';
+import { useProvince } from '@/hooks/useProvince';
 
 // Import all provincial service functions (we'll reuse them for branch level)
 import { fetchStaffAdequacyPerformance } from '@/services/StaffAdequacyService';
@@ -35,6 +36,8 @@ interface BranchLevelViewProps {
 
 export function BranchLevelView({ selectedKPI, selectedProvince, onBranchClick, onBack }: BranchLevelViewProps) {
   const { getOfficesByProvince } = useOffice();
+  const { getProvinceName } = useProvince();
+  const provinceName = getProvinceName(selectedProvince);
   const [branchData, setBranchData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -404,6 +407,82 @@ export function BranchLevelView({ selectedKPI, selectedProvince, onBranchClick, 
     );
   }
 
+  // Function to extract numeric value from KPI string for sorting
+  const getNumericKPIValue = (kpiString: string): number => {
+    // Extract numeric value from strings like "95.5%", "1.2", "K123456"
+    const match = kpiString.match(/[\d.]+/);
+    return match ? parseFloat(match[0]) : 0;
+  };
+
+  // Calculate Province Avg by summing Branch Avg values
+  const calculateProvinceAvg = () => {
+    let total = 0;
+    let count = 0;
+    
+    branches.forEach(branch => {
+      const data = branchData[branch.id];
+      const kpiValue = getKPIValue(data, selectedKPI);
+      const numericValue = getNumericKPIValue(kpiValue.current);
+      
+      if (!isNaN(numericValue)) {
+        total += numericValue;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '--';
+    
+    const average = total / count;
+    
+    // Determine the format based on selected KPI
+    if (selectedKPI === 'Product distribution mix') {
+      return `${average.toFixed(3)}`; // HHI format
+    } else if (selectedKPI === 'Vetting compliance' || selectedKPI === 'Product risk contribution') {
+      return `${average.toFixed(2)}`; // Decimal format
+    } else if (selectedKPI === 'Branch revenue') {
+      return `K${average.toLocaleString()}`; // Currency format
+    } else {
+      return `${average.toFixed(2)}%`; // Percentage format
+    }
+  };
+
+  // Sort branches by Branch Avg (descending)
+  const sortedBranches = [...branches].sort((a, b) => {
+    const dataA = branchData[a.id];
+    const dataB = branchData[b.id];
+    
+    const kpiValueA = getKPIValue(dataA, selectedKPI);
+    const kpiValueB = getKPIValue(dataB, selectedKPI);
+    
+    const numericValueA = getNumericKPIValue(kpiValueA.current);
+    const numericValueB = getNumericKPIValue(kpiValueB.current);
+    
+    // For KPIs where lower values are better, invert the comparison
+    const lowerIsBetterKPIs = [
+      'Portfolio quality',
+      'Default contribution',
+      'Default rate (branch, province, institutional)',
+      'Vetting compliance',
+      'Product risk contribution',
+      'Product distribution mix',
+      'Margin alignment with strategy',
+      'Cost-to-income ratios',
+      'Default aging analysis',
+      'Risk migration trends',
+      'Vacancy Impact',
+      'Above-Threshold Risk',
+      'Below-Threshold Risk'
+    ];
+    
+    if (lowerIsBetterKPIs.includes(selectedKPI)) {
+      return numericValueA - numericValueB;
+    }
+    
+    return numericValueB - numericValueA;
+  });
+
+  const provinceAvg = calculateProvinceAvg();
+
   if (error) {
     return (
       <div className="text-red-600 dark:text-red-400 py-8 text-center">
@@ -424,7 +503,10 @@ export function BranchLevelView({ selectedKPI, selectedProvince, onBranchClick, 
           </svg>
           Back to Provinces
         </button>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Branches in Province {selectedProvince}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Branches in {provinceName}</h3>
+        <div className="ml-4 text-sm text-gray-600 dark:text-gray-400">
+          Province Avg: <span className="font-semibold">{provinceAvg}</span>
+        </div>
       </div>
       
       <div className="overflow-x-auto">
@@ -432,7 +514,6 @@ export function BranchLevelView({ selectedKPI, selectedProvince, onBranchClick, 
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Inst. Avg</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch Avg</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actual LCs</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Contribution (pp)</th>
@@ -443,7 +524,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, onBranchClick, 
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {branches.map((branch) => {
+            {sortedBranches.map((branch) => {
               const data = branchData[branch.id];
               const kpiValue = getKPIValue(data, selectedKPI);
 
@@ -454,7 +535,6 @@ export function BranchLevelView({ selectedKPI, selectedProvince, onBranchClick, 
                   onClick={() => onBranchClick(parseInt(branch.id))}
                 >
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
-                  <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">--</td>
                   <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{kpiValue.current}</td>
                   <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{kpiValue.actualLcs > 0 ? kpiValue.actualLcs : '--'}</td>
                   <td className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400">{kpiValue.contribution}</td>

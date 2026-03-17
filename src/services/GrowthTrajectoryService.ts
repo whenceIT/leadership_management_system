@@ -17,7 +17,7 @@ export interface GrowthTrajectoryData {
 export async function fetchGrowthTrajectory(branchId: number): Promise<GrowthTrajectoryData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/growth-trajectory/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -30,7 +30,7 @@ export async function fetchGrowthTrajectory(branchId: number): Promise<GrowthTra
 export async function fetchProvincialGrowthTrajectory(provinceId: number): Promise<GrowthTrajectoryData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/growth-trajectory/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

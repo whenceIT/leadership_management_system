@@ -18,7 +18,7 @@ export interface EfficiencyRatioData {
 export async function fetchEfficiencyRatio(branchId: number): Promise<EfficiencyRatioData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/efficiency-ratio/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -31,7 +31,7 @@ export async function fetchEfficiencyRatio(branchId: number): Promise<Efficiency
 export async function fetchProvincialEfficiencyRatio(provinceId: number): Promise<EfficiencyRatioData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/efficiency-ratio/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

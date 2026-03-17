@@ -15,7 +15,7 @@ export interface AboveThresholdRiskData {
 export async function fetchAboveThresholdRisk(branchId: number): Promise<AboveThresholdRiskData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/above-threshold-risk/${branchId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -28,7 +28,7 @@ export async function fetchAboveThresholdRisk(branchId: number): Promise<AboveTh
 export async function fetchProvincialAboveThresholdRisk(provinceId: number): Promise<AboveThresholdRiskData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/above-threshold-risk/province/${provinceId}`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {
@@ -41,7 +41,7 @@ export async function fetchProvincialAboveThresholdRisk(provinceId: number): Pro
 export async function fetchInstitutionalAboveThresholdRisk(): Promise<AboveThresholdRiskData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/above-threshold-risk/company`, {
     cache: "force-cache",
-    next: { revalidate: 600 }
+    next: { revalidate: 300 }
   });
   
   if (!response.ok) {

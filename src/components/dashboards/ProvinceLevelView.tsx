@@ -31,9 +31,174 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
     return 'text-gray-600 dark:text-gray-400';
   }
 
+  // Function to get current period value for sorting
+  const getCurrentPeriodValue = (province: any) => {
+    const data = provincialData[province.id];
+    if (!data) return 0;
+
+    let value = 0;
+
+    if (selectedKPI === 'Staff Adequacy Score') {
+      value = parseFloat(data.average_normalized_score || '0');
+    } else if (selectedKPI === 'Productivity Achievement') {
+      value = parseFloat(data.average_normalized_score || '0');
+    } else if (selectedKPI === 'Vacancy Impact') {
+      value = parseFloat(data.average_normalized_score || '0');
+    } else if (selectedKPI === 'Portfolio Load Balance') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Volume Achievement') {
+      value = parseFloat(data.average_normalized_score || '0');
+    } else if (selectedKPI === 'Portfolio quality') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Default contribution' || selectedKPI === 'Default rate (branch, province, institutional)') {
+      value = parseFloat(data.average_month_1_default_rate || '0');
+    } else if (selectedKPI === 'Collections efficiency') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Vetting compliance' || selectedKPI === 'Product risk contribution') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Product distribution mix') {
+      value = parseFloat(data.average_HHI || '0');
+    } else if (selectedKPI === 'Revenue yield per product') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Margin alignment with strategy' || selectedKPI === 'Cost-to-income ratios') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Default aging analysis') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Recovery rate within 1 month' || selectedKPI === 'Recovery rate within 3 months') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Risk migration trends') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Branch revenue' || selectedKPI === 'Growth trajectory alignment') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Institutional average performance') {
+      value = parseFloat(data.average_normalized_score || '0');
+    } else if (selectedKPI === 'Revenue achievement') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Profitability contribution') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Cash Position Score') {
+      value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Above-Threshold Risk' || selectedKPI === 'Below-Threshold Risk') {
+      value = parseFloat(data.average_score || '0');
+    }
+
+    value = isNaN(value) ? 0 : value;
+
+    // For KPIs where lower values are better, invert the value for sorting purposes
+    const lowerIsBetterKPIs = [
+      'Portfolio quality',
+      'Default contribution',
+      'Default rate (branch, province, institutional)',
+      'Vetting compliance',
+      'Product risk contribution',
+      'Product distribution mix',
+      'Margin alignment with strategy',
+      'Cost-to-income ratios',
+      'Default aging analysis',
+      'Risk migration trends',
+      'Vacancy Impact',
+      'Above-Threshold Risk',
+      'Below-Threshold Risk'
+    ];
+
+    if (lowerIsBetterKPIs.includes(selectedKPI || '')) {
+      // Invert the value - higher inverted value means lower original value
+      return 100 - value;
+    }
+
+    return value;
+  };
+
+  // Calculate Institution Avg by summing Province Avg values
+  const calculateInstitutionAvg = () => {
+    let total = 0;
+    let count = 0;
+    
+    provinces.forEach(province => {
+      const data = provincialData[province.id];
+      let value = 0;
+      
+      if (selectedKPI === 'Staff Adequacy Score') {
+        value = parseFloat(data?.average_normalized_score || '0');
+      } else if (selectedKPI === 'Productivity Achievement') {
+        value = parseFloat(data?.average_normalized_score || '0');
+      } else if (selectedKPI === 'Vacancy Impact') {
+        value = parseFloat(data?.average_normalized_score || '0');
+      } else if (selectedKPI === 'Portfolio Load Balance') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Volume Achievement') {
+        value = parseFloat(data?.average_normalized_score || '0');
+      } else if (selectedKPI === 'Portfolio quality') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Default contribution' || selectedKPI === 'Default rate (branch, province, institutional)') {
+        value = parseFloat(data?.average_month_1_default_rate || '0');
+      } else if (selectedKPI === 'Collections efficiency') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Vetting compliance' || selectedKPI === 'Product risk contribution') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Product distribution mix') {
+        value = parseFloat(data?.average_HHI || '0');
+      } else if (selectedKPI === 'Revenue yield per product') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Margin alignment with strategy' || selectedKPI === 'Cost-to-income ratios') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Default aging analysis') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Recovery rate within 1 month' || selectedKPI === 'Recovery rate within 3 months') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Risk migration trends') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Branch revenue' || selectedKPI === 'Growth trajectory alignment') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Institutional average performance') {
+        value = parseFloat(data?.average_normalized_score || '0');
+      } else if (selectedKPI === 'Revenue achievement') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Profitability contribution') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Cash Position Score') {
+        value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Above-Threshold Risk' || selectedKPI === 'Below-Threshold Risk') {
+        value = parseFloat(data?.average_score || '0');
+      }
+      
+      if (!isNaN(value)) {
+        total += value;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '--';
+    
+    const average = total / count;
+    
+    // Determine the format based on selected KPI
+    if (selectedKPI === 'Product distribution mix') {
+      return `${average.toFixed(3)}`; // HHI format
+    } else if (selectedKPI === 'Vetting compliance' || selectedKPI === 'Product risk contribution') {
+      return `${average.toFixed(2)}`; // Decimal format
+    } else if (selectedKPI === 'Branch revenue') {
+      return `K${average.toLocaleString()}`; // Currency format
+    } else {
+      return `${average.toFixed(2)}%`; // Percentage format
+    }
+  };
+
+  // Sort provinces by current period value in descending order
+  const sortedProvinces = [...provinces].sort((a, b) => {
+    const valueA = getCurrentPeriodValue(a);
+    const valueB = getCurrentPeriodValue(b);
+    return valueB - valueA;
+  });
+
+  const institutionAvg = calculateInstitutionAvg();
+
   return (
     <div>
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Province Level Performance</h3>
+      <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+        Institution Avg: <span className="font-semibold">{institutionAvg}</span>
+      </div>
       {loading ? (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -57,7 +222,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {provinces.map((province) => {
+              {sortedProvinces.map((province) => {
                 const data = provincialData[province.id];
                 
                 let institutionalAvg = '0';
