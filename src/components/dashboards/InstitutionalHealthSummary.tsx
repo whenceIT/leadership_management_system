@@ -388,7 +388,7 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
   if (isProvincialData && staffAdequacyData) {
     // For provincial data, we have a single aggregated score from the API
     const overallScore = Math.round(staffAdequacyData.average_normalized_score);
-    const target = 95;
+    const target = 100;
     const variance = overallScore - target;
     const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
     const varianceAbs = `${Math.abs(variance)}pp`;
@@ -399,7 +399,7 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     return {
       institutionalAvg: '--',
       userLevelAvg: `${overallScore}%`,
-      target: '≥95%',
+      target: '100%',
       variance: varianceStr,
       varianceAbs,
       trend,
@@ -434,11 +434,11 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
   // If no data, return default values instead of '--'
   if (kpis.length === 0) {
     return {
-      institutionalAvg: '67.9%',
-      userLevelAvg: '51.2%',
-      target: '≥95%',
-      variance: '-43.8%',
-      varianceAbs: '43.8pp',
+      institutionalAvg: '--',
+      userLevelAvg: '--',
+      target:  '--',
+      variance:  '--',
+      varianceAbs:  '--',
       trend: '→',
       status: 'warning'
     };
@@ -447,7 +447,7 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
   
-  const target = 95;
+  const target = 100;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
@@ -465,7 +465,7 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
   return {
     institutionalAvg,
     userLevelAvg: `${overallScore}%`,
-    target: '≥95%',
+    target: '100%',
     variance: varianceStr,
     varianceAbs,
     trend,
@@ -511,11 +511,11 @@ function aggregateLoanConsultantPerformanceKPIs(
   // If no data, return default values instead of '--'
   if (kpis.length === 0) {
     return {
-      institutionalAvg: '68.5%',
-      userLevelAvg: '45.7%',
-      target: '≥95%',
-      variance: '-49.3%',
-      varianceAbs: '49.3pp',
+      institutionalAvg: 'nil',
+      userLevelAvg: 'nil',
+      target: 'nil',
+      variance: 'nil',
+      varianceAbs: 'nil',
       trend: '↓',
       status: 'critical'
     };
@@ -524,7 +524,7 @@ function aggregateLoanConsultantPerformanceKPIs(
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
   
-  const target = 95;
+  const target = 100;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
@@ -537,12 +537,12 @@ function aggregateLoanConsultantPerformanceKPIs(
     .filter(score => !isNaN(score));
   const institutionalAvg = validInstitutionalAvgs.length > 0 
     ? `${Math.round(validInstitutionalAvgs.reduce((a, b) => a + b, 0) / validInstitutionalAvgs.length)}%`
-    : '68.5%';
+    : 'nil';
 
   return {
     institutionalAvg,
     userLevelAvg: `${overallScore}%`,
-    target: '≥95%',
+    target: '100%',
     variance: varianceStr,
     varianceAbs,
     trend,
@@ -582,10 +582,10 @@ function aggregateLoanProductsKPIs(
   // If no data, return default values instead of '--'
   if (kpis.length === 0) {
     return {
-      institutionalAvg: '72.3%',
-      userLevelAvg: '58.9%',
-      target: '≥95%',
-      variance: '-36.1%',
+      institutionalAvg: 'nil',
+      userLevelAvg: 'nil',
+      target: 'nil',
+      variance: 'nil',
       varianceAbs: '36.1pp',
       trend: '→',
       status: 'warning'
@@ -595,7 +595,7 @@ function aggregateLoanProductsKPIs(
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
   
-  const target = 95;
+  const target = 100;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
@@ -613,7 +613,7 @@ function aggregateLoanProductsKPIs(
   return {
     institutionalAvg,
     userLevelAvg: `${overallScore}%`,
-    target: '≥95%',
+    target: '100%',
     variance: varianceStr,
     varianceAbs,
     trend,
@@ -653,11 +653,11 @@ function aggregateRiskManagementKPIs(
   // If no data, return default values instead of '--'
   if (kpis.length === 0) {
     return {
-      institutionalAvg: '65.2%',
-      userLevelAvg: '48.9%',
-      target: '≥95%',
-      variance: '-46.1%',
-      varianceAbs: '46.1pp',
+      institutionalAvg: 'nil',
+      userLevelAvg: 'nil',
+      target: '1nil',
+      variance: 'nil',
+      varianceAbs: 'nil',
       trend: '↓',
       status: 'critical'
     };
@@ -666,7 +666,7 @@ function aggregateRiskManagementKPIs(
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
   
-  const target = 95;
+  const target = 100;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
@@ -679,12 +679,12 @@ function aggregateRiskManagementKPIs(
     .filter(score => !isNaN(score));
   const institutionalAvg = validInstitutionalAvgs.length > 0 
     ? `${Math.round(validInstitutionalAvgs.reduce((a, b) => a + b, 0) / validInstitutionalAvgs.length)}%`
-    : '65.2%';
+    : '0';
 
   return {
     institutionalAvg,
     userLevelAvg: `${overallScore}%`,
-    target: '≥95%',
+    target: '100%',
     variance: varianceStr,
     varianceAbs,
     trend,
@@ -746,11 +746,11 @@ function aggregateCashLiquidityManagementKPIs(
   // If no data, return default values instead of '--'
   if (kpis.length === 0) {
     return {
-      institutionalAvg: '67.9%',
-      userLevelAvg: '51.2%',
-      target: '≥95%',
-      variance: '-43.8%',
-      varianceAbs: '43.8pp',
+      institutionalAvg: 'nil',
+      userLevelAvg: '--',
+      target: 'nil',
+      variance: 'nil',
+      varianceAbs: 'nil',
       trend: '→',
       status: 'warning'
     };
@@ -759,7 +759,7 @@ function aggregateCashLiquidityManagementKPIs(
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
   
-  const target = 95;
+  const target = 100;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
@@ -777,7 +777,7 @@ function aggregateCashLiquidityManagementKPIs(
   return {
     institutionalAvg,
     userLevelAvg: `${overallScore}%`,
-    target: '≥95%',
+    target: '100%',
     variance: varianceStr,
     varianceAbs,
     trend,
@@ -823,11 +823,11 @@ function aggregateRevenuePerformanceKPIs(
   // If no data, return default values instead of '--'
   if (kpis.length === 0) {
     return {
-      institutionalAvg: '71.8%',
-      userLevelAvg: '52.4%',
-      target: '≥95%',
-      variance: '-42.6%',
-      varianceAbs: '42.6pp',
+      institutionalAvg: 'nil',
+      userLevelAvg: 'nil',
+      target: 'nil',
+      variance: 'nil',
+      varianceAbs: 'nil',
       trend: '→',
       status: 'warning'
     };
@@ -836,7 +836,7 @@ function aggregateRevenuePerformanceKPIs(
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
   
-  const target = 95;
+  const target = 100;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
@@ -854,7 +854,7 @@ function aggregateRevenuePerformanceKPIs(
   return {
     institutionalAvg,
     userLevelAvg: `${overallScore}%`,
-    target: '≥95%',
+    target: '100%',
     variance: varianceStr,
     varianceAbs,
     trend,
@@ -1115,7 +1115,7 @@ function getParameterKPIs(paramName: string,
         name: 'Cash Position Score',
         institutionalAvg: cashPositionData ? '--' : '--',
         currentPeriod: cashPositionData ? `${(parseFloat(cashPositionData.score || cashPositionData.average_score || '0')).toFixed(2)}` : '--',
-        target: 'Within range',
+        target: 'K20,000 to K30,000',
         variance: cashPositionData ? `${(parseFloat(cashPositionData.score || cashPositionData.average_score || '0') - 100).toFixed(2)}%` : '--',
         trend: cashPositionData ? (parseFloat(cashPositionData.score || cashPositionData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
         status: cashPositionData ? (parseFloat(cashPositionData.score || cashPositionData.average_score || '0') >= 90 ? 'good' : parseFloat(cashPositionData.score || cashPositionData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
@@ -1124,7 +1124,7 @@ function getParameterKPIs(paramName: string,
         name: 'Above-Threshold Risk',
         institutionalAvg: aboveThresholdRiskData ? '--' : '--',
         currentPeriod: aboveThresholdRiskData ? `${(parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0')).toFixed(2)}` : '--',
-        target: 'Zero',
+        target: '0',
         variance: aboveThresholdRiskData ? `${(parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0') - 100).toFixed(2)}%` : '--',
         trend: aboveThresholdRiskData ? (parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
         status: aboveThresholdRiskData ? (parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
@@ -1133,7 +1133,7 @@ function getParameterKPIs(paramName: string,
         name: 'Below-Threshold Risk',
         institutionalAvg: belowThresholdRiskData ? '--' : '--',
         currentPeriod: belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0')).toFixed(2)}` : '--',
-        target: 'Zero',
+        target: '0',
         variance: belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') - 100).toFixed(2)}%` : '--',
         trend: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
         status: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
@@ -1221,11 +1221,11 @@ export function InstitutionalHealthSummary({
           {overallInstAvg !== undefined && overallTarget !== undefined && (
             <div className="grid grid-cols-3 gap-4 text-center mt-3 pt-3 border-t border-gray-700">
               <div>
-                <p className="text-gray-400 text-xs">Current</p>
+                <p className="text-gray-400 text-xs">Current Average</p>
                 <p className="text-white font-bold">{overallScore}%</p>
               </div>
               <div>
-                <p className="text-gray-400 text-xs">Inst. Avg</p>
+                <p className="text-gray-400 text-xs">Institutional Operating Average</p>
                 <p className={`font-bold ${overallScore >= overallInstAvg ? 'text-green-400' : 'text-red-400'}`}>{overallInstAvg}%</p>
               </div>
               <div>
@@ -1254,8 +1254,8 @@ export function InstitutionalHealthSummary({
               <thead className="bg-gray-50 dark:bg-gray-900/50">
                 <tr>
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameter</th>
-                  {/* <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Institution Avg</th> */}
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{levelLabel} Avg</th>
+                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
+                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Institution Avg</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variance</th>
                   <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trend</th>
@@ -1308,7 +1308,7 @@ export function InstitutionalHealthSummary({
                   return (
                     <React.Fragment key={index}>
                       <tr 
-                        className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer ${isExpanded ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer ${isExpanded ? 'bg-blue-200 border dark:bg-blue-900/20' : ''}`}
                         onClick={() => setExpandedParam(isExpanded ? null : param.name)}
                       >
                         <td className="px-4 py-3">
@@ -1322,14 +1322,14 @@ export function InstitutionalHealthSummary({
                             </div>
                           </div>
                         </td>
-                        {/* <td className="px-4 py-3 text-center">
-                          <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                            {param.institutionalAvg}
-                          </span>
-                        </td> */}
-                        <td className="px-4 py-3 text-center">
+                        <td className="border px-4 py-3 text-center bg-black/5 dark:bg-white/10">
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
                             {param.userLevelAvg}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                            --not set--
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{param.target}</td>
@@ -1368,24 +1368,24 @@ export function InstitutionalHealthSummary({
                         </td>
                       </tr>
                        {isExpanded && (
-                        <tr>
-                          <td colSpan={7} className="px-4 py-3 bg-blue-50 dark:bg-blue-900/10">
-                            <div className="space-y-4">
+                        <tr className="bg-blue-300">
+                          <td colSpan={7} className="px-4 py-3">
+                            <div className="space-y-4 rounded-lg">
                               {/* Key Performance Indicators */}
-                              <div>
+                              <div className="rounded-lg">
                                 <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">📊 KEY PERFORMANCE INDICATORS:</h4>
                                 <div className="overflow-x-auto">
                                   <table className="min-w-full">
                                      <thead className="bg-blue-100 dark:bg-blue-900/30">
                                       <tr>
-                                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Metric</th>
-                               
-                                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{levelLabel} Avg</th>
-                                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
-                                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
-                                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Contribution</th>
-                                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Trend</th>
-                                        <th className="px-4 py-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Status</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Metric</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Instutional Avg.</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Contribution</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Trend</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Status</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-blue-200 dark:divide-blue-900/20">
@@ -1414,14 +1414,14 @@ export function InstitutionalHealthSummary({
                                           // For branch level, no drill-down needed - they already see branch data
                                         }}
                                         >
-                                          <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">{kpi.name}</td>
-                                      
-                                          <td className="px-4 py-2 text-left text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
-                                          <td className="px-4 py-2 text-left text-sm text-gray-500 dark:text-gray-400">{kpi.target}</td>
-                                          <td className="px-4 py-2 text-left">
+                                          <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
+                                          <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
+                                          <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">--Not set--</td>
+                                          <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">{kpi.target}</td>
+                                          <td className="px-4 py-2 text-center">
                                             <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
                                           </td>
-                                          <td className="px-4 py-2 text-left text-sm">
+                                          <td className="px-4 py-2 text-center text-sm">
                                             {kpi.name === 'Staff Adequacy Score' && staffAdequacyData ? `${parseFloat(staffAdequacyData.percentage_point).toFixed(2)} of ${staffAdequacyData.weight.replace('%','')}pp` : 
                                              kpi.name === 'Productivity Achievement' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
                                              kpi.name === 'Vacancy Impact' && vacancyImpactData ? `${parseFloat(vacancyImpactData.percentage_point).toFixed(2)} of ${vacancyImpactData.weight.replace('%','')}pp` : 
@@ -1452,10 +1452,10 @@ export function InstitutionalHealthSummary({
                                              kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `${parseFloat(belowThresholdRiskData.percentage_points || belowThresholdRiskData.percentage_point || '0').toFixed(2)} of 20pp` : 
                                                 '0'}
                                           </td>
-                                          <td className="px-4 py-2 text-left">
+                                          <td className="px-4 py-2 text-center">
                                             <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
                                           </td>
-                                          <td className="px-4 py-2 text-left">
+                                          <td className="px-4 py-2 text-center">
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>
                                               {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : 'CRITICAL'}
                                             </span>
