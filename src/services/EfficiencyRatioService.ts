@@ -12,7 +12,7 @@ export interface EfficiencyRatioData {
   score?: string;
   average_score?: number;
   weight: string;
-  percentage_point: string;
+  percentage_point: string;   
 }
 
 export async function fetchEfficiencyRatio(branchId: number): Promise<EfficiencyRatioData> {
@@ -24,7 +24,7 @@ export async function fetchEfficiencyRatio(branchId: number): Promise<Efficiency
   if (!response.ok) {
     throw new Error(`Failed to fetch efficiency ratio: ${response.statusText}`);
   }
-  
+   
   return await response.json();
 }
 
