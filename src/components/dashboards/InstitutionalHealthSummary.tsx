@@ -5,6 +5,8 @@ import ApiLoader from '@/components/ApiLoader/ApiLoader';
 import HealthAnalysisSections from './HealthAnalysisSections';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { BranchLevelView } from './BranchLevelView';
+import { ParametersTableView } from './ParametersTableView';
+import { ParametersCardsView } from './ParametersCardsView';
 
 interface KPI { 
   name: string;
@@ -853,8 +855,14 @@ function getParameterKPIs(paramName: string,
   // Helper function to get score from data (handles both branch and institutional formats)
   const getScore = (data: any, field1: string, field2?: string): number => {
     if (!data) return 0;
-    const value = (field2 && data?.[field1] !== undefined) ? data[field1] : (field2 && data?.[field2] !== undefined ? data[field2] : 0);
-    return typeof value === 'string' ? parseFloat(value) : (typeof value === 'number' ? value : 0);
+    // First check field1, then fall back to field2
+    let value = data[field1];
+    if ((value === undefined || value === null) && field2) {
+      value = data[field2];
+    }
+    if (value === undefined || value === null) return 0;
+    const num = typeof value === 'string' ? parseFloat(value) : (typeof value === 'number' ? value : 0);
+    return isNaN(num) ? 0 : num;
   };
 
   const kpis: ParameterKPIs = {
@@ -873,7 +881,12 @@ function getParameterKPIs(paramName: string,
         institutionalAvg: productivityAchievementData ? '--' : '--',
         currentPeriod: productivityAchievementData ? `${getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score').toFixed(2)}` : '0',
         target: productivityAchievementData ? 100 : '--',
-        variance: productivityAchievementData ? `${(getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') - (productivityAchievementData.target || 100)).toFixed(2)}%` : '--',
+        variance: productivityAchievementData ? `${((score) => {
+          const s = score ?? 0;
+          const t = productivityAchievementData?.target ?? 100;
+          const v = s - t;
+          return isNaN(v) ? '--' : `${v.toFixed(2)}%`;
+        })(getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score'))}` : '--',
         trend: productivityAchievementData ? (getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= productivityAchievementData.target ? '↑' : '↓') : '↓',
         status: productivityAchievementData ? (getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical') : 'warning'
       },
@@ -882,7 +895,12 @@ function getParameterKPIs(paramName: string,
         institutionalAvg: vacancyImpactData ? '--' : '--',
         currentPeriod: vacancyImpactData ? `${(getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100).toFixed(2)}` : '--',
         target: vacancyImpactData ? 0 : 0,
-        variance: vacancyImpactData ? `${((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) - (vacancyImpactData.target || 20)).toFixed(2)}` : '--',
+        variance: vacancyImpactData ? `${((score) => {
+          const s = score ?? 0;
+          const t = vacancyImpactData?.target ?? 20;
+          const v = (s * 100) - t;
+          return isNaN(v) ? '--' : `${v.toFixed(2)}`;
+        })(getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score'))}` : '--',
         trend: vacancyImpactData ? ((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= vacancyImpactData.target ? '↑' : '↓') : '↑',
         status: vacancyImpactData ? ((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= 90 ? 'good' : (getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= 70 ? 'warning' : 'critical') : 'warning'
       },
@@ -891,7 +909,12 @@ function getParameterKPIs(paramName: string,
         institutionalAvg: loanPortfolioLoadData ? '--' : '--',
         currentPeriod: loanPortfolioLoadData ? `${getScore(loanPortfolioLoadData, 'score', 'average_score').toFixed(2)}` : '--',
         target: 100,
-        variance: loanPortfolioLoadData ? `${(getScore(loanPortfolioLoadData, 'score', 'average_score') - (loanPortfolioLoadData.target || 100)).toFixed(2)}%` : '--',
+        variance: loanPortfolioLoadData ? `${((score) => {
+          const s = score ?? 0;
+          const t = loanPortfolioLoadData?.target ?? 100;
+          const v = s - t;
+          return isNaN(v) ? '--' : `${v.toFixed(2)}%`;
+        })(getScore(loanPortfolioLoadData, 'score', 'average_score'))}` : '--',
         trend: loanPortfolioLoadData ? (getScore(loanPortfolioLoadData, 'score', 'average_score') >= loanPortfolioLoadData.target ? '↑' : '↓') : '↓',
         status: loanPortfolioLoadData ? (getScore(loanPortfolioLoadData, 'score', 'average_score') >= 90 ? 'good' : getScore(loanPortfolioLoadData, 'score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning'
       }
@@ -1034,7 +1057,7 @@ function getParameterKPIs(paramName: string,
         institutionalAvg: '--',
         currentPeriod: growthTrajectoryData ? `${parseFloat(growthTrajectoryData.average_score || '0').toFixed(2)}` : '--',
         target: '≥2.5%',
-        variance: growthTrajectoryData ? `${(growthTrajectoryData.average_score * 100 - 2.5).toFixed(2)}` : '--',
+        variance: growthTrajectoryData ? `${(parseFloat(growthTrajectoryData.average_score || '0') * 100 - 2.5).toFixed(2)}` : '--',
         trend: growthTrajectoryData ? (growthTrajectoryData.average_score >= 0.025 ? '↑' : '↓') : '↓',
         status: growthTrajectoryData ? (growthTrajectoryData.average_score >= 0.025 ? 'good' : growthTrajectoryData.average_score >= 0 ? 'warning' : 'critical') : 'warning'
       },
@@ -1147,6 +1170,7 @@ export function InstitutionalHealthSummary({
   const [drillLevel, setDrillLevel] = useState<'province' | 'branch' | 'consultant' | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   const levelLabel = {
     institution: 'Institutional',
@@ -1227,288 +1251,130 @@ export function InstitutionalHealthSummary({
 
       {/* Five Headline Parameters View */}
       {(
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-              Six Headline Parameters — {levelLabel} Level
-            </h3>
-            <span className="text-xs text-gray-500 dark:text-gray-400">{userLevelLabel}</span>
+        <>
+          {/* View Toggle */}
+          <div className="flex items-center justify-end mb-4">
+            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  viewMode === 'table'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                📋 Table
+              </button>
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  viewMode === 'cards'
+                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                🗂️ Cards
+              </button>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              {/* Overview stats */}
-              <thead className="bg-gray-50 dark:bg-gray-900/50">
-                <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameter</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Institution Avg</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variance</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trend</th>
-                  <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status & Distance to Target</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {parameters.map((param, index) => {
-                  const kpis = getParameterKPIs(param.name, 
-                    staffAdequacyData, 
-                    productivityAchievementData, 
-                    vacancyImpactData, 
-                    volumeAchievementData, 
-                    loanPortfolioLoadData,
-                    collectionEfficiencyData,
-                    efficiencyRatioData,
-                    growthTrajectoryData,
-                    longTermDelinquencyData,
-                    month1DefaultPerformanceData,
-                    month3RecoveryAchievementsData,
-                    portfolioQualityData,
-                    productDiversificationData,
-                    productRiskScoreData,
-                    rollRateControlData,
-                    yieldAchievementsData,
-                    revenueAchievementsData,
-                    profitabilityContributionData,
-                    cashPositionData,
-                    aboveThresholdRiskData,
-                    belowThresholdRiskData,
-                    approvedExceptionRatioData);
-                  const isExpanded = expandedParam === param.name;
-                  
-                  // Calculate progress percentage
-                  // The userLevelAvg should directly represent the progress towards target
-                  // For example: 51.2% userLevelAvg means 51.2% progress towards target (already normalized)
-                  const userLevelScore = parseFloat(param.userLevelAvg.replace('%', ''));
-                  let targetScore = parseFloat(param.target.toString().replace('%', '').replace('≥', '').replace('≤', ''));
-                  
-                  // If target is not a numeric value (e.g., "Within range"), use default target of 100
-                  if (isNaN(targetScore)) {
-                    targetScore = 100;
-                  }
-                  
-                  // Calculate progress as percentage towards target
-                  // If userLevelAvg is already normalized (e.g., 51.2% represents 51.2% of target=95), 
-                  // then progress = (userLevelScore / targetScore) * 100
-                  const progress = Math.min(Math.max((userLevelScore / targetScore) * 100, 0), 100);
 
-                  return (
-                    <React.Fragment key={index}>
-                      <tr 
-                        className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer ${isExpanded ? 'bg-blue-200 border dark:bg-blue-900/20' : ''}`}
-                        onClick={() => setExpandedParam(isExpanded ? null : param.name)}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center">
-                            <span className={`mr-2 transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
-                              ▶
-                            </span>
-                            <div>
-                              <p className="text-sm font-semibold text-gray-900 dark:text-white">{param.name}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{param.shortName}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="border px-4 py-3 text-center bg-black/5 dark:bg-white/10">
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {param.userLevelAvg}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <div className="flex flex-col items-center">
-                            <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                              {param.name === 'Branch Structure & Staffing Index' ? '87%' :
-                               param.name === 'Loan Consultant Performance Index' ? '45%' :
-                               param.name === 'Loan Products & Interest Rates Index' ? '58%' :
-                               param.name === 'Risk Management & Defaults Index' ? '45%' :
-                               param.name === 'Revenue & Performance Metrics Index' ? '39%' :
-                               param.name === 'Cash & Liquidity Management Index' ? '50%' :
-                               '--'}
-                            </span>
-                            {param.name !== 'Cash & Liquidity Management Index' && param.userLevelAvg !== '--' && param.userLevelAvg !== '--%' && (
-                              <span className={`text-xs font-medium ${parseFloat(param.userLevelAvg) >= parseFloat(param.name === 'Branch Structure & Staffing Index' ? '87' : param.name === 'Loan Consultant Performance Index' ? '45' : param.name === 'Loan Products & Interest Rates Index' ? '58' : param.name === 'Risk Management & Defaults Index' ? '45' : param.name === 'Revenue & Performance Metrics Index' ? '39' : param.name === 'Cash & Liquidity Management Index' ? '50' : '0') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                              {parseFloat(param.userLevelAvg) >= parseFloat(param.name === 'Branch Structure & Staffing Index' ? '87' : param.name === 'Loan Consultant Performance Index' ? '45' : param.name === 'Loan Products & Interest Rates Index' ? '58' : param.name === 'Risk Management & Defaults Index' ? '45' : param.name === 'Revenue & Performance Metrics Index' ? '39' : param.name === 'Cash & Liquidity Management Index' ? '50' : '0') ? '▲' : '▼'}
-                              {Math.abs(parseFloat(param.userLevelAvg) - parseFloat(param.name === 'Branch Structure & Staffing Index' ? '87' : param.name === 'Loan Consultant Performance Index' ? '45' : param.name === 'Loan Products & Interest Rates Index' ? '58' : param.name === 'Risk Management & Defaults Index' ? '45' : param.name === 'Revenue & Performance Metrics Index' ? '39' : param.name === 'Cash & Liquidity Management Index' ? '50' : '0')).toFixed(0)}%
-                            </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{param.target}</td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`text-sm ${getVarianceColor(param.variance)}`}>
-                            {param.variance}
-                          </span>
-                          <span className="text-xs text-gray-400 ml-1">({param.varianceAbs})</span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={getTrendBadge(param.trend)}>{param.trend}</span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-center">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(param.status)} mb-2 inline-block`}>
-                              {param.status === 'good' ? 'GOOD' : param.status === 'warning' ? 'WARNING' : 'CRITICAL'}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                <div 
-                                  className={`h-2 rounded-full transition-all duration-300 ${
-                                    param.status === 'critical' ? 'bg-red-500' :
-                                    param.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
-                                  }`}
-                                  style={{ width: `${progress}%` }}
-                                />
-                              </div>
-                              <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 min-w-[40px] text-center">
-                                {userLevelScore}%
-                              </span>
-                            </div>
-                            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                              {`${Math.round(100 - progress)}% to target`}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                       {isExpanded && (
-                        <tr className="bg-blue-300">
-                          <td colSpan={7} className="px-4 py-3">
-                            <div className="space-y-4 rounded-lg">
-                              {/* Key Performance Indicators */}
-                              <div className="rounded-lg">
-                                <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">📊 KEY PERFORMANCE INDICATORS:</h4>
-                                <div className="overflow-x-auto">
-                                  <table className="min-w-full">
-                                     <thead className="bg-blue-100 dark:bg-blue-900/30">
-                                      <tr>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Metric</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Inst Avg</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Contribution</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Trend</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Status</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-blue-200 dark:divide-blue-900/20">
-                                      {kpis.map((kpi, kpiIndex) => (
-                                        <tr 
-                                          key={kpiIndex} 
-                                          className="hover:bg-blue-100 dark:hover:bg-blue-900/20 cursor-pointer"
-                                          onClick={() => {
-                                          // Access level control:
-                                          // - institution: drill to province level
-                                          // - province: skip province, go directly to branch
-                                          // - branch: no drill-down (already at branch level)
-                                          if (userLevel === 'institution') {
-                                            setSelectedKPI(kpi.name);
-                                            setDrillLevel('province');
-                                            setSelectedProvince(null);
-                                            setSelectedBranch(null);
-                                          } else if (userLevel === 'province') {
-                                            // Provincial Manager - skip province level, go directly to branch
-                                            // The province ID will be derived from user's office
-                                            setSelectedKPI(kpi.name);
-                                            setDrillLevel('branch');
-                                            setSelectedProvince(null);
-                                            setSelectedBranch(null);
-                                          }
-                                          // For branch level, no drill-down needed - they already see branch data
-                                        }}
-                                        >
-                                          <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
-                                          <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
-                                          <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                            {kpi.name === 'Staff Adequacy Score' ? '87%' : 
-                                             kpi.name === 'Productivity Achievement' ? '75-100%' : 
-                                             kpi.name === 'Vacancy Impact' ? '46.7%' : 
-                                             kpi.name === 'Portfolio Load Balance' ? '50%' : 
-                                             kpi.name === 'Volume Achievement' ? '13%' : 
-                                             kpi.name === 'Portfolio quality' ? '71.64%' : 
-                                             kpi.name === 'Default contribution' ? '28.36%' : 
-                                             kpi.name === 'Collections efficiency' ? '71.64%' : 
-                                             kpi.name === 'Vetting compliance' ? '100%' : 
-                                             kpi.name === 'Product distribution mix' ? '87.31%' : 
-                                             kpi.name === 'Revenue yield per product' ? '38.17%' : 
-                                             kpi.name === 'Product risk contribution' ? '28.36%' : 
-                                             kpi.name === 'Margin alignment with strategy' ? '55%' : 
-                                             kpi.name === 'Default rate (branch, province, institutional)' ? '28.36%' : 
-                                             kpi.name === 'Default aging analysis' ? '43.95%' : 
-                                             kpi.name === 'Recovery rate within 3 months' ? '56.05%' : 
-                                             kpi.name === 'Risk migration trends' ? '20%' : 
-                                             kpi.name === 'Branch revenue' ? '2.5%' : 
-                                             kpi.name === 'Cost-to-income ratios' ? '55%' : 
-                                             kpi.name === 'Institutional average performance' ? '75-100%' : 
-                                             kpi.name === 'Growth trajectory alignment' ? '2.5%' : 
-                                             kpi.name === 'Revenue achievement' ? '27.9%' : 
-                                             kpi.name === 'Profitability contribution' ? '27.9%' : 
-                                             kpi.name === 'Cash Position Score' ? '50%' : 
-                                             kpi.name === 'Above-Threshold Risk' ? '0%' : 
-                                             kpi.name === 'Below-Threshold Risk' ? '0%' : 
-                                             kpi.name === 'Approved Exception Ratio' ? '100%' :
-                                                '--'}
-                                          </td>
-                                          <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">{kpi.target}</td>
-                                          <td className="px-4 py-2 text-center">
-                                            <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
-                                          </td>
-                                          <td className="px-4 py-2 text-center text-sm">
-                                            {kpi.name === 'Staff Adequacy Score' && staffAdequacyData ? `${parseFloat(staffAdequacyData.percentage_point).toFixed(2)} of ${staffAdequacyData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Productivity Achievement' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Vacancy Impact' && vacancyImpactData ? `${parseFloat(vacancyImpactData.percentage_point).toFixed(2)} of ${vacancyImpactData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Volume Achievement' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point).toFixed(2)} of ${volumeAchievementData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Portfolio Load Balance' && loanPortfolioLoadData ? `${parseFloat(loanPortfolioLoadData.percentage_point).toFixed(2)} of ${loanPortfolioLoadData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Loan disbursement volume' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point).toFixed(2)} of ${volumeAchievementData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Portfolio quality' && portfolioQualityData ? `${parseFloat(portfolioQualityData.percentage_point).toFixed(2)} of ${portfolioQualityData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Default contribution' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point).toFixed(2)} of ${month1DefaultPerformanceData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Collections efficiency' && collectionEfficiencyData ? `${parseFloat(collectionEfficiencyData.percentage_point).toFixed(2)} of ${collectionEfficiencyData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Vetting compliance' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point).toFixed(2)} of ${productRiskScoreData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Product distribution mix' && productDiversificationData ? `${parseFloat(productDiversificationData.percentage_point).toFixed(2)} of ${productDiversificationData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Revenue yield per product' && yieldAchievementsData ? `${parseFloat(yieldAchievementsData.percentage_point).toFixed(2)} of ${yieldAchievementsData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Product risk contribution' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point).toFixed(2)} of ${productRiskScoreData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Margin alignment with strategy' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Default rate (branch, province, institutional)' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point).toFixed(2)} of ${month1DefaultPerformanceData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Default aging analysis' && longTermDelinquencyData ? `${parseFloat(longTermDelinquencyData.percentage_point).toFixed(2)} of ${longTermDelinquencyData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Recovery rate within 1 month' && month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.percentage_point).toFixed(2)} of ${month3RecoveryAchievementsData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Recovery rate within 3 months' && month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.percentage_point).toFixed(2)} of ${month3RecoveryAchievementsData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Risk migration trends' && rollRateControlData ? `${parseFloat(rollRateControlData.percentage_point).toFixed(2)} of ${rollRateControlData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Branch revenue' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` : 
-                                             kpi.name === 'Cost-to-income ratios' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Institutional average performance' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Growth trajectory alignment' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` : 
-                                             kpi.name === 'Revenue achievement' && revenueAchievementsData ? `${parseFloat(revenueAchievementsData.percentage_point).toFixed(2)} of ${revenueAchievementsData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Profitability contribution' && profitabilityContributionData ? `${parseFloat(profitabilityContributionData.percentage_point).toFixed(2)} of ${profitabilityContributionData.weight.replace('%','')}pp` : 
-                                             kpi.name === 'Cash Position Score' && cashPositionData ? `${parseFloat(cashPositionData.percentage_points || cashPositionData.percentage_point || '0').toFixed(2)} of 40pp` : 
-                                             kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `${parseFloat(aboveThresholdRiskData.percentage_points || aboveThresholdRiskData.percentage_point || '0').toFixed(2)} of 30pp` : 
-                                             kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `${parseFloat(belowThresholdRiskData.percentage_points || belowThresholdRiskData.percentage_point || '0').toFixed(2)} of 20pp` : 
-                                                '0'}
-                                          </td>
-                                          <td className="px-4 py-2 text-center">
-                                            <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
-                                          </td>
-                                          <td className="px-4 py-2 text-center">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>
-                                              {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : 'CRITICAL'}
-                                            </span>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                              
-                              {/* Reusable Analysis Sections */}
-                              
-                              
-                            </div>
-                          </td>
-                        </tr>
-                       )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-            <HealthAnalysisSections
+          {viewMode === 'table' ? (
+            <ParametersTableView
+              parameters={parameters}
+              userLevel={userLevel}
+              userLevelLabel={userLevelLabel}
+              expandedParam={expandedParam}
+              onToggleExpand={(paramName) => setExpandedParam(expandedParam === paramName ? null : paramName)}
+              getParameterKPIs={getParameterKPIs}
+              getVarianceColor={getVarianceColor}
+              getTrendBadge={getTrendBadge}
+              getStatusBadge={getStatusBadge}
+              staffAdequacyData={staffAdequacyData}
+              productivityAchievementData={productivityAchievementData}
+              vacancyImpactData={vacancyImpactData}
+              volumeAchievementData={volumeAchievementData}
+              loanPortfolioLoadData={loanPortfolioLoadData}
+              collectionEfficiencyData={collectionEfficiencyData}
+              efficiencyRatioData={efficiencyRatioData}
+              growthTrajectoryData={growthTrajectoryData}
+              longTermDelinquencyData={longTermDelinquencyData}
+              month1DefaultPerformanceData={month1DefaultPerformanceData}
+              month3RecoveryAchievementsData={month3RecoveryAchievementsData}
+              portfolioQualityData={portfolioQualityData}
+              productDiversificationData={productDiversificationData}
+              productRiskScoreData={productRiskScoreData}
+              rollRateControlData={rollRateControlData}
+              yieldAchievementsData={yieldAchievementsData}
+              revenueAchievementsData={revenueAchievementsData}
+              profitabilityContributionData={profitabilityContributionData}
+              cashPositionData={cashPositionData}
+              aboveThresholdRiskData={aboveThresholdRiskData}
+              belowThresholdRiskData={belowThresholdRiskData}
+              approvedExceptionRatioData={approvedExceptionRatioData}
+              onKpiClick={(kpiName) => {
+                if (userLevel === 'institution') {
+                  setSelectedKPI(kpiName);
+                  setDrillLevel('province');
+                  setSelectedProvince(null);
+                  setSelectedBranch(null);
+                } else if (userLevel === 'province') {
+                  setSelectedKPI(kpiName);
+                  setDrillLevel('branch');
+                  setSelectedProvince(null);
+                  setSelectedBranch(null);
+                }
+              }}
+            />
+          ) : (
+            <ParametersCardsView
+              parameters={parameters}
+              userLevel={userLevel}
+              userLevelLabel={userLevelLabel}
+              expandedParam={expandedParam}
+              onToggleExpand={(paramName) => setExpandedParam(expandedParam === paramName ? null : paramName)}
+              getParameterKPIs={getParameterKPIs}
+              getVarianceColor={getVarianceColor}
+              getTrendBadge={getTrendBadge}
+              getStatusBadge={getStatusBadge}
+              staffAdequacyData={staffAdequacyData}
+              productivityAchievementData={productivityAchievementData}
+              vacancyImpactData={vacancyImpactData}
+              volumeAchievementData={volumeAchievementData}
+              loanPortfolioLoadData={loanPortfolioLoadData}
+              collectionEfficiencyData={collectionEfficiencyData}
+              efficiencyRatioData={efficiencyRatioData}
+              growthTrajectoryData={growthTrajectoryData}
+              longTermDelinquencyData={longTermDelinquencyData}
+              month1DefaultPerformanceData={month1DefaultPerformanceData}
+              month3RecoveryAchievementsData={month3RecoveryAchievementsData}
+              portfolioQualityData={portfolioQualityData}
+              productDiversificationData={productDiversificationData}
+              productRiskScoreData={productRiskScoreData}
+              rollRateControlData={rollRateControlData}
+              yieldAchievementsData={yieldAchievementsData}
+              revenueAchievementsData={revenueAchievementsData}
+              profitabilityContributionData={profitabilityContributionData}
+              cashPositionData={cashPositionData}
+              aboveThresholdRiskData={aboveThresholdRiskData}
+              belowThresholdRiskData={belowThresholdRiskData}
+              approvedExceptionRatioData={approvedExceptionRatioData}
+              onKpiClick={(kpiName) => {
+                if (userLevel === 'institution') {
+                  setSelectedKPI(kpiName);
+                  setDrillLevel('province');
+                  setSelectedProvince(null);
+                  setSelectedBranch(null);
+                } else if (userLevel === 'province') {
+                  setSelectedKPI(kpiName);
+                  setDrillLevel('branch');
+                  setSelectedProvince(null);
+                  setSelectedBranch(null);
+                }
+              }}
+            />
+          )}
+
+          <HealthAnalysisSections
                                 userLevel={userLevel}
                                 parameters={parameters}
                                 keyMetrics={keyMetrics}
@@ -1539,36 +1405,8 @@ export function InstitutionalHealthSummary({
                                 belowThresholdRiskData={belowThresholdRiskData}
                                 approvedExceptionRatioData={approvedExceptionRatioData}
                               />
-          </div>
-        </div>
+        </>
       )}
-
-      {/* Recent Activity
-      {recentActivities.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700">
-            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Recent Activity Causing Change</h3>
-          </div>
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            {recentActivities.map((activity, index) => (
-              <div key={index} className="px-5 py-3 flex items-start gap-3">
-                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                  activity.impact === 'positive' ? 'bg-green-500' :
-                  activity.impact === 'negative' ? 'bg-red-500' : 'bg-gray-400'
-                }`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-900 dark:text-white">{activity.description}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-xs text-gray-400">{activity.time}</span>
-                    <span className="text-xs text-gray-300 dark:text-gray-600">•</span>
-                    <span className="text-xs text-blue-600 dark:text-blue-400">{activity.parameter}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )} */}
       {/* KPI Drill-down Modal */}
       {selectedKPI && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[999999] flex items-center justify-center p-4">
