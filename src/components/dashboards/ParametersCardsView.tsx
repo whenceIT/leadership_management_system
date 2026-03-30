@@ -142,6 +142,40 @@ export function ParametersCardsView({
     return Math.min(Math.max((userLevelScore / targetScore) * 100, 0), 100);
   };
 
+  // Standard operating averages for each KPI
+  const getStandardOperatingAverage = (kpiName: string): string => {
+    switch (kpiName) {
+      case 'Staff Adequacy Score': return '87%';
+      case 'Productivity Achievement': return '75-100%';
+      case 'Vacancy Impact': return '46.7%';
+      case 'Portfolio Load Balance': return '50%';
+      case 'Volume Achievement': return '13%';
+      case 'Portfolio quality': return '71.64%';
+      case 'Default contribution': return '28.36%';
+      case 'Collections efficiency': return '71.64%';
+      case 'Vetting compliance': return '100%';
+      case 'Product distribution mix': return '87.31%';
+      case 'Revenue yield per product': return '38.17%';
+      case 'Product risk contribution': return '28.36%';
+      case 'Margin alignment with strategy': return '55%';
+      case 'Default rate (branch, province, institutional)': return '28.36%';
+      case 'Default aging analysis': return '43.95%';
+      case 'Recovery rate within 3 months': return '56.05%';
+      case 'Risk migration trends': return '20%';
+      case 'Branch revenue': return '2.5%';
+      case 'Cost-to-income ratios': return '55%';
+      case 'Institutional average performance': return '75-100%';
+      case 'Growth trajectory alignment': return '2.5%';
+      case 'Revenue achievement': return '27.9%';
+      case 'Profitability contribution': return '27.9%';
+      case 'Cash Position Score': return '50%';
+      case 'Above-Threshold Risk': return '0%';
+      case 'Below-Threshold Risk': return '0%';
+      case 'Approved Exception Ratio': return '100%';
+      default: return '--';
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {parameters.map((param, index) => {
@@ -251,10 +285,14 @@ export function ParametersCardsView({
                           {kpi.status}
                         </span>
                       </div>
-                      <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="grid grid-cols-4 gap-2 text-xs">
                         <div>
                           <p className="text-gray-500 dark:text-gray-400">Current</p>
                           <p className="font-semibold text-gray-900 dark:text-white">{kpi.currentPeriod}%</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 dark:text-gray-400">Std Op Avg</p>
+                          <p className="font-semibold text-blue-600 dark:text-blue-400">{getStandardOperatingAverage(kpi.name)}</p>
                         </div>
                         <div>
                           <p className="text-gray-500 dark:text-gray-400">Target</p>
@@ -262,7 +300,10 @@ export function ParametersCardsView({
                         </div>
                         <div>
                           <p className="text-gray-500 dark:text-gray-400">Variance</p>
-                          <p className={`font-semibold ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</p>
+                          <div className="flex items-center gap-1">
+                            <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
+                            <span className={`font-semibold ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
+                          </div>
                         </div>
                       </div>
                     </div>

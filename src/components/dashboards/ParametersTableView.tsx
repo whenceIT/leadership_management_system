@@ -319,7 +319,10 @@ export function ParametersTableView({
                                       </td>
                                       <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">{kpi.target}</td>
                                       <td className="px-4 py-2 text-center">
-                                        <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
+                                        <div className="flex items-center justify-center gap-1">
+                                          <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
+                                          <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
+                                        </div>
                                       </td>
                                       <td className="px-4 py-2 text-center text-sm">
                                         {kpi.name === 'Staff Adequacy Score' && staffAdequacyData ? `${parseFloat(staffAdequacyData.percentage_point).toFixed(2)} of ${staffAdequacyData.weight.replace('%','')}pp` : 
@@ -351,7 +354,8 @@ export function ParametersTableView({
                                             '0'}
                                       </td>
                                       <td className="px-4 py-2 text-center">
-                                        <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
+                                        {/* Trend already shown in Variance column */}
+                                        <span className={`text-xs ${kpi.trend === '↑' ? 'text-green-600' : kpi.trend === '↓' ? 'text-red-600' : 'text-gray-500'}`}>{kpi.trend}</span>
                                       </td>
                                       <td className="px-4 py-2 text-center">
                                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>

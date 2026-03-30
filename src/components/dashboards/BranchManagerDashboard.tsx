@@ -126,7 +126,32 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
   // Custom summary data with dynamic aggregated Branch Structure & Staffing Index
   const summaryData = useMemo(() => {
-    const baseData = getInstitutionalSummaryData('branch', 'Branch View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData);
+    const baseData = getInstitutionalSummaryData(
+      'branch', 
+      'Branch View', 
+      staffAdequacyData, 
+      productivityAchievementData, 
+      vacancyImpactData, 
+      loanPortfolioLoadData,
+      volumeAchievementData,
+      collectionEfficiencyData,
+      efficiencyRatioData,
+      growthTrajectoryData,
+      longTermDelinquencyData,
+      month1DefaultPerformanceData,
+      month3RecoveryAchievementsData,
+      portfolioQualityData,
+      productDiversificationData,
+      productRiskScoreData,
+      rollRateControlData,
+      yieldAchievementsData,
+      undefined, // revenueAchievementsData - not available
+      undefined, // profitabilityContributionData - not available
+      cashPositionData,
+      aboveThresholdRiskData,
+      belowThresholdRiskData,
+      approvedExceptionRatioData
+    );
     let updatedData = { ...baseData };
 
     // Update key metrics with individual KPI data
@@ -362,7 +387,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       overallScore,
       overallInstAvg
     };
-  }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData, cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData]);
+  }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData, longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData, portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData, yieldAchievementsData, cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData]);
 
   return (
     <DashboardBase
