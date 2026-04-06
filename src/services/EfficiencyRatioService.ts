@@ -40,3 +40,16 @@ export async function fetchProvincialEfficiencyRatio(provinceId: number): Promis
   
   return await response.json();
 }
+export async function fetchDistrictEfficiencyRatio(districtId: number): Promise<EfficiencyRatioData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/efficiency-ratio/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district efficiency ratio: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

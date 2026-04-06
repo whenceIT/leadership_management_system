@@ -124,7 +124,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
   // Fetch approved exception ratio data
   const { data: approvedExceptionRatioData, isLoading: isApprovedExceptionRatioLoading, error: approvedExceptionRatioError } = useApprovedExceptionRatio(3);
 
-  // Custom summary data with dynamic aggregated Branch Structure & Staffing Index
+  // Custom summary data with dynamic aggregated Branch Structure & Staffing
   const summaryData = useMemo(() => {
     const baseData = getInstitutionalSummaryData(
       'branch', 
@@ -272,7 +272,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       });
     }
 
-    // Update Loan Consultant Performance Index with Volume Achievement data
+    // Update Loan Consultant Performance with Volume Achievement data
     if (volumeAchievementData) {
       const normalizedScore = parseFloat(volumeAchievementData.normalized_score || '0');
       const variance = normalizedScore - 100; // Target is 100% for normalized score
@@ -280,7 +280,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       updatedData = {
         ...updatedData,
         parameters: updatedData.parameters.map(param => {
-          if (param.name === 'Loan Consultant Performance Index') {
+          if (param.name === 'Loan Consultant Performance') {
             const trend = normalizedScore >= 90 ? '↑' : normalizedScore >= 70 ? '→' : '↓';
             const status = normalizedScore >= 90 ? 'good' : normalizedScore >= 70 ? 'warning' : 'critical';
             

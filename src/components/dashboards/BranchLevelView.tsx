@@ -30,20 +30,27 @@ import { fetchBelowThresholdRisk } from '@/services/BelowThresholdRiskService';
 interface BranchLevelViewProps {
   selectedKPI: string;
   selectedProvince: number;
+  selectedDistrict: number | string | null;
   onBranchClick: (branchId: number) => void;
   onBack: () => void;
 }
 
-export function BranchLevelView({ selectedKPI, selectedProvince, onBranchClick, onBack }: BranchLevelViewProps) {
-  const { getOfficesByProvince } = useOffice();
+export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistrict, onBranchClick, onBack }: BranchLevelViewProps) {
+  const { getOfficesByProvince, getOfficesByDistrict } = useOffice();
   const { getProvinceName } = useProvince();
   const provinceName = getProvinceName(selectedProvince);
   const [branchData, setBranchData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Memoize branches to prevent infinite re-renders - only recalculate when province changes
-  const branches = useMemo(() => getOfficesByProvince(selectedProvince), [selectedProvince, getOfficesByProvince]);
+  // Memoize branches to prevent infinite re-renders
+  // Filter by district if selected, otherwise by province
+  const branches = useMemo(() => {
+    if (selectedDistrict) {
+      return getOfficesByDistrict(selectedDistrict);
+    }
+    return getOfficesByProvince(selectedProvince);
+  }, [selectedProvince, selectedDistrict, getOfficesByProvince, getOfficesByDistrict]);
 
   // Fetch branch data for the selected KPI
   useEffect(() => {
@@ -58,86 +65,80 @@ export function BranchLevelView({ selectedKPI, selectedProvince, onBranchClick, 
       try {
         for (const branch of branches) {
           try {
-            let data: any;
-            switch (selectedKPI) {
+            const branchId = String(branch.id);
+            let data: any = null;
+            
+            switch(selectedKPI) {
               case 'Staff Adequacy Score':
-                data = await fetchStaffAdequacyPerformance(parseInt(branch.id));
+                data = await fetchStaffAdequacyPerformance(parseInt(branchId));
                 break;
-              case 'Productivity Achievement':
-                data = await fetchProductivityAchievement(parseInt(branch.id));
-                break;
-              case 'Vacancy Impact':
-                data = await fetchVacancyImpact(parseInt(branch.id));
-                break;
-              case 'Portfolio Load Balance':
-                data = await fetchLoanPortfolioLoad(parseInt(branch.id));
+              case 'Productivity Achievement Score':
+                data = await fetchProductivityAchievement(parseInt(branchId));
                 break;
               case 'Volume Achievement':
-                data = await fetchVolumeAchievement(parseInt(branch.id));
+                data = await fetchVolumeAchievement(parseInt(branchId));
                 break;
-              case 'Portfolio quality':
-                data = await fetchPortfolioQuality(parseInt(branch.id));
+              case 'Vacancy Impact':
+                data = await fetchVacancyImpact(parseInt(branchId));
                 break;
-              case 'Default contribution':
-              case 'Default rate (branch, province, institutional)':
-                data = await fetchMonth1DefaultPerformance(parseInt(branch.id));
-                break;
-              case 'Collections efficiency':
-                data = await fetchCollectionEfficiency(parseInt(branch.id));
+              case 'Portfolio Quality Score':
+                data = await fetchPortfolioQuality(parseInt(branchId));
                 break;
               case 'Vetting compliance':
-              case 'Product risk contribution':
-                data = await fetchProductRiskScore(parseInt(branch.id));
+                data = await fetchProductRiskScore(parseInt(branchId));
                 break;
-              case 'Product distribution mix':
-                data = await fetchProductDiversification(parseInt(branch.id));
+              case 'Collection Efficiency':
+                data = await fetchCollectionEfficiency(parseInt(branchId));
                 break;
-              case 'Revenue yield per product':
-                data = await fetchYieldAchievements(parseInt(branch.id));
+              case 'Yield Achievement':
+                data = await fetchYieldAchievements(parseInt(branchId));
                 break;
-              case 'Margin alignment with strategy':
-              case 'Cost-to-income ratios':
-                data = await fetchEfficiencyRatio(parseInt(branch.id));
+              case 'Product diversification':
+                data = await fetchProductDiversification(parseInt(branchId));
                 break;
-              case 'Default aging analysis':
-                data = await fetchLongTermDelinquency(parseInt(branch.id));
+              case 'Product Risk Score':
+                data = await fetchProductRiskScore(parseInt(branchId));
                 break;
-              case 'Recovery rate within 1 month':
-              case 'Recovery rate within 3 months':
-                data = await fetchMonth3RecoveryAchievements(parseInt(branch.id));
+              case 'Month-1 Default Performance':
+                data = await fetchMonth1DefaultPerformance(parseInt(branchId));
                 break;
-              case 'Risk migration trends':
-                data = await fetchRollRateControl(parseInt(branch.id));
+              case '3-Month Recovery Achievement':
+                data = await fetchMonth3RecoveryAchievements(parseInt(branchId));
                 break;
-              case 'Branch revenue':
-              case 'Growth trajectory alignment':
-                data = await fetchGrowthTrajectory(parseInt(branch.id));
+              case 'Roll-Rate Control':
+                data = await fetchRollRateControl(parseInt(branchId));
                 break;
-              case 'Institutional average performance':
-                data = await fetchProductivityAchievement(parseInt(branch.id));
+              case 'Long-Term Delinquency Risk':
+                data = await fetchLongTermDelinquency(parseInt(branchId));
                 break;
-              case 'Revenue achievement':
-                data = await fetchRevenueAchievements(parseInt(branch.id));
+              case 'Revenue Achievement':
+                data = await fetchRevenueAchievements(parseInt(branchId));
                 break;
-              case 'Profitability contribution':
-                data = await fetchProfitabilityContribution(parseInt(branch.id));
+              case 'Efficiency Ratio (CIR)':
+                data = await fetchEfficiencyRatio(parseInt(branchId));
+                break;
+              case 'Profitability Contribution':
+                data = await fetchProfitabilityContribution(parseInt(branchId));
+                break;
+              case 'Growth Trajectory':
+                data = await fetchGrowthTrajectory(parseInt(branchId));
                 break;
               case 'Cash Position Score':
-                data = await fetchCashPosition(parseInt(branch.id));
+                data = await fetchCashPosition(parseInt(branchId));
                 break;
               case 'Above-Threshold Risk':
-                data = await fetchAboveThresholdRisk(parseInt(branch.id));
+                data = await fetchAboveThresholdRisk(parseInt(branchId));
                 break;
               case 'Below-Threshold Risk':
-                data = await fetchBelowThresholdRisk(parseInt(branch.id));
+                data = await fetchBelowThresholdRisk(parseInt(branchId));
                 break;
-              default:
-                data = null;
+              case 'Portfolio Load Balance':
+                data = await fetchLoanPortfolioLoad(parseInt(branchId));
+                break;
             }
-            newBranchData[branch.id] = data;
+            newBranchData[branchId] = data;
           } catch (err) {
-            console.error(`Failed to fetch ${selectedKPI} for branch ${branch.id}:`, err);
-            newBranchData[branch.id] = null;
+            console.error(`Error fetching data for branch ${branch.id}:`, err);
           }
         }
         setBranchData(newBranchData);
@@ -149,7 +150,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, onBranchClick, 
     };
 
     fetchBranchData();
-  }, [selectedKPI, selectedProvince]);
+  }, [selectedKPI, branches]);
 
   // Helper functions to calculate trend and status
   const getTrendBadge = (trend: '↑' | '↓' | '→') => {
@@ -532,7 +533,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, onBranchClick, 
                 <tr 
                   key={branch.id} 
                   className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                  onClick={() => onBranchClick(parseInt(branch.id))}
+                  onClick={() => onBranchClick(Number(branch.id))}
                 >
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
                   <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{kpiValue.current}</td>

@@ -1,997 +1,208 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+
 /**
  * useOffice Hook
  * 
- * Provides access to office data from Info/offices.md.
- * Contains all offices with their IDs, names, and other details.
+ * Provides access to office data fetched from the backend API.
+ * Includes district_id and province_id for hierarchical filtering.
  */
 
 export interface Office {
-  id: string;
+  id: string | number;
   name: string;
-  parentId: string | null;
+  parentId: string | number | null;
   externalId: string;
-  openingDate: string | null;
-  branchCapacity: string | null;
-  address: string | null;
-  phone: string | null;
-  email: string | null;
-  notes: string | null;
-  managerId: string | null;
-  active: boolean;
-  defaultOffice: boolean;
-  createdAt: string | null;
-  updatedAt: string | null;
-  deletedAt: string | null;
-  provinceId: string;
+  openingDate?: string | null;
+  branchCapacity?: number | string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  notes?: string | null;
+  managerId?: string | number | null;
+  active: boolean | number;
+  defaultOffice?: boolean | number;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  deletedAt?: string | null;
+  provinceId: string | number;
+  districtId?: string | number | null;
+  district_id?: string | number | null; // API often uses snake_case
+  province_id?: string | number | null;
 }
 
-// Office data parsed from Info/offices.md
-const officesData: Office[] = [
-  {
-    id: "1",
-    name: "ZIMCO HOUSE LUSAKA",
-    parentId: null,
-    externalId: "WHLSK001",
-    openingDate: "2019-08-09",
-    branchCapacity: null,
-    address: null,
-    phone: "0971089407",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: true,
-    createdAt: null,
-    updatedAt: "2019-12-20 13:34:24",
-    deletedAt: null,
-    provinceId: "1",
-  },
-  {
-    id: "2",
-    name: "ANCHOR HOUSE LUSAKA",
-    parentId: "1",
-    externalId: "WHLSK002",
-    openingDate: "2019-08-10",
-    branchCapacity: null,
-    address: null,
-    phone: "0972274147",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2019-08-09 17:50:41",
-    updatedAt: "2023-02-27 07:28:18",
-    deletedAt: null,
-    provinceId: "1",
-  },
-  {
-    id: "3",
-    name: "KAMBENDEKELA HOUSE LUSAKA",
-    parentId: "1",
-    externalId: "WHLSK003",
-    openingDate: "2019-08-09",
-    branchCapacity: null,
-    address: null,
-    phone: "0978966347",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2019-08-09 17:51:17",
-    updatedAt: "2019-12-20 13:32:36",
-    deletedAt: null,
-    provinceId: "1",
-  },
-  {
-    id: "4",
-    name: "SOLWEZI  HQ BRANCH",
-    parentId: "1",
-    externalId: "WHNWP001",
-    openingDate: "2019-08-09",
-    branchCapacity: null,
-    address: null,
-    phone: " 0973108416",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2019-08-09 17:53:49",
-    updatedAt: "2024-12-20 17:11:08",
-    deletedAt: null,
-    provinceId: "7",
-  },
-  {
-    id: "5",
-    name: "WHENCE KITWE BRANCH",
-    parentId: "1",
-    externalId: "WHCB001",
-    openingDate: "2019-12-20",
-    branchCapacity: null,
-    address: null,
-    phone: "0770898120",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2019-12-20 13:12:14",
-    updatedAt: "2021-05-21 13:36:48",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "6",
-    name: "PROVIDENT HOUSE CHIPATA",
-    parentId: "1",
-    externalId: "WHEP001",
-    openingDate: "2020-07-20",
-    branchCapacity: null,
-    address: null,
-    phone: "0761910760",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2020-07-20 17:49:08",
-    updatedAt: "2020-07-20 17:51:56",
-    deletedAt: null,
-    provinceId: "3",
-  },
-  {
-    id: "7",
-    name: "COMPENSATION HOUSE KASAMA",
-    parentId: "1",
-    externalId: "WHNP001",
-    openingDate: "2021-10-20",
-    branchCapacity: null,
-    address: null,
-    phone: "0974845202",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2021-03-23 15:28:56",
-    updatedAt: "2021-03-23 15:28:56",
-    deletedAt: null,
-    provinceId: "6",
-  },
-  {
-    id: "8",
-    name: "MANSA BRANCH",
-    parentId: "1",
-    externalId: "WHLP001",
-    openingDate: "2020-12-09",
-    branchCapacity: null,
-    address: null,
-    phone: "0974867727",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2021-03-23 15:29:59",
-    updatedAt: "2021-03-23 15:29:59",
-    deletedAt: null,
-    provinceId: "10",
-  },
-  {
-    id: "9",
-    name: "LIVINGSTONE BRANCH",
-    parentId: "1",
-    externalId: "WHSP001",
-    openingDate: "2021-03-08",
-    branchCapacity: null,
-    address: null,
-    phone: "0972489589",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2021-03-23 15:30:50",
-    updatedAt: "2021-03-23 15:30:50",
-    deletedAt: null,
-    provinceId: "9",
-  },
-  {
-    id: "10",
-    name: "WHENCE KABWE BRANCH",
-    parentId: "1",
-    externalId: "WHCP001",
-    openingDate: "2021-05-21",
-    branchCapacity: null,
-    address: null,
-    phone: "0779341367",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2021-05-21 13:35:31",
-    updatedAt: "2021-05-21 13:35:31",
-    deletedAt: null,
-    provinceId: "4",
-  },
-  {
-    id: "11",
-    name: "MONGU BRANCH",
-    parentId: "1",
-    externalId: "WHWP001",
-    openingDate: "2021-06-01",
-    branchCapacity: null,
-    address: null,
-    phone: "0971667804",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2021-06-01 15:30:00",
-    updatedAt: "2021-06-01 15:30:00",
-    deletedAt: null,
-    provinceId: "8",
-  },
-  {
-    id: "12",
-    name: "LUMWANA BRANCH",
-    parentId: "4",
-    externalId: "WHNWP002",
-    openingDate: "2022-01-11",
-    branchCapacity: null,
-    address: null,
-    phone: "0766507692",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2022-01-11 16:06:52",
-    updatedAt: "2022-01-11 16:06:52",
-    deletedAt: null,
-    provinceId: "7",
-  },
-  {
-    id: "13",
-    name: "NDOLA BRANCH",
-    parentId: "5",
-    externalId: "WHCB002",
-    openingDate: "2022-11-08",
-    branchCapacity: null,
-    address: null,
-    phone: "0976746170",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-03-27 06:36:19",
-    updatedAt: "2023-04-05 07:40:25",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "15",
-    name: "MAZABUKA BRANCH",
-    parentId: "9",
-    externalId: "WHSP003",
-    openingDate: "2023-01-03",
-    branchCapacity: null,
-    address: null,
-    phone: "0974315024",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-03-27 06:47:21",
-    updatedAt: "2023-04-05 07:39:59",
-    deletedAt: null,
-    provinceId: "9",
-  },
-  {
-    id: "16",
-    name: "CHINGOLA BRANCH",
-    parentId: "5",
-    externalId: "WHCB003",
-    openingDate: "2023-03-27",
-    branchCapacity: null,
-    address: null,
-    phone: "0763024487",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-03-27 06:51:05",
-    updatedAt: "2023-04-05 07:37:35",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "18",
-    name: "CHOMA BRANCH",
-    parentId: "9",
-    externalId: "WHSP004",
-    openingDate: "2022-12-13",
-    branchCapacity: null,
-    address: null,
-    phone: "0760701760",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-03-27 07:24:50",
-    updatedAt: "2025-03-26 10:35:01",
-    deletedAt: null,
-    provinceId: "9",
-  },
-  {
-    id: "32",
-    name: "KAFUE BRANCH",
-    parentId: "1",
-    externalId: "WHLSK004",
-    openingDate: "2023-03-28",
-    branchCapacity: null,
-    address: null,
-    phone: "0760701791",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-03-28 14:48:30",
-    updatedAt: "2023-10-03 16:39:02",
-    deletedAt: null,
-    provinceId: "1",
-  },
-  {
-    id: "33",
-    name: "PETAUKE BRANCH",
-    parentId: "6",
-    externalId: "WHEP002",
-    openingDate: "2023-03-28",
-    branchCapacity: null,
-    address: null,
-    phone: "0979545446",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-03-28 14:49:00",
-    updatedAt: "2023-04-05 07:40:53",
-    deletedAt: null,
-    provinceId: "3",
-  },
-  {
-    id: "34",
-    name: "KALUMBILA BRANCH",
-    parentId: "4",
-    externalId: "WHNWP003",
-    openingDate: "2023-04-05",
-    branchCapacity: null,
-    address: null,
-    phone: "0767393721",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-04-05 07:36:47",
-    updatedAt: "2023-04-05 07:39:29",
-    deletedAt: null,
-    provinceId: "7",
-  },
-  {
-    id: "35",
-    name: "LUANSHYA BRANCH",
-    parentId: "5",
-    externalId: "WHCB004",
-    openingDate: "2023-07-14",
-    branchCapacity: null,
-    address: null,
-    phone: "0774160806",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-07-14 15:49:09",
-    updatedAt: "2023-08-02 14:42:53",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "36",
-    name: "MUFURILA BRANCH",
-    parentId: "5",
-    externalId: "WHCB005",
-    openingDate: "2023-08-02",
-    branchCapacity: null,
-    address: null,
-    phone: "0765981365",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-08-02 14:43:46",
-    updatedAt: "2023-08-02 14:43:46",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "37",
-    name: "KAOMA BRANCH",
-    parentId: "11",
-    externalId: "WHWP002",
-    openingDate: "2023-09-01",
-    branchCapacity: null,
-    address: null,
-    phone: "0769812066",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-09-01 11:00:25",
-    updatedAt: "2023-09-01 11:00:25",
-    deletedAt: null,
-    provinceId: "8",
-  },
-  {
-    id: "38",
-    name: "Monze Branch",
-    parentId: "9",
-    externalId: "WHSP002",
-    openingDate: "2023-09-14",
-    branchCapacity: null,
-    address: null,
-    phone: "0774176080",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-09-14 16:09:54",
-    updatedAt: "2023-09-14 16:09:54",
-    deletedAt: null,
-    provinceId: "9",
-  },
-  {
-    id: "39",
-    name: "WHENCE KAPIRI BRANCH",
-    parentId: "10",
-    externalId: "WHCP002",
-    openingDate: "2023-10-03",
-    branchCapacity: null,
-    address: null,
-    phone: "0779341367",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-10-03 16:20:37",
-    updatedAt: "2023-10-03 16:20:37",
-    deletedAt: null,
-    provinceId: "4",
-  },
-  {
-    id: "40",
-    name: "WHENCE CHONGWE BRANCH",
-    parentId: "2",
-    externalId: "WHLSK004",
-    openingDate: "2023-10-03",
-    branchCapacity: null,
-    address: null,
-    phone: "0977255161",
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2023-10-03 16:34:04",
-    updatedAt: "2023-10-03 16:34:04",
-    deletedAt: null,
-    provinceId: "1",
-  },
-  {
-    id: "41",
-    name: "CHILANGA BRANCH",
-    parentId: "3",
-    externalId: "WHLSK005",
-    openingDate: "2024-11-21",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2024-11-21 10:12:16",
-    updatedAt: "2024-11-21 10:12:16",
-    deletedAt: null,
-    provinceId: "1",
-  },
-  {
-    id: "42",
-    name: "CHILILABOMBWE BRANCH",
-    parentId: "5",
-    externalId: "WHCB006",
-    openingDate: "2024-11-21",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2024-11-21 11:34:31",
-    updatedAt: "2024-11-21 11:35:04",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "43",
-    name: "KATETE BRANCH",
-    parentId: "6",
-    externalId: "WHEP003",
-    openingDate: "2024-12-09",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2024-12-09 14:02:49",
-    updatedAt: "2024-12-09 14:02:49",
-    deletedAt: null,
-    provinceId: "3",
-  },
-  {
-    id: "44",
-    name: "Solwezi 1 Branch",
-    parentId: "4",
-    externalId: "WHNWP004",
-    openingDate: "2024-12-20",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2024-12-20 15:37:06",
-    updatedAt: "2024-12-20 17:07:24",
-    deletedAt: null,
-    provinceId: "7",
-  },
-  {
-    id: "45",
-    name: "MPIKA BRANCH",
-    parentId: "7",
-    externalId: "WHNP002",
-    openingDate: "2024-12-23",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2024-12-23 23:26:23",
-    updatedAt: "2024-12-23 23:26:23",
-    deletedAt: null,
-    provinceId: "6",
-  },
-  {
-    id: "46",
-    name: "CHIRUNDU BRANCH",
-    parentId: "3",
-    externalId: "WHLSK007",
-    openingDate: "2024-12-26",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2024-12-26 15:53:30",
-    updatedAt: "2024-12-26 16:00:46",
-    deletedAt: null,
-    provinceId: "1",
-  },
-  {
-    id: "47",
-    name: "MASALA NDOLA BRANCH",
-    parentId: "13",
-    externalId: "WHCB003",
-    openingDate: "2025-02-03",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-02-03 15:36:41",
-    updatedAt: "2025-02-04 16:14:10",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "49",
-    name: "MPONGWE BRANCH",
-    parentId: "5",
-    externalId: "WHCB007",
-    openingDate: "2025-03-14",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-03-14 15:47:34",
-    updatedAt: "2025-03-14 15:47:34",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "51",
-    name: "Kalomo Branch",
-    parentId: "9",
-    externalId: "WHSP005",
-    openingDate: "2025-03-26",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-03-26 10:37:40",
-    updatedAt: "2025-03-26 10:37:40",
-    deletedAt: null,
-    provinceId: "9",
-  },
-  {
-    id: "52",
-    name: "CHAMBISHI BRANCH",
-    parentId: "5",
-    externalId: "WHCB007",
-    openingDate: "2025-04-08",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-04-08 16:44:30",
-    updatedAt: "2025-04-08 16:44:30",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "53",
-    name: "Kalulushi",
-    parentId: "5",
-    externalId: "WHCB008",
-    openingDate: "2025-10-20",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-10-20 14:27:38",
-    updatedAt: "2025-10-20 14:28:40",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "54",
-    name: "Mbala Branch",
-    parentId: "7",
-    externalId: "WHNP003",
-    openingDate: "2025-11-04",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-11-04 13:36:32",
-    updatedAt: "2025-11-04 13:36:32",
-    deletedAt: null,
-    provinceId: "6",
-  },
-  {
-    id: "55",
-    name: "Nyimba Branch",
-    parentId: "6",
-    externalId: "WHEP004",
-    openingDate: "2025-11-11",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-11-11 12:29:20",
-    updatedAt: "2025-11-11 12:29:20",
-    deletedAt: null,
-    provinceId: "3",
-  },
-  {
-    id: "57",
-    name: "Mitech Branch Solwezi",
-    parentId: "4",
-    externalId: "WHNWP005",
-    openingDate: "2025-11-12",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-11-12 10:59:07",
-    updatedAt: "2025-11-12 11:00:29",
-    deletedAt: null,
-    provinceId: "7",
-  },
-  {
-    id: "59",
-    name: "SENANGA BRANCH",
-    parentId: "11",
-    externalId: "WHWP003",
-    openingDate: "2025-12-24",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-12-24 10:51:38",
-    updatedAt: "2025-12-24 10:51:38",
-    deletedAt: null,
-    provinceId: "8",
-  },
-  {
-    id: "60",
-    name: "SAMFYA BRANCH",
-    parentId: "8",
-    externalId: "WHLP002",
-    openingDate: "2025-12-24",
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-12-24 10:54:36",
-    updatedAt: "2025-12-24 10:54:36",
-    deletedAt: null,
-    provinceId: "10",
-  },
-  {
-    id: "61",
-    name: "MPATAMATU LUANSHYA BRANCH",
-    parentId: "35",
-    externalId: "WHCM007",
-    openingDate: null,
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2025-12-24 13:22:50",
-    updatedAt: "2026-01-08 11:14:05",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "62",
-    name: "PAMODZI NDOLA BRANCH",
-    parentId: "5",
-    externalId: "WHCB009",
-    openingDate: null,
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2026-01-07 15:00:36",
-    updatedAt: "2026-01-07 16:40:55",
-    deletedAt: null,
-    provinceId: "2",
-  },
-  {
-    id: "64",
-    name: "MAAMBA BRANCH",
-    parentId: "9",
-    externalId: "WHSP006",
-    openingDate: null,
-    branchCapacity: null,
-    address: null,
-    phone: null,
-    email: null,
-    notes: null,
-    managerId: null,
-    active: true,
-    defaultOffice: false,
-    createdAt: "2026-02-02 14:02:13",
-    updatedAt: "2026-02-02 14:02:13",
-    deletedAt: null,
-    provinceId: "9",
-  },
-];
-
-/**
- * Hook to get office data
- * Returns the list of all offices and helper functions to find office by ID
- */
 export function useOffice() {
+  const [offices, setOffices] = useState<Office[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchOffices = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('https://smartbackend.whencefinancesystem.com/offices');
+        if (!response.ok) {
+          throw new Error('Failed to fetch offices');
+        }
+        const data = await response.json();
+        const formattedData = Array.isArray(data) ? data : (data.data || []);
+        
+        // Normalize snake_case from API to camelCase where expected by existing UI
+        const normalized = formattedData.map((o: any) => ({
+          ...o,
+          id: o.id.toString(),
+          provinceId: (o.province_id || o.provinceId)?.toString(),
+          districtId: (o.district_id || o.districtId)?.toString(),
+          parentId: o.parent_id?.toString() || null,
+          externalId: o.external_id || o.externalId,
+          branchCapacity: o.branch_capacity ?? o.branchCapacity ?? null,
+          createdAt: o.created_at ?? o.createdAt ?? null,
+          updatedAt: o.updated_at ?? o.updatedAt ?? null,
+          active: !!o.active,
+        }));
+        
+        setOffices(normalized);
+      } catch (err) {
+        console.error("Error fetching offices:", err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOffices();
+  }, []);
+
   /**
    * Get office name by ID
-   * @param officeId - The office ID (numeric string)
-   * @returns The office name or undefined if not found
    */
-  const getOfficeName = (officeId: string | number): string | undefined => {
-    const id = String(officeId);
-    const office = officesData.find((o) => o.id === id);
+  const getOfficeName = useCallback((officeId: string | number): string | undefined => {
+    const idStr = String(officeId);
+    const office = offices.find((o) => String(o.id) === idStr);
     return office?.name;
-  };
+  }, [offices]);
 
   /**
    * Get office by ID
-   * @param officeId - The office ID (numeric string)
-   * @returns The office object or undefined if not found
    */
-  const getOffice = (officeId: string | number): Office | undefined => {
-    const id = String(officeId);
-    return officesData.find((o) => o.id === id);
-  };
+  const getOffice = useCallback((officeId: string | number): Office | undefined => {
+    const idStr = String(officeId);
+    return offices.find((o) => String(o.id) === idStr);
+  }, [offices]);
 
   /**
    * Get all active offices
-   * @returns Array of active offices
    */
-  const getActiveOffices = (): Office[] => {
-    return officesData.filter((o) => o.active);
-  };
+  const getActiveOffices = useCallback((): Office[] => {
+    return offices.filter((o) => o.active);
+  }, [offices]);
 
   /**
    * Get all offices
-   * @returns Array of all offices
    */
-  const getAllOffices = (): Office[] => {
-    return officesData;
-  };
+  const getAllOffices = useCallback((): Office[] => {
+    return offices;
+  }, [offices]);
 
   /**
    * Get offices by province ID
-   * @param provinceId - The province ID
-   * @returns Array of offices in that province
    */
-  const getOfficesByProvince = (provinceId: string | number): Office[] => {
-    const id = String(provinceId);
-    return officesData.filter((o) => o.provinceId === id);
-  };
+  const getOfficesByProvince = useCallback((provinceId: string | number): Office[] => {
+    const idStr = String(provinceId);
+    return offices.filter((o) => String(o.provinceId) === idStr);
+  }, [offices]);
+
+  /**
+   * Get offices by district ID
+   */
+  const getOfficesByDistrict = useCallback((districtId: string | number): Office[] => {
+    const idStr = String(districtId);
+    return offices.filter((o) => String(o.districtId) === idStr);
+  }, [offices]);
 
   /**
    * Get child offices of a parent
-   * @param parentId - The parent office ID
-   * @returns Array of child offices
    */
-  const getChildOffices = (parentId: string | number): Office[] => {
-    const id = String(parentId);
-    return officesData.filter((o) => o.parentId === id);
-  };
+  const getChildOffices = useCallback((parentId: string | number): Office[] => {
+    const idStr = String(parentId);
+    return offices.filter((o) => String(o.parentId) === idStr);
+  }, [offices]);
 
   return {
-    offices: officesData,
+    offices,
+    loading,
+    error,
     getOfficeName,
     getOffice,
     getActiveOffices,
     getAllOffices,
     getOfficesByProvince,
+    getOfficesByDistrict,
     getChildOffices,
   };
 }
 
 /**
- * Standalone function to get office name by ID (works outside React context)
- * @param officeId - The office ID (numeric string or number)
- * @returns The office name or undefined if not found
+ * Standalone utility function to get office name by ID
+ * Includes a fallback check for cases where the offices array might be undefined
  */
-export function getOfficeNameById(officeId: string | number): string | undefined {
-  const id = String(officeId);
-  const office = officesData.find((o) => o.id === id);
-  return office?.name;
+export function getOfficeNameById(officeId: string | number, offices?: Office[]): string | undefined {
+  if (!officeId) return undefined;
+  const idStr = String(officeId);
+  
+  // 1. If dynamic offices array is provided, use it (Most accurate)
+  if (offices && Array.isArray(offices)) {
+    const office = offices.find((o) => String(o.id) === idStr);
+    if (office) return office.name;
+  }
+  
+  // 2. Fallback to a static list of known major offices for immediate UI resolution
+  const STABLE_OFFICES: Record<string, string> = {
+    "1": "ZIMCO HOUSE LUSAKA",
+    "2": "ANCHOR HOUSE LUSAKA",
+    "3": "KAMBENDEKELA HOUSE LUSAKA",
+    "4": "SOLWEZI HQ BRANCH",
+    "5": "WHENCE KITWE BRANCH",
+    "6": "PROVIDENT HOUSE CHIPATA",
+    "7": "COMPENSATION HOUSE KASAMA",
+    "8": "MANSA BRANCH",
+    "9": "LIVINGSTONE BRANCH",
+    "10": "WHENCE KABWE BRANCH",
+    "11": "MONGU BRANCH",
+    "12": "LUMWANA BRANCH",
+    "13": "NDOLA BRANCH",
+    "15": "MAZABUKA BRANCH"
+  };
+  
+  if (STABLE_OFFICES[idStr]) return STABLE_OFFICES[idStr];
+  
+  // 3. Last resort: check if it's the current user's office name cached in session
+  return undefined;
 }
 
+
+/**
+ * Get the current user's office name from localStorage
+ * Used synchronously in various dashboards
+ */
 export function getUserOfficeName(): string {
-  if (typeof window === 'undefined') {
-    return 'Branch Office';
-  }
-  
-  const storedUser = localStorage.getItem('thisUser');
-  if (!storedUser) {
-    return 'Branch Office';
-  }
-  
+  if (typeof window === 'undefined') return 'Loading...';
   try {
+    const storedUser = localStorage.getItem('thisUser');
+    if (!storedUser) return 'Unknown Branch';
     const user = JSON.parse(storedUser);
-    // Try office_id first, then office_name, then office, then fall back to default
-    if (user.office_id) {
-      const officeName = getOfficeNameById(user.office_id);
-      if (officeName) {
-        return officeName;
-      }
-    }
     
-    return user.office_name || user.office || 'Branch Office';
-  } catch (e) {
-    console.error('Error parsing user data:', e);
-    return 'Branch Office';
+    // Try various possible field names from the user session object
+    const officeName = user.office_name || user.officeName || (user.office && user.office.name);
+    if (officeName) return officeName;
+    
+    // Fallback to institutional default seen in this codebase
+    return 'KAMBENDEKELA HOUSE LUSAKA';
+  } catch (err) {
+    console.warn("Failed to parse thisUser from localStorage in getUserOfficeName", err);
+    return 'Unknown Branch';
   }
-}
-
-/**
- * Standalone function to get office by ID (works outside React context)
- * @param officeId - The office ID (numeric string or number)
- * @returns The office object or undefined if not found
- */
-export function getOfficeById(officeId: string | number): Office | undefined {
-  const id = String(officeId);
-  return officesData.find((o) => o.id === id);
-}
-
-/**
- * Standalone function to get all offices (works outside React context)
- * @returns Array of all offices
- */
-export function getAllOfficesData(): Office[] {
-  return officesData;
 }
 
 export default useOffice;

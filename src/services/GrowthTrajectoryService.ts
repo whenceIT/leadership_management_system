@@ -39,3 +39,16 @@ export async function fetchProvincialGrowthTrajectory(provinceId: number): Promi
   
   return await response.json();
 }
+export async function fetchDistrictGrowthTrajectory(districtId: number): Promise<GrowthTrajectoryData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/growth-trajectory/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district growth trajectory: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

@@ -36,3 +36,15 @@ export async function fetchProvincialPortfolioQuality(provinceId: number): Promi
   
   return await response.json();
 }
+export async function fetchDistrictPortfolioQuality(districtId: number): Promise<PortfolioQualityData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-quality/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district portfolio quality: ${response.statusText}`);
+  }
+  
+  return await response.json();
+}

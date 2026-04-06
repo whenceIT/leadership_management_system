@@ -34,3 +34,16 @@ export async function fetchProvincialProfitabilityContribution(provinceId: numbe
   
   return await response.json();
 }
+export async function fetchDistrictProfitabilityContribution(districtId: number): Promise<ProfitabilityContributionData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/profitability-contribution/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district profitability contribution: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

@@ -34,3 +34,16 @@ export async function fetchProvincialProductDiversification(provinceId: number):
   
   return await response.json();
 }
+export async function fetchDistrictProductDiversification(districtId: number): Promise<ProductDiversificationData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-diversification/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district product diversification: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

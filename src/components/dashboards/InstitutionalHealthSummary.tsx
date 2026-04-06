@@ -5,6 +5,8 @@ import ApiLoader from '@/components/ApiLoader/ApiLoader';
 import HealthAnalysisSections from './HealthAnalysisSections';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { BranchLevelView } from './BranchLevelView';
+import { DistrictLevelView } from './DistrictLevelView';
+import { ConsultantLevelView } from './ConsultantLevelView';
 import { ParametersTableView } from './ParametersTableView';
 import { ParametersCardsView } from './ParametersCardsView';
 
@@ -110,7 +112,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
   // Base data that can be adjusted based on user level
   const baseParameters: ParameterSummary[] = [
     {
-      name: 'Branch Structure & Staffing Index',
+      name: 'Branch Structure & Staffing',
       shortName: 'Staffing & Structure',
       institutionalAvg: branchStructureAggregated.institutionalAvg || '--',
       userLevelAvg: branchStructureAggregated.userLevelAvg || '--',
@@ -121,7 +123,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       status: branchStructureAggregated.status || 'warning'
     },
     {
-      name: 'Loan Consultant Performance Index',
+      name: 'Loan Consultant Performance',
       shortName: 'LC Performance',
       institutionalAvg: lcPerformanceAggregated.institutionalAvg || '--',
       userLevelAvg: lcPerformanceAggregated.userLevelAvg || '--',
@@ -132,7 +134,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       status: lcPerformanceAggregated.status || 'warning'
     },
     {
-      name: 'Loan Products & Interest Rates Index',
+      name: 'Loan Products & Interest Rates',
       shortName: 'Products & Rates',
       institutionalAvg: loanProductsAggregated.institutionalAvg || '--',
       userLevelAvg: loanProductsAggregated.userLevelAvg || '--',
@@ -261,7 +263,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       time: '2024-07-14 14:20',
       description: 'Branch Manager acknowledged declining staff adequacy',
       impact: 'negative',
-      parameter: 'Branch Structure & Staffing Index'
+      parameter: 'Branch Structure & Staffing'
     },
     {
       time: '2024-07-13 11:05',
@@ -273,7 +275,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       time: '2024-07-12 08:45',
       description: 'District Manager reviewed branch performance',
       impact: 'positive',
-      parameter: 'Loan Consultant Performance Index'
+      parameter: 'Loan Consultant Performance'
     }
   ];
 
@@ -866,7 +868,7 @@ function getParameterKPIs(paramName: string,
   };
 
   const kpis: ParameterKPIs = {
-    'Branch Structure & Staffing Index': [
+    'Branch Structure & Staffing': [
       {
         name: 'Staff Adequacy Score',
         institutionalAvg: staffAdequacyData?.instAvg || '--',
@@ -919,12 +921,12 @@ function getParameterKPIs(paramName: string,
         status: loanPortfolioLoadData ? (getScore(loanPortfolioLoadData, 'score', 'average_score') >= 90 ? 'good' : getScore(loanPortfolioLoadData, 'score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning'
       }
     ],
-    'Loan Consultant Performance Index': [
+    'Loan Consultant Performance': [
       {
         name: 'Volume Achievement',
         institutionalAvg: volumeAchievementData ? '--' : '--',
         currentPeriod: volumeAchievementData ? `${getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score').toFixed(2)}` : '--',
-        target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target || '0').toLocaleString()}` : 100,
+        target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target || '0').toLocaleString()}` : '100',
         variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement || '0') - parseFloat(volumeAchievementData.branch_target || '0')).toLocaleString()}` : '--',
         trend: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') ? '↑' : '↓') : '↓',
         status: volumeAchievementData ? (getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical') : 'warning'
@@ -966,7 +968,7 @@ function getParameterKPIs(paramName: string,
         status: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? 'good' : getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.5 ? 'warning' : 'critical') : 'critical'
       }
     ],
-    'Loan Products & Interest Rates Index': [
+    'Loan Products & Interest Rates': [
       {
         name: 'Product distribution mix',
         institutionalAvg: '--',
@@ -1167,8 +1169,9 @@ export function InstitutionalHealthSummary({
   const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
-  const [drillLevel, setDrillLevel] = useState<'province' | 'branch' | 'consultant' | null>(null);
+  const [drillLevel, setDrillLevel] = useState<'province' | 'district' | 'branch' | 'consultant' | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
+  const [selectedDistrict, setSelectedDistrict] = useState<number | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
@@ -1316,11 +1319,19 @@ export function InstitutionalHealthSummary({
                   setSelectedKPI(kpiName);
                   setDrillLevel('province');
                   setSelectedProvince(null);
+                  setSelectedDistrict(null);
                   setSelectedBranch(null);
                 } else if (userLevel === 'province') {
                   setSelectedKPI(kpiName);
+                  setDrillLevel('district');
+                  setSelectedProvince(null);
+                  setSelectedDistrict(null);
+                  setSelectedBranch(null);
+                } else if (userLevel === 'district') {
+                  setSelectedKPI(kpiName);
                   setDrillLevel('branch');
                   setSelectedProvince(null);
+                  setSelectedDistrict(null);
                   setSelectedBranch(null);
                 }
               }}
@@ -1363,11 +1374,19 @@ export function InstitutionalHealthSummary({
                   setSelectedKPI(kpiName);
                   setDrillLevel('province');
                   setSelectedProvince(null);
+                  setSelectedDistrict(null);
                   setSelectedBranch(null);
                 } else if (userLevel === 'province') {
                   setSelectedKPI(kpiName);
+                  setDrillLevel('district');
+                  setSelectedProvince(null);
+                  setSelectedDistrict(null);
+                  setSelectedBranch(null);
+                } else if (userLevel === 'district') {
+                  setSelectedKPI(kpiName);
                   setDrillLevel('branch');
                   setSelectedProvince(null);
+                  setSelectedDistrict(null);
                   setSelectedBranch(null);
                 }
               }}
@@ -1435,23 +1454,22 @@ export function InstitutionalHealthSummary({
                   selectedKPI={selectedKPI}
                   onProvinceClick={(provinceId) => {
                     setSelectedProvince(provinceId);
-                    setDrillLevel('branch');
+                    setDrillLevel('district');
                   }}
                 />
               )}
 
-              {/* Branch Level View - Show for province level (direct) or institution level (after province) */}
-              {(drillLevel === 'branch' || (drillLevel === 'province' && userLevel === 'province')) && selectedKPI && (
-                <BranchLevelView 
+              {/* District Level View */}
+              {(drillLevel === 'district') && selectedKPI && (
+                <DistrictLevelView 
                   selectedKPI={selectedKPI}
                   selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
-                  onBranchClick={(branchId: number) => {
-                    setSelectedBranch(branchId);
-                    setDrillLevel('consultant');
+                  onDistrictClick={(districtId: number) => {
+                    setSelectedDistrict(districtId);
+                    setDrillLevel('branch');
                   }}
                   onBack={() => {
                     if (userLevel === 'province') {
-                      // For provincial managers, back goes to closing the modal
                       setSelectedKPI(null);
                       setDrillLevel(null);
                     } else {
@@ -1462,70 +1480,35 @@ export function InstitutionalHealthSummary({
                 />
               )}
 
+              {/* Branch Level View - Show for district level or province level (direct) */}
+              {(drillLevel === 'branch') && selectedKPI && (
+                <BranchLevelView 
+                  selectedKPI={selectedKPI}
+                  selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
+                  selectedDistrict={selectedDistrict}
+                  onBranchClick={(branchId: number) => {
+                    setSelectedBranch(branchId);
+                    setDrillLevel('consultant');
+                  }}
+                  onBack={() => {
+                    if (userLevel === 'district') {
+                      setSelectedKPI(null);
+                      setDrillLevel(null);
+                    } else {
+                      setSelectedDistrict(null);
+                      setDrillLevel('district');
+                    }
+                  }}
+                />
+              )}
+
               {/* Consultant Level View */}
-              {drillLevel === 'consultant' && selectedBranch && (
-                <div>
-                  <div className="flex items-center mb-4">
-                    <button 
-                      onClick={() => setDrillLevel('branch')}
-                      className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
-                    >
-                      <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                      Back to Branches
-                    </button>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Loan Consultants in Branch {selectedBranch}</h3>
-                  </div>
-                  
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-900">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Loan Consultant</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Inst. Avg</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Individual Avg</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                        {Array.from({ length: 8 }, (_, i) => ({
-                          id: i + 1,
-                          name: `Consultant ${i + 1}`,
-                          institutionalAvg: '12 loans/month',
-                          currentPeriod: (10 + Math.random() * 5).toFixed(1) + ' loans/month',
-                          target: '≥15 loans/month',
-                          variance: `-${(5 - Math.random() * 3).toFixed(1)} loans/month`,
-                          trend: ['↑', '↓', '→'][Math.floor(Math.random() * 3)] as '↑' | '↓' | '→',
-                          status: ['good', 'warning', 'critical'][Math.floor(Math.random() * 3)] as 'good' | 'warning' | 'critical'
-                        }))
-                        .sort((a, b) => parseFloat(b.currentPeriod) - parseFloat(a.currentPeriod))
-                        .map((consultant, index) => (
-                          <tr key={consultant.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{consultant.name}</td>
-                            <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300">{consultant.institutionalAvg}</td>
-                            <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{consultant.currentPeriod}</td>
-                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{consultant.target}</td>
-                            <td className="px-4 py-2 text-sm">
-                              <span className={`${getVarianceColor(consultant.variance)}`}>{consultant.variance}</span>
-                            </td>
-                            <td className="px-4 py-2 text-sm">
-                              <span className={getTrendBadge(consultant.trend)}>{consultant.trend}</span>
-                            </td>
-                            <td className="px-4 py-2">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(consultant.status)}`}>
-                                {consultant.status === 'good' ? 'GOOD' : consultant.status === 'warning' ? 'WARNING' : 'CRITICAL'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+              {drillLevel === 'consultant' && selectedBranch && selectedKPI && (
+                <ConsultantLevelView 
+                  officeId={selectedBranch}
+                  selectedKPI={selectedKPI}
+                  onBack={() => setDrillLevel('branch')}
+                />
               )}
             </div>
           </div>

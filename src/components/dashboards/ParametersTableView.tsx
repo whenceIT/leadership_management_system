@@ -207,18 +207,18 @@ export function ParametersTableView({
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                          {param.name === 'Branch Structure & Staffing Index' ? '87%' :
-                           param.name === 'Loan Consultant Performance Index' ? '45%' :
-                           param.name === 'Loan Products & Interest Rates Index' ? '58%' :
+                          {param.name === 'Branch Structure & Staffing' ? '87%' :
+                           param.name === 'Loan Consultant Performance' ? '45%' :
+                           param.name === 'Loan Products & Interest Rates' ? '58%' :
                            param.name === 'Risk Management & Defaults Index' ? '45%' :
                            param.name === 'Revenue & Performance Metrics Index' ? '39%' :
                            param.name === 'Cash & Liquidity Management Index' ? '50%' :
                            '--'}
                         </span>
                         {param.name !== 'Cash & Liquidity Management Index' && param.userLevelAvg !== '--' && param.userLevelAvg !== '--%' && (
-                          <span className={`text-xs font-medium ${parseFloat(param.userLevelAvg) >= parseFloat(param.name === 'Branch Structure & Staffing Index' ? '87' : param.name === 'Loan Consultant Performance Index' ? '45' : param.name === 'Loan Products & Interest Rates Index' ? '58' : param.name === 'Risk Management & Defaults Index' ? '45' : param.name === 'Revenue & Performance Metrics Index' ? '39' : param.name === 'Cash & Liquidity Management Index' ? '50' : '0') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {parseFloat(param.userLevelAvg) >= parseFloat(param.name === 'Branch Structure & Staffing Index' ? '87' : param.name === 'Loan Consultant Performance Index' ? '45' : param.name === 'Loan Products & Interest Rates Index' ? '58' : param.name === 'Risk Management & Defaults Index' ? '45' : param.name === 'Revenue & Performance Metrics Index' ? '39' : param.name === 'Cash & Liquidity Management Index' ? '50' : '0') ? '▲' : '▼'}
-                          {Math.abs(parseFloat(param.userLevelAvg) - parseFloat(param.name === 'Branch Structure & Staffing Index' ? '87' : param.name === 'Loan Consultant Performance Index' ? '45' : param.name === 'Loan Products & Interest Rates Index' ? '58' : param.name === 'Risk Management & Defaults Index' ? '45' : param.name === 'Revenue & Performance Metrics Index' ? '39' : param.name === 'Cash & Liquidity Management Index' ? '50' : '0')).toFixed(0)}%
+                          <span className={`text-xs font-medium ${parseFloat(param.userLevelAvg) >= parseFloat(param.name === 'Branch Structure & Staffing' ? '87' : param.name === 'Loan Consultant Performance' ? '45' : param.name === 'Loan Products & Interest Rates' ? '58' : param.name === 'Risk Management & Defaults Index' ? '45' : param.name === 'Revenue & Performance Metrics Index' ? '39' : param.name === 'Cash & Liquidity Management Index' ? '50' : '0') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {parseFloat(param.userLevelAvg) >= parseFloat(param.name === 'Branch Structure & Staffing' ? '87' : param.name === 'Loan Consultant Performance' ? '45' : param.name === 'Loan Products & Interest Rates' ? '58' : param.name === 'Risk Management & Defaults Index' ? '45' : param.name === 'Revenue & Performance Metrics Index' ? '39' : param.name === 'Cash & Liquidity Management Index' ? '50' : '0') ? '▲' : '▼'}
+                          {Math.abs(parseFloat(param.userLevelAvg) - parseFloat(param.name === 'Branch Structure & Staffing' ? '87' : param.name === 'Loan Consultant Performance' ? '45' : param.name === 'Loan Products & Interest Rates' ? '58' : param.name === 'Risk Management & Defaults Index' ? '45' : param.name === 'Revenue & Performance Metrics Index' ? '39' : param.name === 'Cash & Liquidity Management Index' ? '50' : '0')).toFixed(0)}%
                         </span>
                         )}
                       </div>

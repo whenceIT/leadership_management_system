@@ -50,3 +50,16 @@ export async function fetchInstitutionalBelowThresholdRisk(): Promise<BelowThres
   
   return await response.json();
 }
+export async function fetchDistrictBelowThresholdRisk(districtId: number): Promise<BelowThresholdRiskData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/below-threshold-risk/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district below threshold risk: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

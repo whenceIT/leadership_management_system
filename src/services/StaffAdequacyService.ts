@@ -49,4 +49,21 @@ export async function fetchProvincialStaffAdequacyPerformance(provinceId: number
   };
 }
 
-// add pro
+export async function fetchDistrictStaffAdequacyPerformance(districtId: number): Promise<StaffAdequacyData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/staff-adequacy/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district staff adequacy performance: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  
+  // Add fixed target of 100% since it's not in the API response
+  return {
+    ...data,
+    target: 100
+  };
+}

@@ -42,7 +42,7 @@ export function getHeadlineParameters(options?: {
 }): HeadlineParameter[] {
   return [
     {
-      title: "Branch Structure & Staffing Index",
+      title: "Branch Structure & Staffing",
       shortTitle: "BSSI",
       indexScore: 76,
       instAvg: 78,
@@ -96,7 +96,7 @@ export function getHeadlineParameters(options?: {
       ]
     },
     {
-      title: "Loan Consultant Performance Index",
+      title: "Loan Consultant Performance",
       shortTitle: "LCPI",
       indexScore: 68,
       instAvg: 62,
@@ -149,7 +149,7 @@ export function getHeadlineParameters(options?: {
       ]
     },
     {
-      title: "Loan Products & Interest Rates Index",
+      title: "Loan Products & Interest Rates",
       shortTitle: "LPIRI",
       indexScore: 82,
       instAvg: 74,

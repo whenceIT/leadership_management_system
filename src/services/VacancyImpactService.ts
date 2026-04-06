@@ -50,3 +50,21 @@ export async function fetchProvincialVacancyImpact(provinceId: number): Promise<
     target: 0
   };
 }
+export async function fetchDistrictVacancyImpact(districtId: number): Promise<VacancyImpactData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/vacancy-impact/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district vacancy impact: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  
+  // Add fixed target of 0 since it's not in the API response
+  return {
+    ...data,
+    target: 0
+  };
+}

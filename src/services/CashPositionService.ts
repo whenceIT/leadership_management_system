@@ -50,3 +50,16 @@ export async function fetchInstitutionalCashPosition(): Promise<CashPositionData
   
   return await response.json();
 }
+export async function fetchDistrictCashPosition(districtId: number): Promise<CashPositionData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/cash-position-score/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district cash position: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

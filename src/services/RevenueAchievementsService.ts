@@ -34,3 +34,16 @@ export async function fetchProvincialRevenueAchievements(provinceId: number): Pr
   
   return await response.json();
 }
+export async function fetchDistrictRevenueAchievements(districtId: number): Promise<RevenueAchievementsData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/revenue-achievement/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district revenue achievements: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

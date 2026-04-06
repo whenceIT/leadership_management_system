@@ -36,3 +36,16 @@ export async function fetchProvincialProductRiskScore(provinceId: number): Promi
   
   return await response.json();
 }
+export async function fetchDistrictProductRiskScore(districtId: number): Promise<ProductRiskScoreData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/product-risk-score/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district product risk score: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

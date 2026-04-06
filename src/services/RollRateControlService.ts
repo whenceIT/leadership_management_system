@@ -46,3 +46,16 @@ export async function fetchProvincialRollRateControl(provinceId: number): Promis
   
   return await response.json();
 }
+export async function fetchDistrictRollRateControl(districtId: number): Promise<RollRateControlData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/roll-rate-control/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district roll rate control: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

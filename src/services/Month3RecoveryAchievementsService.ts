@@ -37,3 +37,16 @@ export async function fetchProvincialMonth3RecoveryAchievements(provinceId: numb
   
   return await response.json();
 }
+export async function fetchDistrictMonth3RecoveryAchievements(districtId: number): Promise<Month3RecoveryAchievementsData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/3-month-recovery-achievement/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district month 3 recovery achievements: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

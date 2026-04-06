@@ -38,3 +38,16 @@ export async function fetchProvincialVolumeAchievement(provinceId: number): Prom
   const data = await response.json();
   return data;
 }
+export async function fetchDistrictVolumeAchievement(districtId: number): Promise<VolumeAchievementData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/volume-achievement/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district volume achievement: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}

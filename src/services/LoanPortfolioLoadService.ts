@@ -47,3 +47,20 @@ export async function fetchProvincialLoanPortfolioLoad(provinceId: number): Prom
     target: 100 // Target is 100% for normalized score
   };
 }
+export async function fetchDistrictLoanPortfolioLoad(districtId: number): Promise<LoanPortfolioLoadData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/portfolio-load-balance/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district loan portfolio load: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  
+  return {
+    ...data,
+    target: 100 // Target is 100% for normalized score
+  };
+}

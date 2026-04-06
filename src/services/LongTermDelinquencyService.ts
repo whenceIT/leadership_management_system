@@ -38,3 +38,16 @@ export async function fetchProvincialLongTermDelinquency(provinceId: number): Pr
   
   return await response.json();
 }
+export async function fetchDistrictLongTermDelinquency(districtId: number): Promise<LongTermDelinquencyData> {
+  const response = await fetch(`https://smartbackend.whencefinancesystem.com/long-term-delinquency-risk/district/${districtId}`, {
+    cache: "force-cache",
+    next: { revalidate: 300 }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch district long term delinquency: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data;
+}
