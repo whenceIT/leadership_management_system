@@ -68,7 +68,10 @@ export function useUserPosition() {
     if (!forceRefresh && positionsLoadedRef.current) return;
     
     try {
-      const response = await fetch('https://smartbackend.whencefinancesystem.com/leadership-positions');
+      const response = await fetch('https://smartbackend.whencefinancesystem.com/leadership-positions', {
+        cache: "force-cache",
+        next: { revalidate: 300 }
+      });
       const data = await response.json();
       if (Array.isArray(data)) {
         setPositions(data);
@@ -174,7 +177,10 @@ export function useUserPosition() {
       // Fetch latest user data from API to get updated position_id
       if (currentUser.email) {
         try {
-          const response = await fetch(`/api/auth/user?email=${encodeURIComponent(currentUser.email)}`);
+          const response = await fetch(`/api/auth/user?email=${encodeURIComponent(currentUser.email)}`, {
+            cache: "force-cache",
+            next: { revalidate: 300 }
+          });
           const data = await response.json();
 
           if (data.success && data.user) {
