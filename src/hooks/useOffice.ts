@@ -186,6 +186,46 @@ export function getOfficeNameById(officeId: string | number, offices?: Office[])
 
 
 /**
+ * Standalone utility function to get office by ID
+ * Includes a fallback check for cases where the offices array might be undefined
+ */
+export function getOfficeById(officeId: string | number, offices?: Office[]): Office | undefined {
+  if (!officeId) return undefined;
+  const idStr = String(officeId);
+
+  // 1. If dynamic offices array is provided, use it (Most accurate)
+  if (offices && Array.isArray(offices)) {
+    return offices.find((o) => String(o.id) === idStr);
+  }
+
+  // 2. Fallback to a static list of known major offices for immediate UI resolution
+  const STABLE_OFFICES: Record<string, Partial<Office>> = {
+    "1": { id: "1", name: "ZIMCO HOUSE LUSAKA", provinceId: "1", districtId: null, externalId: "ZIMCO001" },
+    "2": { id: "2", name: "ANCHOR HOUSE LUSAKA", provinceId: "1", districtId: null, externalId: "ANCHOR001" },
+    "3": { id: "3", name: "KAMBENDEKELA HOUSE LUSAKA", provinceId: "1", districtId: null, externalId: "KAMB001" },
+    "4": { id: "4", name: "SOLWEZI HQ BRANCH", provinceId: "7", districtId: null, externalId: "SOLWEZI001" },
+    "5": { id: "5", name: "WHENCE KITWE BRANCH", provinceId: "2", districtId: null, externalId: "KITWE001" },
+    "6": { id: "6", name: "PROVIDENT HOUSE CHIPATA", provinceId: "3", districtId: null, externalId: "CHIPATA001" },
+    "7": { id: "7", name: "COMPENSATION HOUSE KASAMA", provinceId: "6", districtId: null, externalId: "KASAMA001" },
+    "8": { id: "8", name: "MANSA BRANCH", provinceId: "10", districtId: null, externalId: "MANSA001" },
+    "9": { id: "9", name: "LIVINGSTONE BRANCH", provinceId: "9", districtId: null, externalId: "LIVINGSTONE001" },
+    "10": { id: "10", name: "WHENCE KABWE BRANCH", provinceId: "4", districtId: null, externalId: "KABWE001" },
+    "11": { id: "11", name: "MONGU BRANCH", provinceId: "8", districtId: null, externalId: "MONGU001" },
+    "12": { id: "12", name: "LUMWANA BRANCH", provinceId: "2", districtId: null, externalId: "LUMWANA001" },
+    "13": { id: "13", name: "NDOLA BRANCH", provinceId: "2", districtId: null, externalId: "NDOLA001" },
+    "15": { id: "15", name: "MAZABUKA BRANCH", provinceId: "9", districtId: null, externalId: "MAZABUKA001" }
+  };
+
+  const stableOffice = STABLE_OFFICES[idStr];
+  if (stableOffice) {
+    return stableOffice as Office;
+  }
+
+  // 3. Last resort: check if it's the current user's office from localStorage
+  return undefined;
+}
+
+/**
  * Get the current user's office name from localStorage
  * Used synchronously in various dashboards
  */
@@ -195,11 +235,11 @@ export function getUserOfficeName(): string {
     const storedUser = localStorage.getItem('thisUser');
     if (!storedUser) return 'Unknown Branch';
     const user = JSON.parse(storedUser);
-    
+
     // Try various possible field names from the user session object
     const officeName = user.office_name || user.officeName || (user.office && user.office.name);
     if (officeName) return officeName;
-    
+
     // Fallback to institutional default seen in this codebase
     return 'KAMBENDEKELA HOUSE LUSAKA';
   } catch (err) {

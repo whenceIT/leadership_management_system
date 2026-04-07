@@ -60,7 +60,7 @@ export default function ProvincialManagerDashboard() {
     if (user?.office_id) {
       const office = getOffice(user.office_id);
       if (office?.provinceId) {
-        return parseInt(office.provinceId, 10);
+        return parseInt(String(office.provinceId), 10);
       }
     }
     return 1; // Default to Lusaka Province
