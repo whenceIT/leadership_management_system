@@ -34,12 +34,12 @@ export function useProvincialData(selectedKPI: string | null) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load provinces on component mount
+  // Load provinces with office counts on component mount
   useEffect(() => {
     const loadProvinces = async () => {
       try {
         const provinceService = ProvinceService.getInstance();
-        const provincesList = await provinceService.getProvinces();
+        const provincesList = await provinceService.getProvincesWithOfficeCounts();
         setProvinces(provincesList);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load provinces');

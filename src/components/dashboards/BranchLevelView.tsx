@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useOffice } from '@/hooks/useOffice';
 import { useProvince } from '@/hooks/useProvince';
+import { useDistrict } from '@/hooks/useDistrict';
 
 // Import all provincial service functions (we'll reuse them for branch level)
 import { fetchStaffAdequacyPerformance } from '@/services/StaffAdequacyService';
@@ -38,7 +39,9 @@ interface BranchLevelViewProps {
 export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistrict, onBranchClick, onBack }: BranchLevelViewProps) {
   const { getOfficesByProvince, getOfficesByDistrict } = useOffice();
   const { getProvinceName } = useProvince();
+  const { getDistrictName } = useDistrict();
   const provinceName = getProvinceName(selectedProvince);
+  const districtName = selectedDistrict ? getDistrictName(typeof selectedDistrict === 'string' ? parseInt(selectedDistrict) : selectedDistrict) : null;
   const [branchData, setBranchData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -495,18 +498,22 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
   return (
     <div>
       <div className="flex items-center mb-4">
-        <button 
+        <button
           onClick={onBack}
           className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
         >
           <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back to Provinces
+          {selectedDistrict ? 'Back to Districts' : 'Back to Provinces'}
         </button>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Branches in {provinceName}</h3>
-        <div className="ml-4 text-sm text-gray-600 dark:text-gray-400">
-          Province Avg: <span className="font-semibold">{provinceAvg}</span>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Branches in {districtName ? `${districtName}, ` : ''}{provinceName}
+          </h3>
+          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Province Average: <span className="font-semibold text-blue-600 dark:text-blue-400">{provinceAvg}</span>
+          </div>
         </div>
       </div>
       

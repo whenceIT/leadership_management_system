@@ -44,6 +44,34 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
 
+  // Sort districts by district average score (highest to lowest)
+  const sortedDistricts = useMemo(() => {
+    return [...districts].sort((a, b) => {
+      const dataA = districtData[a.id];
+      const dataB = districtData[b.id];
+
+      if (!dataA || !dataB) return 0;
+
+      let scoreA = 0;
+      let scoreB = 0;
+
+      switch(selectedKPI) {
+        case 'Staff Adequacy Score':
+        case 'Productivity Achievement Score':
+          scoreA = parseFloat(dataA.average_normalized_score || '0');
+          scoreB = parseFloat(dataB.average_normalized_score || '0');
+          break;
+        default:
+          scoreA = parseFloat(dataA.average_score || '0');
+          scoreB = parseFloat(dataB.average_score || '0');
+          break;
+      }
+
+      // Sort descending (highest first)
+      return scoreB - scoreA;
+    });
+  }, [districts, districtData, selectedKPI]);
+
   useEffect(() => {
     // Skip if no districts or no KPI selected
     if (!selectedKPI || districts.length === 0) return;
@@ -265,10 +293,20 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {districts.map((district) => {
+            {sortedDistricts.map((district, index) => {
               const data = districtData[district.id];
               let rowData: React.ReactNode[] = [];
               let status: 'good' | 'warning' | 'critical' = 'warning';
+
+              // Determine background color based on ranking
+              let bgColor = '';
+              if (index < 3) {
+                // Top 3 performers
+                bgColor = 'bg-green-50 dark:bg-green-900/20';
+              } else if (index < 7) {
+                // Next 4 performers (positions 4-7)
+                bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
+              }
 
               if (data) {
                 switch(selectedKPI) {
@@ -294,90 +332,90 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                   case 'Vacancy Impact': {
                     const score = data.average_normalized_score || 0;
                     status = score >= 90 ? 'good' : score >= 75 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.actual_lcs || 0,
-                      data.authorized_positions || 0,
-                      data.vacancies || 0,
-                      `${score}%`
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.actual_lcs || 0,
+                       data.authorized_positions || 0,
+                       data.vacancies || 0,
+                       `${score}%`
+                     ];
                     break;
                   }
                   case 'Volume Achievement': {
                     const score = parseFloat(data.average_normalized_score || '0');
                     status = score >= 100 ? 'good' : score >= 80 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.total_disbursement || '--',
-                      data.branch_target || '--',
-                      `${score.toFixed(2)}%`
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.total_disbursement || '--',
+                       data.branch_target || '--',
+                       `${score.toFixed(2)}%`
+                     ];
                     break;
                   }
                   case 'Portfolio Quality Score': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 92 ? 'good' : score >= 85 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.total_outstanding || '--',
-                      data.overdue_outstanding || '--',
-                      data.PAR || '--',
-                      `${score.toFixed(2)}%`
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.total_outstanding || '--',
+                       data.overdue_outstanding || '--',
+                       data.PAR || '--',
+                       `${score.toFixed(2)}%`
+                     ];
                     break;
                   }
                   case 'Vetting compliance': {
                     const score = parseFloat(data.average_score?.replace('%', '') || '0');
                     status = score >= 80 ? 'good' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.average_score || '--',
-                      data.weight || '--',
-                      data.percentage_point || 0,
-                      data.target || '≥80%'
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.average_score || '--',
+                       data.weight || '--',
+                       data.percentage_point || 0,
+                       data.target || '≥80%'
+                     ];
                     break;
                   }
                   case 'Collection Efficiency': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.total_collections || '--',
-                      data.benchmark || '--',
-                      data.weight || '--',
-                      `${score.toFixed(2)}%`
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.total_collections || '--',
+                       data.benchmark || '--',
+                       data.weight || '--',
+                       `${score.toFixed(2)}%`
+                     ];
                     break;
                   }
                   case 'Yield Achievement': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 95 ? 'good' : score >= 85 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.target || '--',
-                      data.weight || '--',
-                      `${score.toFixed(2)}%`,
-                      data.percentage_point || 0
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.target || '--',
+                       data.weight || '--',
+                       `${score.toFixed(2)}%`,
+                       data.percentage_point || 0
+                     ];
                     break;
                   }
                   case 'Product diversification': {
                     const score = parseFloat(data.average_HHI || '0');
                     status = score <= 2000 ? 'good' : score <= 3000 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.average_HHI || '--',
-                      data.weight || '--',
-                      data.percentage_point || 0
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.average_HHI || '--',
+                       data.weight || '--',
+                       data.percentage_point || 0
+                     ];
                     break;
                   }
                   case 'Product Risk Score':
@@ -386,68 +424,68 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                   case 'Long-Term Delinquency Risk': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      `${score.toFixed(2)}%`,
-                      data.weight || '--',
-                      data.percentage_point || 0
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       `${score.toFixed(2)}%`,
+                       data.weight || '--',
+                       data.percentage_point || 0
+                     ];
                     break;
                   }
                   case '3-Month Recovery Achievement': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.benchmark || '--',
-                      data.weight || '--',
-                      `${score.toFixed(2)}%`,
-                      data.percentage_point || 0
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.benchmark || '--',
+                       data.weight || '--',
+                       `${score.toFixed(2)}%`,
+                       data.percentage_point || 0
+                     ];
                     break;
                   }
                   case 'Revenue Achievement': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 100 ? 'good' : score >= 85 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.period || '--',
-                      data.expected_revenue || '--',
-                      `${score.toFixed(2)}%`,
-                      data.weight || '--',
-                      data.percentage_point || 0
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.period || '--',
+                       data.expected_revenue || '--',
+                       `${score.toFixed(2)}%`,
+                       data.weight || '--',
+                       data.percentage_point || 0
+                     ];
                     break;
                   }
                   case 'Efficiency Ratio (CIR)': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 90 ? 'good' : score >= 75 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.period || '--',
-                      data.target || '--',
-                      `${score.toFixed(2)}%`,
-                      data.weight || '--',
-                      data.percentage_point || 0
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.period || '--',
+                       data.target || '--',
+                       `${score.toFixed(2)}%`,
+                       data.weight || '--',
+                       data.percentage_point || 0
+                     ];
                     break;
                   }
                   case 'Profitability Contribution': {
                     const score = parseFloat(data.average_score?.replace('%', '') || '0');
                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.period || '--',
-                      data.company_net_contribution || '--',
-                      data.average_score || '--',
-                      data.weight || '--',
-                      data.percentage_point || 0
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.period || '--',
+                       data.company_net_contribution || '--',
+                       data.average_score || '--',
+                       data.weight || '--',
+                       data.percentage_point || 0
+                     ];
                     break;
                   }
                   case 'Growth Trajectory':
@@ -456,24 +494,24 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                   case 'Below-Threshold Risk': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      `${score.toFixed(2)}%`,
-                      data.percentage_point || data.percentage_points || 0
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       `${score.toFixed(2)}%`,
+                       data.percentage_point || data.percentage_points || 0
+                     ];
                     break;
                   }
                   case 'Portfolio Load Balance': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 90 ? 'good' : score >= 75 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      data.offices_count || 0,
-                      data.portfolio_per_lc || '--',
-                      'K300k-K380k',
-                      `${score.toFixed(2)}%`
-                    ];
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       data.portfolio_per_lc || '--',
+                       'K300k-K380k',
+                       `${score.toFixed(2)}%`
+                     ];
                     break;
                   }
                   default:
@@ -484,9 +522,9 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
               }
 
               return (
-                <tr 
-                  key={district.id} 
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                <tr
+                  key={district.id}
+                  className={`${bgColor} hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors`}
                   onClick={() => onDistrictClick(district.id)}
                 >
                   {rowData.map((cell, idx) => (

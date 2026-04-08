@@ -195,9 +195,9 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Province Level Performance</h3>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Executive Institution Overview - Country Wide Zambia</h3>
       <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-        Institution Avg: <span className="font-semibold">{institutionAvg}</span>
+        Institution Average as at Today: <span className="font-semibold text-blue-600 dark:text-blue-400">{institutionAvg}</span>
       </div>
       {loading ? (
         <div className="flex items-center justify-center py-8">
@@ -214,6 +214,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Province</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Offices Count</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Provincial Avg</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
@@ -222,7 +223,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {sortedProvinces.map((province) => {
+              {sortedProvinces.map((province, index) => {
                 const data = provincialData[province.id];
                 
                 let institutionalAvg = '0';
@@ -501,13 +502,24 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                   }
                 }
 
+                // Determine background color based on ranking
+                let bgColor = '';
+                if (index < 3) {
+                  // Top 3 performers
+                  bgColor = 'bg-green-50 dark:bg-green-900/20';
+                } else if (index < 7) {
+                  // Next 4 performers (positions 4-7)
+                  bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
+                }
+
                 return (
-                  <tr 
-                    key={province.id} 
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                  <tr
+                    key={province.id}
+                    className={`${bgColor} hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer`}
                     onClick={() => onProvinceClick(province.id)}
                   >
                     <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{province.name}</td>
+                    <td className="px-4 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400">{province.offices_count || 0}</td>
                     <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{currentPeriod}</td>
                     {/* <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{actualLcs > 0 ? actualLcs : '--'}</td>
                     <td className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400">{contribution}</td> */}

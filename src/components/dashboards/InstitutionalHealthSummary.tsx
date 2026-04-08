@@ -10,7 +10,7 @@ import { ConsultantLevelView } from './ConsultantLevelView';
 import { ParametersTableView } from './ParametersTableView';
 import { ParametersCardsView } from './ParametersCardsView';
 
-interface KPI { 
+interface KPI {
   name: string;
   institutionalAvg: string;
   currentPeriod: string;
@@ -93,14 +93,14 @@ export interface InstitutionalSummaryData {
   overallTarget: number;
 }
 
-export function getInstitutionalSummaryData(userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant', userLevelLabel: string, 
+export function getInstitutionalSummaryData(userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant', userLevelLabel: string,
   staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, loanPortfolioLoadData?: any,
   volumeAchievementData?: any, collectionEfficiencyData?: any, efficiencyRatioData?: any, growthTrajectoryData?: any,
   longTermDelinquencyData?: any, month1DefaultPerformanceData?: any, month3RecoveryAchievementsData?: any,
   portfolioQualityData?: any, productDiversificationData?: any, productRiskScoreData?: any, rollRateControlData?: any,
   yieldAchievementsData?: any, revenueAchievementsData?: any, profitabilityContributionData?: any,
   cashPositionData?: any, aboveThresholdRiskData?: any, belowThresholdRiskData?: any, approvedExceptionRatioData?: any): InstitutionalSummaryData {
-  
+
   // Calculate aggregated scores for each parameter
   const branchStructureAggregated = aggregateBranchStructureKPIs(staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData);
   const lcPerformanceAggregated = aggregateLoanConsultantPerformanceKPIs(volumeAchievementData, collectionEfficiencyData, portfolioQualityData, month1DefaultPerformanceData, productRiskScoreData);
@@ -145,7 +145,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       status: loanProductsAggregated.status || 'warning'
     },
     {
-      name: 'Risk Management & Defaults Index',
+      name: 'Risk Management & Defaults',
       shortName: 'Risk & Defaults',
       institutionalAvg: riskManagementAggregated.institutionalAvg || '--',
       userLevelAvg: riskManagementAggregated.userLevelAvg || '--',
@@ -156,7 +156,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       status: riskManagementAggregated.status || 'warning'
     },
     {
-      name: 'Revenue & Performance Metrics Index',
+      name: 'Revenue & Performance',
       shortName: 'Revenue & Performance',
       institutionalAvg: revenuePerformanceAggregated.institutionalAvg || '--',
       userLevelAvg: revenuePerformanceAggregated.userLevelAvg || '--',
@@ -167,7 +167,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       status: revenuePerformanceAggregated.status || 'warning'
     },
     {
-      name: 'Cash & Liquidity Management Index',
+      name: 'Cash & Liquidity Management',
       shortName: 'Cash & Liquidity',
       institutionalAvg: cashLiquidityAggregated.institutionalAvg || '--',
       userLevelAvg: cashLiquidityAggregated.userLevelAvg || '--',
@@ -269,7 +269,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       time: '2024-07-13 11:05',
       description: 'Risk Management team identified increasing defaults',
       impact: 'negative',
-      parameter: 'Risk Management & Defaults Index'
+      parameter: 'Risk Management & Defaults'
     },
     {
       time: '2024-07-12 08:45',
@@ -396,7 +396,7 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     const variance = overallScore - target;
     const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
     const varianceAbs = `${Math.abs(variance)}pp`;
-    
+
     const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
     const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
@@ -413,23 +413,23 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
 
   // For branch-level data, aggregate from individual metrics
   const kpis = [
-    { 
-      data: staffAdequacyData, 
+    {
+      data: staffAdequacyData,
       getScore: (d: any) => parseFloat(d?.normalized_score || '0'),
       weight: parseFloat(staffAdequacyData?.weight || '25') / 100
     },
-    { 
-      data: productivityAchievementData, 
+    {
+      data: productivityAchievementData,
       getScore: (d: any) => parseFloat(d?.normalized_score || '0'),
       weight: parseFloat(productivityAchievementData?.weight || '25') / 100
     },
-    { 
-      data: vacancyImpactData, 
+    {
+      data: vacancyImpactData,
       getScore: (d: any) => parseFloat(d?.normalized_score || '0') * 100,
       weight: parseFloat(vacancyImpactData?.weight || '25') / 100
     },
-    { 
-      data: loanPortfolioLoadData, 
+    {
+      data: loanPortfolioLoadData,
       getScore: (d: any) => parseFloat(d?.score || '0'),
       weight: parseFloat(loanPortfolioLoadData?.weight || '25') / 100
     }
@@ -440,9 +440,9 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     return {
       institutionalAvg: '--',
       userLevelAvg: '--',
-      target:  '100%',
-      variance:  '--',
-      varianceAbs:  '--',
+      target: '100%',
+      variance: '--',
+      varianceAbs: '--',
       trend: '→',
       status: 'warning'
     };
@@ -450,14 +450,14 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
-  
+
   const target = 100;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
-  
-    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+
+  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   return {
     institutionalAvg: '78%', // Hardcoded from Five Parameters.md
@@ -478,28 +478,28 @@ function aggregateLoanConsultantPerformanceKPIs(
   productRiskScoreData?: any
 ): Partial<ParameterSummary> {
   const kpis = [
-    { 
-      data: volumeAchievementData, 
+    {
+      data: volumeAchievementData,
       getScore: (d: any) => parseFloat(d?.average_normalized_score || '0'),
       weight: parseFloat(volumeAchievementData?.weight || '20') / 100
     },
-    { 
-      data: collectionEfficiencyData, 
+    {
+      data: collectionEfficiencyData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(collectionEfficiencyData?.weight || '20') / 100
     },
-    { 
-      data: portfolioQualityData, 
+    {
+      data: portfolioQualityData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(portfolioQualityData?.weight || '20') / 100
     },
-    { 
-      data: month1DefaultPerformanceData, 
+    {
+      data: month1DefaultPerformanceData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(month1DefaultPerformanceData?.weight || '20') / 100
     },
-    { 
-      data: productRiskScoreData, 
+    {
+      data: productRiskScoreData,
       getScore: (d: any) => parseFloat(d?.average_score || '0') * 100,
       weight: parseFloat(productRiskScoreData?.weight || '20') / 100
     }
@@ -520,14 +520,14 @@ function aggregateLoanConsultantPerformanceKPIs(
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
-  
+
   const target = 80;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
-  
-    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+
+  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   return {
     institutionalAvg: '62%',
@@ -547,23 +547,23 @@ function aggregateLoanProductsKPIs(
   efficiencyRatioData?: any
 ): Partial<ParameterSummary> {
   const kpis = [
-    { 
-      data: productDiversificationData, 
+    {
+      data: productDiversificationData,
       getScore: (d: any) => (1 - parseFloat(d?.average_HHI || '0')) * 100, // HHI inverse for better score
       weight: parseFloat(productDiversificationData?.weight || '25') / 100
     },
-    { 
-      data: yieldAchievementsData, 
+    {
+      data: yieldAchievementsData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(yieldAchievementsData?.weight || '25') / 100
     },
-    { 
-      data: productRiskScoreData, 
+    {
+      data: productRiskScoreData,
       getScore: (d: any) => (1 - parseFloat(d?.average_score || '0')) * 100, // Inverse risk score
       weight: parseFloat(productRiskScoreData?.weight || '25') / 100
     },
-    { 
-      data: efficiencyRatioData, 
+    {
+      data: efficiencyRatioData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(efficiencyRatioData?.weight || '25') / 100
     }
@@ -584,14 +584,14 @@ function aggregateLoanProductsKPIs(
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
-  
+
   const target = 80;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
-  
-    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+
+  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   return {
     institutionalAvg: '74%',
@@ -611,23 +611,23 @@ function aggregateRiskManagementKPIs(
   rollRateControlData?: any
 ): Partial<ParameterSummary> {
   const kpis = [
-    { 
-      data: month1DefaultPerformanceData, 
+    {
+      data: month1DefaultPerformanceData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(month1DefaultPerformanceData?.weight || '25') / 100
     },
-    { 
-      data: longTermDelinquencyData, 
+    {
+      data: longTermDelinquencyData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(longTermDelinquencyData?.weight || '25') / 100
     },
-    { 
-      data: month3RecoveryAchievementsData, 
+    {
+      data: month3RecoveryAchievementsData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(month3RecoveryAchievementsData?.weight || '25') / 100
     },
-    { 
-      data: rollRateControlData, 
+    {
+      data: rollRateControlData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(rollRateControlData?.weight || '25') / 100
     }
@@ -648,14 +648,14 @@ function aggregateRiskManagementKPIs(
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
-  
+
   const target = 75;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
-  
-    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+
+  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   return {
     institutionalAvg: '52%',
@@ -681,7 +681,7 @@ function aggregateCashLiquidityManagementKPIs(
     const variance = score - target;
     const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
     const varianceAbs = `${Math.abs(variance)}pp`;
-    
+
     const trend = score >= 90 ? '↑' : '↓';
     const status: 'good' | 'warning' | 'critical' = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
 
@@ -697,23 +697,23 @@ function aggregateCashLiquidityManagementKPIs(
   }
 
   const kpis = [
-    { 
-      data: cashPositionData, 
+    {
+      data: cashPositionData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(cashPositionData?.weight || '40') / 100
     },
-    { 
-      data: aboveThresholdRiskData, 
+    {
+      data: aboveThresholdRiskData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(aboveThresholdRiskData?.weight || '30') / 100
     },
-    { 
-      data: belowThresholdRiskData, 
+    {
+      data: belowThresholdRiskData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(belowThresholdRiskData?.weight || '20') / 100
     },
-    { 
-      data: approvedExceptionRatioData, 
+    {
+      data: approvedExceptionRatioData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(approvedExceptionRatioData?.weight || '10') / 100
     }
@@ -734,19 +734,19 @@ function aggregateCashLiquidityManagementKPIs(
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
-  
+
   const target = 100;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
-  
-    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+
+  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   const validInstitutionalAvgs = kpis
     .map(kpi => parseFloat(kpi.data?.instAvg || '0'))
     .filter(score => !isNaN(score));
-  const institutionalAvg = validInstitutionalAvgs.length > 0 
+  const institutionalAvg = validInstitutionalAvgs.length > 0
     ? `${Math.round(validInstitutionalAvgs.reduce((a, b) => a + b, 0) / validInstitutionalAvgs.length)}%`
     : '--';
 
@@ -769,28 +769,28 @@ function aggregateRevenuePerformanceKPIs(
   profitabilityContributionData?: any
 ): Partial<ParameterSummary> {
   const kpis = [
-    { 
-      data: growthTrajectoryData, 
+    {
+      data: growthTrajectoryData,
       getScore: (d: any) => Math.max(0, Math.min(100, parseFloat(d?.average_score || '0'))),
       weight: parseFloat(growthTrajectoryData?.weight || '20') / 100
     },
-    { 
-      data: efficiencyRatioData, 
+    {
+      data: efficiencyRatioData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(efficiencyRatioData?.weight || '20') / 100
     },
-    { 
-      data: productivityAchievementData, 
+    {
+      data: productivityAchievementData,
       getScore: (d: any) => parseFloat(d?.average_normalized_score || '0'),
       weight: parseFloat(productivityAchievementData?.weight || '20') / 100
     },
-    { 
-      data: revenueAchievementsData, 
+    {
+      data: revenueAchievementsData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(revenueAchievementsData?.weight || '20') / 100
     },
-    { 
-      data: profitabilityContributionData, 
+    {
+      data: profitabilityContributionData,
       getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(profitabilityContributionData?.weight || '20') / 100
     }
@@ -811,14 +811,14 @@ function aggregateRevenuePerformanceKPIs(
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
-  
+
   const target = 75;
   const variance = overallScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
-  
-    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+
+  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   return {
     institutionalAvg: '65%',
@@ -831,11 +831,11 @@ function aggregateRevenuePerformanceKPIs(
   };
 }
 
-function getParameterKPIs(paramName: string, 
-  staffAdequacyData?: any, 
-  productivityAchievementData?: any, 
-  vacancyImpactData?: any, 
-  volumeAchievementData?: any, 
+function getParameterKPIs(paramName: string,
+  staffAdequacyData?: any,
+  productivityAchievementData?: any,
+  vacancyImpactData?: any,
+  volumeAchievementData?: any,
   loanPortfolioLoadData?: any,
   collectionEfficiencyData?: any,
   efficiencyRatioData?: any,
@@ -1006,7 +1006,7 @@ function getParameterKPIs(paramName: string,
         status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR || '0') <= parseFloat(efficiencyRatioData.target || '0') ? 'good' : parseFloat(efficiencyRatioData.CIR || '0') <= parseFloat(efficiencyRatioData.target || '0') * 1.1 ? 'warning' : 'critical') : 'warning'
       }
     ],
-    'Risk Management & Defaults Index': [
+    'Risk Management & Defaults': [
       {
         name: 'Default rate (branch, province, institutional)',
         institutionalAvg: '--',
@@ -1044,7 +1044,7 @@ function getParameterKPIs(paramName: string,
         status: rollRateControlData ? (parseFloat(rollRateControlData.average_score || '0') <= 20 ? 'good' : parseFloat(rollRateControlData.average_score || '0') <= 30 ? 'warning' : 'critical') : 'warning'
       }
     ],
-    'Revenue & Performance Metrics Index': [
+    'Revenue & Performance': [
       {
         name: 'Efficiency Ratio (CIR)',
         institutionalAvg: '--',
@@ -1082,7 +1082,7 @@ function getParameterKPIs(paramName: string,
         status: profitabilityContributionData ? (parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') >= 90 ? 'good' : parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') >= 70 ? 'warning' : 'critical') : 'warning'
       }
     ],
-    'Cash & Liquidity Management Index': [
+    'Cash & Liquidity Management': [
       {
         name: 'Cash Position Score',
         institutionalAvg: cashPositionData ? '--' : '--',
@@ -1121,14 +1121,14 @@ function getParameterKPIs(paramName: string,
       }
     ]
   };
-  
+
   // Log variance values for all KPIs for debugging
   Object.entries(kpis).forEach(([paramName, paramKpis]) => {
     paramKpis.forEach((kpi, idx) => {
       console.log(`[${paramName}] ${kpi.name}: variance=${kpi.variance}, target=${kpi.target}, currentPeriod=${kpi.currentPeriod}`);
     });
   });
-  
+
   return kpis[paramName] || [];
 }
 
@@ -1205,15 +1205,14 @@ export function InstitutionalHealthSummary({
                 <p className="text-gray-400 text-xs">Current Average</p>
                 <p className="text-white font-bold">{overallScore}%</p>
                 {/* Indicator for comparison with Institutional Avg */}
-                <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${
-                  overallScore >= overallInstAvg 
-                    ? 'bg-green-900/50 text-green-300' 
-                    : 'bg-red-900/50 text-red-300'
-                }`}>
+                <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${overallScore >= overallInstAvg
+                  ? 'bg-green-900/50 text-green-300'
+                  : 'bg-red-900/50 text-red-300'
+                  }`}>
                   <span className="mr-1">{overallScore >= overallInstAvg ? '▲' : '▼'}</span>
                   <span>
-                    {overallScore >= overallInstAvg 
-                      ? `+${overallScore - overallInstAvg}%` 
+                    {overallScore >= overallInstAvg
+                      ? `+${overallScore - overallInstAvg}%`
                       : `${overallScore - overallInstAvg}%`}
                   </span>
                 </div>
@@ -1223,8 +1222,8 @@ export function InstitutionalHealthSummary({
                 <p className={`font-bold ${overallScore >= overallInstAvg ? 'text-green-400' : 'text-red-400'}`}>{overallInstAvg}%</p>
                 {/* Show variance */}
                 <p className="text-xs text-gray-500 mt-1">
-                  {overallScore >= overallInstAvg 
-                    ? `+${overallScore - overallInstAvg}% above` 
+                  {overallScore >= overallInstAvg
+                    ? `+${overallScore - overallInstAvg}% above`
                     : `${overallScore - overallInstAvg}% below`}
                 </p>
               </div>
@@ -1232,15 +1231,14 @@ export function InstitutionalHealthSummary({
                 <p className="text-gray-400 text-xs">Target</p>
                 <p className="text-gray-300 font-bold">{overallTarget}%</p>
                 {/* Indicator for comparison with Target */}
-                <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${
-                  overallScore >= overallTarget 
-                    ? 'bg-green-900/50 text-green-300' 
-                    : 'bg-yellow-900/50 text-yellow-300'
-                }`}>
+                <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${overallScore >= overallTarget
+                  ? 'bg-green-900/50 text-green-300'
+                  : 'bg-yellow-900/50 text-yellow-300'
+                  }`}>
                   <span className="mr-1">{overallScore >= overallTarget ? '▲' : '▼'}</span>
                   <span>
-                    {overallScore >= overallTarget 
-                      ? `+${overallScore - overallTarget}%` 
+                    {overallScore >= overallTarget
+                      ? `+${overallScore - overallTarget}%`
                       : `${overallScore - overallTarget}%`}
                   </span>
                 </div>
@@ -1249,7 +1247,7 @@ export function InstitutionalHealthSummary({
           )}
         </div>
       )}
-      
+
 
 
       {/* Five Headline Parameters View */}
@@ -1260,21 +1258,19 @@ export function InstitutionalHealthSummary({
             <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('table')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  viewMode === 'table'
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'table'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
               >
                 📋 Table
               </button>
               <button
                 onClick={() => setViewMode('cards')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  viewMode === 'cards'
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                }`}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'cards'
+                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
               >
                 🗂️ Cards
               </button>
@@ -1394,36 +1390,36 @@ export function InstitutionalHealthSummary({
           )}
 
           <HealthAnalysisSections
-                                userLevel={userLevel}
-                                parameters={parameters}
-                                keyMetrics={keyMetrics}
-                                recentActivities={recentActivities}
-                                overallScore={overallScore}
-                                overallInstAvg={overallInstAvg}
-                                overallTarget={overallTarget}
-                                staffAdequacyData={staffAdequacyData}
-                                productivityAchievementData={productivityAchievementData}
-                                vacancyImpactData={vacancyImpactData}
-                                volumeAchievementData={volumeAchievementData}
-                                loanPortfolioLoadData={loanPortfolioLoadData}
-                                collectionEfficiencyData={collectionEfficiencyData}
-                                efficiencyRatioData={efficiencyRatioData}
-                                growthTrajectoryData={growthTrajectoryData}
-                                longTermDelinquencyData={longTermDelinquencyData}
-                                month1DefaultPerformanceData={month1DefaultPerformanceData}
-                                month3RecoveryAchievementsData={month3RecoveryAchievementsData}
-                                portfolioQualityData={portfolioQualityData}
-                                productDiversificationData={productDiversificationData}
-                                productRiskScoreData={productRiskScoreData}
-                                rollRateControlData={rollRateControlData}
-                                yieldAchievementsData={yieldAchievementsData}
-                                revenueAchievementsData={revenueAchievementsData}
-                                profitabilityContributionData={profitabilityContributionData}
-                                cashPositionData={cashPositionData}
-                                aboveThresholdRiskData={aboveThresholdRiskData}
-                                belowThresholdRiskData={belowThresholdRiskData}
-                                approvedExceptionRatioData={approvedExceptionRatioData}
-                              />
+            userLevel={userLevel}
+            parameters={parameters}
+            keyMetrics={keyMetrics}
+            recentActivities={recentActivities}
+            overallScore={overallScore}
+            overallInstAvg={overallInstAvg}
+            overallTarget={overallTarget}
+            staffAdequacyData={staffAdequacyData}
+            productivityAchievementData={productivityAchievementData}
+            vacancyImpactData={vacancyImpactData}
+            volumeAchievementData={volumeAchievementData}
+            loanPortfolioLoadData={loanPortfolioLoadData}
+            collectionEfficiencyData={collectionEfficiencyData}
+            efficiencyRatioData={efficiencyRatioData}
+            growthTrajectoryData={growthTrajectoryData}
+            longTermDelinquencyData={longTermDelinquencyData}
+            month1DefaultPerformanceData={month1DefaultPerformanceData}
+            month3RecoveryAchievementsData={month3RecoveryAchievementsData}
+            portfolioQualityData={portfolioQualityData}
+            productDiversificationData={productDiversificationData}
+            productRiskScoreData={productRiskScoreData}
+            rollRateControlData={rollRateControlData}
+            yieldAchievementsData={yieldAchievementsData}
+            revenueAchievementsData={revenueAchievementsData}
+            profitabilityContributionData={profitabilityContributionData}
+            cashPositionData={cashPositionData}
+            aboveThresholdRiskData={aboveThresholdRiskData}
+            belowThresholdRiskData={belowThresholdRiskData}
+            approvedExceptionRatioData={approvedExceptionRatioData}
+          />
         </>
       )}
       {/* KPI Drill-down Modal */}
@@ -1432,7 +1428,7 @@ export function InstitutionalHealthSummary({
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedKPI}</h2>
-              <button 
+              <button
                 onClick={() => {
                   setSelectedKPI(null);
                   setDrillLevel(null);
@@ -1446,11 +1442,11 @@ export function InstitutionalHealthSummary({
                 </svg>
               </button>
             </div>
-            
+
             <div className="p-6">
               {/* Province Level View - Only show for institution level */}
               {drillLevel === 'province' && userLevel === 'institution' && (
-                <ProvinceLevelView 
+                <ProvinceLevelView
                   selectedKPI={selectedKPI}
                   onProvinceClick={(provinceId) => {
                     setSelectedProvince(provinceId);
@@ -1461,7 +1457,7 @@ export function InstitutionalHealthSummary({
 
               {/* District Level View */}
               {(drillLevel === 'district') && selectedKPI && (
-                <DistrictLevelView 
+                <DistrictLevelView
                   selectedKPI={selectedKPI}
                   selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
                   onDistrictClick={(districtId: number) => {
@@ -1482,7 +1478,7 @@ export function InstitutionalHealthSummary({
 
               {/* Branch Level View - Show for district level or province level (direct) */}
               {(drillLevel === 'branch') && selectedKPI && (
-                <BranchLevelView 
+                <BranchLevelView
                   selectedKPI={selectedKPI}
                   selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
                   selectedDistrict={selectedDistrict}
@@ -1504,7 +1500,7 @@ export function InstitutionalHealthSummary({
 
               {/* Consultant Level View */}
               {drillLevel === 'consultant' && selectedBranch && selectedKPI && (
-                <ConsultantLevelView 
+                <ConsultantLevelView
                   officeId={selectedBranch}
                   selectedKPI={selectedKPI}
                   onBack={() => setDrillLevel('branch')}

@@ -235,7 +235,7 @@ Below 50%	Excellent efficiency
 60% - 70%	Average / Needs monitoring
 Above 70%	Poor efficiency / Red flag
 In Our SLMS Context:
-From the Revenue & Performance Metrics Index:
+From the Revenue & Performance:
 Efficiency Ratio Score = Target CIR (55%) / Actual CIR
 Example Scenarios:
 1)	If Actual CIR = 50% (better than target):

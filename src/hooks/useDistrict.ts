@@ -4,6 +4,7 @@ export interface District {
   id: number;
   name: string;
   province_id: number;
+  offices_count?: number;
 }
 
 export function useDistrict() {
@@ -12,15 +13,61 @@ export function useDistrict() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchDistricts = async () => {
+    const fetchDistrictsWithOfficeCounts = async () => {
       try {
         setLoading(true);
-        const response = await fetch('https://smartbackend.whencefinancesystem.com/districts');
-        if (!response.ok) {
+
+        // Fetch districts
+        const districtsResponse = await fetch('https://smartbackend.whencefinancesystem.com/districts');
+        if (!districtsResponse.ok) {
           throw new Error('Failed to fetch districts');
         }
-        const data = await response.json();
-        setDistricts(Array.isArray(data) ? data : (data.data || []));
+        const districtsData = await districtsResponse.json();
+        const districtsList = Array.isArray(districtsData) ? districtsData : (districtsData.data || []);
+
+        // Fetch offices to count by district
+        try {
+          const officesResponse = await fetch('https://smartbackend.whencefinancesystem.com/offices', {
+            cache: "force-cache",
+            next: { revalidate: 300 }
+          });
+
+          if (officesResponse.ok) {
+            const officesData = await officesResponse.json();
+            const offices = Array.isArray(officesData) ? officesData : (officesData.data || []);
+
+            // Count offices by district
+            const officeCounts: { [districtId: string]: number } = {};
+            offices.forEach((office: any) => {
+              const districtId = office.district_id || office.districtId;
+              if (districtId) {
+                const districtIdStr = districtId.toString();
+                officeCounts[districtIdStr] = (officeCounts[districtIdStr] || 0) + 1;
+              }
+            });
+
+            // Add office counts to districts
+            const districtsWithCounts = districtsList.map((district: District) => ({
+              ...district,
+              offices_count: officeCounts[district.id.toString()] || 0
+            }));
+
+            setDistricts(districtsWithCounts);
+          } else {
+            // If offices fetch fails, use districts without counts
+            setDistricts(districtsList.map((district: District) => ({
+              ...district,
+              offices_count: 0
+            })));
+          }
+        } catch (officesError) {
+          console.warn("Failed to fetch office counts for districts:", officesError);
+          // Use districts without counts
+          setDistricts(districtsList.map((district: District) => ({
+            ...district,
+            offices_count: 0
+          })));
+        }
       } catch (err) {
         console.error("Error fetching districts, falling back to empty:", err);
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -30,7 +77,7 @@ export function useDistrict() {
       }
     };
 
-    fetchDistricts();
+    fetchDistrictsWithOfficeCounts();
   }, []);
 
   const getDistrictsByProvince = useCallback((provinceId: number) => {

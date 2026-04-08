@@ -202,7 +202,7 @@ export function getHeadlineParameters(options?: {
       ]
     },
     {
-      title: "Risk Management & Defaults Index",
+      title: "Risk Management & Defaults",
       shortTitle: "RMDI",
       indexScore: 38,
       instAvg: 52,
@@ -255,7 +255,7 @@ export function getHeadlineParameters(options?: {
       ]
     },
     {
-      title: "Revenue & Performance Metrics Index",
+      title: "Revenue & Performance",
       shortTitle: "RPMI",
       indexScore: 71,
       instAvg: 65,
@@ -305,10 +305,10 @@ export function getHeadlineParameters(options?: {
           provAvg: "1.0% MoM",
           branchAvg: "0% MoM"
         }
-       ]
+      ]
     },
     {
-      title: "Cash & Liquidity Management Index",
+      title: "Cash & Liquidity Management",
       shortTitle: "CLMI",
       indexScore: 62,
       instAvg: 70,
