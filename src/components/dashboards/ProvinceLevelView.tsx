@@ -200,9 +200,12 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
         Institution Average as at Today: <span className="font-semibold text-blue-600 dark:text-blue-400">{institutionAvg}</span>
       </div>
       {loading ? (
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <span className="ml-2 text-gray-600 dark:text-gray-300">Loading provinces...</span>
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 dark:border-blue-800"></div>
+            <div className="absolute top-0 left-0 animate-spin rounded-full h-12 w-12 border-4 border-transparent border-t-blue-500 border-r-blue-500" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+          </div>
+          <span className="mt-4 text-gray-600 dark:text-gray-300 animate-pulse">Loading provinces...</span>
         </div>
       ) : error ? (
         <div className="text-red-600 dark:text-red-400 py-8 text-center">

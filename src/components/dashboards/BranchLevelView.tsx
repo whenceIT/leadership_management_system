@@ -404,9 +404,12 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        <span className="ml-2 text-gray-600 dark:text-gray-300">Loading branch data...</span>
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 dark:border-blue-800"></div>
+          <div className="absolute top-0 left-0 animate-spin rounded-full h-12 w-12 border-4 border-transparent border-t-blue-500 border-r-blue-500" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+        </div>
+        <span className="mt-4 text-gray-600 dark:text-gray-300 animate-pulse">Loading branch data...</span>
       </div>
     );
   }
@@ -500,12 +503,12 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
       <div className="flex items-center mb-4">
         <button
           onClick={onBack}
-          className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
+          className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mr-4 p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 transform hover:scale-105"
+          title="Back"
         >
-          <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          {selectedDistrict ? 'Back to Districts' : 'Back to Provinces'}
         </button>
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">

@@ -193,14 +193,14 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
     <div className="bg-white dark:bg-gray-800">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center">
-          <button 
+          <button
             onClick={onBack}
-            className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mr-4 transition-colors"
+            className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mr-4 p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 transform hover:scale-105"
+            title="Back"
           >
-            <svg className="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Branches
           </button>
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
