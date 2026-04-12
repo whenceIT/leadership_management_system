@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchOfficeUsers, OfficeUser, Loan } from '@/services/OfficeUserService';
 import { useOffice } from '@/hooks/useOffice';
-import { LoanConsultantMetricsService } from '@/services/LoanConsultantMetricsService';
+import { LoanConsultantMetricsService, LoanConsultantMetrics } from '@/services/LoanConsultantMetricsService';
 
 interface ConsultantLevelViewProps {
   officeId: number | string;
@@ -15,6 +15,7 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
   const [users, setUsers] = useState<OfficeUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMonthOffset, setSelectedMonthOffset] = useState(0); // 0 = current, 1 = last month, etc.
 
   const LC_TARGET = 40000; // Benchmark from Operational Guidelines (K40,000)
 
@@ -52,45 +53,53 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
 
   const performancePeriod = useMemo(() => {
     const today = new Date();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-    
-    // Start: 24th of last month
-    const start = new Date(currentYear, currentMonth - 1, 24);
-    // End: 24th of this month
-    const end = new Date(currentYear, currentMonth, 24);
-    
+    const baseMonth = today.getMonth() - selectedMonthOffset;
+    const baseYear = today.getFullYear();
+
+    // Adjust year if month goes negative
+    const adjustedYear = baseMonth < 0 ? baseYear - 1 : baseYear;
+    const adjustedMonth = ((baseMonth % 12) + 12) % 12;
+
+    // Start: 24th of last month relative to selected
+    const start = new Date(adjustedYear, adjustedMonth - 1, 24);
+    // End: 24th of this month relative to selected
+    const end = new Date(adjustedYear, adjustedMonth, 24);
+
     const formatDate = (date: Date) => {
       return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     };
-    
+
     return {
       start,
       end,
       label: `${formatDate(start)} - ${formatDate(end)}`
     };
-  }, []);
+  }, [selectedMonthOffset]);
 
   // Previous cycle period for checking uncollected
   const previousCyclePeriod = useMemo(() => {
     const today = new Date();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-    
-    // Previous cycle: 24th of 2 months ago to 24th of last month
-    const start = new Date(currentYear, currentMonth - 2, 24);
-    const end = new Date(currentYear, currentMonth - 1, 24);
-    
+    const baseMonth = today.getMonth() - selectedMonthOffset;
+    const baseYear = today.getFullYear();
+
+    // Adjust year if month goes negative
+    const adjustedYear = baseMonth < 0 ? baseYear - 1 : baseYear;
+    const adjustedMonth = ((baseMonth % 12) + 12) % 12;
+
+    // Previous cycle: 24th of 2 months ago to 24th of last month relative to selected
+    const start = new Date(adjustedYear, adjustedMonth - 2, 24);
+    const end = new Date(adjustedYear, adjustedMonth - 1, 24);
+
     const formatDate = (date: Date) => {
       return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     };
-    
+
     return {
       start,
       end,
       label: `${formatDate(start)} - ${formatDate(end)}`
     };
-  }, []);
+  }, [selectedMonthOffset]);
 
   const metricsService = useMemo(() => LoanConsultantMetricsService.getInstance(), []);
 
@@ -98,25 +107,38 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
     const loadUsers = async () => {
       try {
         setLoading(true);
-        const data = await fetchOfficeUsers(officeId);
-        
+
         // Format dates for API
         const formatISODate = (date: Date) => date.toISOString().split('T')[0];
-        
+
+        // Fetch metrics for current and previous periods
+        const [currentMetrics, previousMetrics] = await Promise.all([
+          metricsService.fetchConsultantsPerformanceByOffice(officeId, formatISODate(performancePeriod.start), formatISODate(performancePeriod.end)),
+          metricsService.fetchConsultantsPerformanceByOffice(officeId, formatISODate(previousCyclePeriod.start), formatISODate(previousCyclePeriod.end))
+        ]);
+
+        // Create maps for quick lookup
+        const currentMetricsMap = new Map(currentMetrics.map(m => [m.user_id, m]));
+        const previousMetricsMap = new Map(previousMetrics.map(m => [m.user_id, m]));
+
+        // Fetch users
+        const data = await fetchOfficeUsers(officeId);
+
         // Enrich data with performance metrics
         const enriched = await Promise.all(data.map(async user => {
-          // Calculate total disbursements from loans array within the period
-          const totalDisbursed = (user.loans || []).reduce((sum, loan) => {
+          const currentMetric = currentMetricsMap.get(user.id);
+          const previousMetric = previousMetricsMap.get(user.id);
+
+          // Use API data where available, fallback to calculations
+          const totalDisbursed = currentMetric ? parseFloat(currentMetric.given_out || '0') : (user.loans || []).reduce((sum, loan) => {
             const disbursementDate = loan.disbursed_date ? new Date(loan.disbursed_date) : null;
-            
-            // Check if loan is within the performance period (24th to 24th)
             if (disbursementDate && disbursementDate >= performancePeriod.start && disbursementDate <= performancePeriod.end) {
               return sum + (typeof loan.principal === 'number' ? loan.principal : parseFloat(loan.principal.toString() || '0'));
             }
             return sum;
           }, 0);
 
-          // Calculate default rate: loans where first_repayment_date has passed but not paid
+          // Calculate default rate from loans (API doesn't provide this)
           const now = new Date();
           const loansWithDefaults = (user.loans || []).filter(loan => {
             if (!loan.first_repayment_date) return false;
@@ -127,21 +149,11 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
           const totalLoans = (user.loans || []).filter(loan => loan.first_repayment_date).length;
           const defaultRate = totalLoans > 0 ? (loansWithDefaults.length / totalLoans) * 100 : 0;
 
-          // Get previous cycle uncollected amount
-          let previousCycleUncollected = 0;
-          try {
-            const metrics = await metricsService.fetchLoanConsultantMetrics(
-              user.id,
-              formatISODate(previousCyclePeriod.start),
-              formatISODate(previousCyclePeriod.end)
-            );
-            previousCycleUncollected = parseFloat(metrics.still_uncollected?.toString() || '0');
-          } catch (e) {
-            console.warn(`Failed to fetch metrics for user ${user.id}`);
-          }
+          // Use API data for uncollected
+          const previousCycleUncollected = previousMetric ? parseFloat(previousMetric.still_uncollected || '0') : 0;
 
-          // Determine targets met
-          const metTarget40k = totalDisbursed >= LC_TARGET;
+          // Use API target_met_current if available, else calculate
+          const metTarget40k = currentMetric ? currentMetric.target_met_current === 1 : totalDisbursed >= LC_TARGET;
           const metUncollectedTarget = previousCycleUncollected < 5000;
           const metBothTargets = metTarget40k && metUncollectedTarget;
           const metBonus50k = totalDisbursed >= 50000;
@@ -149,7 +161,7 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
           const metBonus120k = totalDisbursed >= 120000;
 
           const performance = (totalDisbursed / LC_TARGET) * 100;
-          
+
           return {
             ...user,
             totalDisbursed,
@@ -164,13 +176,20 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
             metBonus80k,
             metBonus120k,
             performance,
-            target_achievement: totalDisbursed
+            target_achievement: totalDisbursed,
+            // Add API fields
+            pdua: currentMetric?.pdua,
+            target_history: currentMetric?.target_history || [],
+            total_collected: currentMetric?.total_collected,
+            total_uncollected: currentMetric?.total_uncollected,
+            still_uncollected: currentMetric?.still_uncollected,
+            carry_over: currentMetric?.carry_over
           };
         }));
 
         // Sort by performance (highest first)
         enriched.sort((a: any, b: any) => b.performance - a.performance);
-        
+
         setUsers(enriched);
       } catch (err) {
         console.error("Error loading office users:", err);
@@ -206,10 +225,22 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
               Loan Consultant Performance {officeName && <span className="text-blue-600 dark:text-blue-400">| {officeName}</span>}
             </h2>
-            <div className="flex items-center mt-1">
+            <div className="flex items-center mt-1 gap-2">
               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                 Performance Period: {performancePeriod.label}
               </span>
+              <select
+                value={selectedMonthOffset}
+                onChange={(e) => setSelectedMonthOffset(parseInt(e.target.value))}
+                className="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1"
+              >
+                <option value={0}>Current Month</option>
+                <option value={1}>Last Month</option>
+                <option value={2}>2 Months Ago</option>
+                <option value={3}>3 Months Ago</option>
+                <option value={4}>4 Months Ago</option>
+                <option value={5}>5 Months Ago</option>
+              </select>
             </div>
           </div>
         </div>
@@ -374,7 +405,7 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 max-w-[100px]">
                       <div 
-                        className={`h-2.5 rounded-full ${user.performance >= 100 ? 'bg-green-500' : user.performance >= 80 ? 'bg-yellow-500' : 'bg-red-500'}`} 
+                        className={`h-2.5 rounded-full ${user.performance >= 70 ? 'bg-green-500' : user.performance >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} 
                         style={{ width: `${Math.min(user.performance, 100)}%` }}
                       ></div>
                     </div>

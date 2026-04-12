@@ -515,14 +515,19 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                   bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
                 }
 
+                const officesCount = data?.offices_count || province.offices_count || 0;
+
                 return (
                   <tr
                     key={province.id}
                     className={`${bgColor} hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer`}
                     onClick={() => onProvinceClick(province.id)}
                   >
+
+
+
                     <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{province.name}</td>
-                    <td className="px-4 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400">{province.offices_count || 0}</td>
+                    <td className="px-4 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400">{officesCount} </td>
                     <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{currentPeriod}</td>
                     {/* <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{actualLcs > 0 ? actualLcs : '--'}</td>
                     <td className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400">{contribution}</td> */}

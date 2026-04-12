@@ -405,9 +405,10 @@ export function ParametersTableView({
                               /* Drill-down view for selected KPI */
                               <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                  <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                                    📊 DRILL-DOWN: {drillDownKPI}
-                                  </h4>
+                                   <h2 className="text-xl font-bold text-blue-700 dark:text-blue-300 flex items-center gap-2 mb-4 p-1 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-l-4 border-blue-500">
+                                     <span className="text-2xl">📊</span>
+                                     <span>{drillDownKPI}</span>
+                                   </h2>
                                    <button
                                      onClick={() => {
                                        setDrillDownKPI?.(null);

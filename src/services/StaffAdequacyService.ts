@@ -13,8 +13,7 @@ export interface StaffAdequacyData {
 
 export async function fetchStaffAdequacyPerformance(branchId: number): Promise<StaffAdequacyData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/staff-adequacy/${branchId}`, {
-    cache: "force-cache",
-    next: { revalidate: 300 }
+    cache: "no-store"
   });
   
   if (!response.ok) {
@@ -32,8 +31,7 @@ export async function fetchStaffAdequacyPerformance(branchId: number): Promise<S
 
 export async function fetchProvincialStaffAdequacyPerformance(provinceId: number): Promise<StaffAdequacyData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/staff-adequacy/province/${provinceId}`, {
-    cache: "force-cache",
-    next: { revalidate: 300 }
+    cache: "no-store"
   });
   
   if (!response.ok) {
@@ -51,8 +49,7 @@ export async function fetchProvincialStaffAdequacyPerformance(provinceId: number
 
 export async function fetchDistrictStaffAdequacyPerformance(districtId: number): Promise<StaffAdequacyData> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/staff-adequacy/district/${districtId}`, {
-    cache: "force-cache",
-    next: { revalidate: 300 }
+    cache: "no-store"
   });
   
   if (!response.ok) {
