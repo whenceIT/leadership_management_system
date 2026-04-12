@@ -488,20 +488,20 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                      ];
                     break;
                   }
-                  case 'Growth Trajectory':
-                  case 'Cash Position Score':
-                  case 'Above-Threshold Risk':
-                  case 'Below-Threshold Risk': {
-                    const score = parseFloat(data.average_score || '0');
-                    status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                     rowData = [
-                       district.name,
-                       district.offices_count || 0,
-                       `${score.toFixed(2)}%`,
-                       data.percentage_point || data.percentage_points || 0
-                     ];
-                    break;
-                  }
+                   case 'Growth Trajectory':
+                   case 'Cash Position Score':
+                   case 'Above-Threshold Risk':
+                   case 'Below-Threshold Risk': {
+                     const score = parseFloat(data.average_score || '0');
+                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                      rowData = [
+                        district.name,
+                        district.offices_count || 0,
+                        `${score.toFixed(2)}%`,
+                        selectedKPI === 'Growth Trajectory' ? data.PP || 0 : data.percentage_point || data.percentage_points || 0
+                      ];
+                     break;
+                   }
                   case 'Portfolio Load Balance': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 90 ? 'good' : score >= 75 ? 'warning' : 'critical';

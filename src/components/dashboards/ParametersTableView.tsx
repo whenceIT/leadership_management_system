@@ -1,6 +1,10 @@
 'use client';
 
 import React from 'react';
+import { ProvinceLevelView } from './ProvinceLevelView';
+import { DistrictLevelView } from './DistrictLevelView';
+import { BranchLevelView } from './BranchLevelView';
+import { ConsultantLevelView } from './ConsultantLevelView';
 
 interface KPI {
   name: string;
@@ -79,6 +83,19 @@ interface ParametersTableViewProps {
   belowThresholdRiskData?: any;
   approvedExceptionRatioData?: any;
   onKpiClick?: (kpiName: string) => void;
+  selectedKPI: string | null;
+  drillLevel: 'province' | 'district' | 'branch' | 'consultant' | null;
+  selectedProvince: number | null;
+  selectedDistrict: number | null;
+  selectedBranch: number | null;
+  setSelectedKPI: (kpi: string | null) => void;
+  setDrillLevel: (level: 'province' | 'district' | 'branch' | 'consultant' | null) => void;
+  setSelectedProvince: (id: number | null) => void;
+  setSelectedDistrict: (id: number | null) => void;
+  setSelectedBranch: (id: number | null) => void;
+  userProvinceId?: number;
+  drillDownKPI?: string | null;
+  setDrillDownKPI?: (kpi: string | null) => void;
 }
 
 export function ParametersTableView({
@@ -113,7 +130,20 @@ export function ParametersTableView({
   aboveThresholdRiskData,
   belowThresholdRiskData,
   approvedExceptionRatioData,
-  onKpiClick
+  onKpiClick,
+  selectedKPI,
+  drillLevel,
+  selectedProvince,
+  selectedDistrict,
+  selectedBranch,
+  setSelectedKPI,
+  setDrillLevel,
+  setSelectedProvince,
+  setSelectedDistrict,
+  setSelectedBranch,
+  userProvinceId,
+  drillDownKPI,
+  setDrillDownKPI
 }: ParametersTableViewProps) {
   const levelLabel = {
     institution: 'Institutional',
@@ -261,116 +291,199 @@ export function ParametersTableView({
                     <tr className="bg-blue-300">
                       <td colSpan={7} className="px-4 py-3">
                         <div className="space-y-4 rounded-lg">
-                          <div className="rounded-lg">
-                            <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">📊 KEY PERFORMANCE INDICATORS:</h4>
-                            <div className="overflow-x-auto">
-                              <table className="min-w-full">
-                                <thead className="bg-blue-100 dark:bg-blue-900/30">
-                                  <tr>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Metric</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Inst Avg</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Contribution</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Trend</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Status</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-blue-200 dark:divide-blue-900/20">
-                                  {kpis.map((kpi, kpiIndex) => (
-                                    <tr
-                                      key={kpiIndex}
-                                      className="hover:bg-blue-100 dark:hover:bg-blue-900/20 cursor-pointer"
-                                      onClick={() => onKpiClick?.(kpi.name)}
-                                    >
-                                      <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
-                                      <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
-                                      <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                        {kpi.name === 'Staff Adequacy Score' ? '87%' :
-                                          kpi.name === 'Productivity Achievement' ? '75-100%' :
-                                            kpi.name === 'Vacancy Impact' ? '46.7%' :
-                                              kpi.name === 'Portfolio Load Balance' ? '50%' :
-                                                kpi.name === 'Volume Achievement' ? '13%' :
-                                                  kpi.name === 'Portfolio quality' ? '71.64%' :
-                                                    kpi.name === 'Default contribution' ? '28.36%' :
-                                                      kpi.name === 'Collections efficiency' ? '71.64%' :
-                                                        kpi.name === 'Vetting compliance' ? '100%' :
-                                                          kpi.name === 'Product distribution mix' ? '87.31%' :
-                                                            kpi.name === 'Revenue yield per product' ? '38.17%' :
-                                                              kpi.name === 'Product risk contribution' ? '28.36%' :
-                                                                kpi.name === 'Margin alignment with strategy' ? '55%' :
-                                                                  kpi.name === 'Default rate (branch, province, institutional)' ? '28.36%' :
-                                                                    kpi.name === 'Default aging analysis' ? '43.95%' :
-                                                                      kpi.name === 'Recovery rate within 3 months' ? '56.05%' :
-                                                                        kpi.name === 'Risk migration trends' ? '20%' :
-                                                                          kpi.name === 'Branch revenue' ? '2.5%' :
-                                                                            kpi.name === 'Cost-to-income ratios' ? '55%' :
-                                                                              kpi.name === 'Institutional average performance' ? '75-100%' :
-                                                                                kpi.name === 'Growth trajectory alignment' ? '2.5%' :
-                                                                                  kpi.name === 'Revenue achievement' ? '27.9%' :
-                                                                                    kpi.name === 'Profitability contribution' ? '27.9%' :
-                                                                                      kpi.name === 'Cash Position Score' ? '50%' :
-                                                                                        kpi.name === 'Above-Threshold Risk' ? '0%' :
-                                                                                          kpi.name === 'Below-Threshold Risk' ? '0%' :
-                                                                                            kpi.name === 'Approved Exception Ratio' ? '100%' :
-                                                                                              '--'}
-                                      </td>
-                                      <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">{kpi.target}</td>
-                                      <td className="px-4 py-2 text-center">
-                                        <div className="flex items-center justify-center gap-1">
-                                          <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
-                                          <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
-                                        </div>
-                                      </td>
-                                      <td className="px-4 py-2 text-center text-sm">
-                                        {kpi.name === 'Staff Adequacy Score' && staffAdequacyData ? `${parseFloat(staffAdequacyData.percentage_point).toFixed(2)} of ${staffAdequacyData.weight.replace('%', '')}pp` :
-                                          kpi.name === 'Productivity Achievement' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%', '')}pp` :
-                                            kpi.name === 'Vacancy Impact' && vacancyImpactData ? `${parseFloat(vacancyImpactData.percentage_point).toFixed(2)} of ${vacancyImpactData.weight.replace('%', '')}pp` :
-                                              kpi.name === 'Volume Achievement' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point).toFixed(2)} of ${volumeAchievementData.weight.replace('%', '')}pp` :
-                                                kpi.name === 'Portfolio Load Balance' && loanPortfolioLoadData ? `${parseFloat(loanPortfolioLoadData.percentage_point).toFixed(2)} of ${loanPortfolioLoadData.weight.replace('%', '')}pp` :
-                                                  kpi.name === 'Portfolio quality' && portfolioQualityData ? `${parseFloat(portfolioQualityData.percentage_point).toFixed(2)} of ${portfolioQualityData.weight.replace('%', '')}pp` :
-                                                    kpi.name === 'Default contribution' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point).toFixed(2)} of ${month1DefaultPerformanceData.weight.replace('%', '')}pp` :
-                                                      kpi.name === 'Collections efficiency' && collectionEfficiencyData ? `${parseFloat(collectionEfficiencyData.percentage_point).toFixed(2)} of ${collectionEfficiencyData.weight.replace('%', '')}pp` :
-                                                        kpi.name === 'Vetting compliance' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point).toFixed(2)} of ${productRiskScoreData.weight.replace('%', '')}pp` :
-                                                          kpi.name === 'Product distribution mix' && productDiversificationData ? `${parseFloat(productDiversificationData.percentage_point).toFixed(2)} of ${productDiversificationData.weight.replace('%', '')}pp` :
-                                                            kpi.name === 'Revenue yield per product' && yieldAchievementsData ? `${parseFloat(yieldAchievementsData.percentage_point).toFixed(2)} of ${yieldAchievementsData.weight.replace('%', '')}pp` :
-                                                              kpi.name === 'Product risk contribution' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point).toFixed(2)} of ${productRiskScoreData.weight.replace('%', '')}pp` :
-                                                                kpi.name === 'Margin alignment with strategy' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%', '')}pp` :
-                                                                  kpi.name === 'Default rate (branch, province, institutional)' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point).toFixed(2)} of ${month1DefaultPerformanceData.weight.replace('%', '')}pp` :
-                                                                    kpi.name === 'Default aging analysis' && longTermDelinquencyData ? `${parseFloat(longTermDelinquencyData.percentage_point).toFixed(2)} of ${longTermDelinquencyData.weight.replace('%', '')}pp` :
-                                                                      kpi.name === 'Recovery rate within 3 months' && month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.percentage_point).toFixed(2)} of ${month3RecoveryAchievementsData.weight.replace('%', '')}pp` :
-                                                                        kpi.name === 'Risk migration trends' && rollRateControlData ? `${parseFloat(rollRateControlData.percentage_point).toFixed(2)} of ${rollRateControlData.weight.replace('%', '')}pp` :
-                                                                          kpi.name === 'Branch revenue' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` :
-                                                                            kpi.name === 'Cost-to-income ratios' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%', '')}pp` :
-                                                                              kpi.name === 'Institutional average performance' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%', '')}pp` :
-                                                                                kpi.name === 'Growth trajectory alignment' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` :
-                                                                                  kpi.name === 'Revenue achievement' && revenueAchievementsData ? `${parseFloat(revenueAchievementsData.percentage_point).toFixed(2)} of ${revenueAchievementsData.weight.replace('%', '')}pp` :
-                                                                                    kpi.name === 'Profitability contribution' && profitabilityContributionData ? `${parseFloat(profitabilityContributionData.percentage_point).toFixed(2)} of ${profitabilityContributionData.weight.replace('%', '')}pp` :
-                                                                                      kpi.name === 'Cash Position Score' && cashPositionData ? `${parseFloat(cashPositionData.percentage_points || cashPositionData.percentage_point || '0').toFixed(2)} of 40pp` :
-                                                                                        kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `${parseFloat(aboveThresholdRiskData.percentage_points || aboveThresholdRiskData.percentage_point || '0').toFixed(2)} of 30pp` :
-                                                                                          kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `${parseFloat(belowThresholdRiskData.percentage_points || belowThresholdRiskData.percentage_point || '0').toFixed(2)} of 20pp` :
-                                                                                            '0'}
-                                      </td>
-                                      <td className="px-4 py-2 text-center">
-                                        {/* Trend already shown in Variance column */}
-                                        <span className={`text-xs ${kpi.trend === '↑' ? 'text-green-600' : kpi.trend === '↓' ? 'text-red-600' : 'text-gray-500'}`}>{kpi.trend}</span>
-                                      </td>
-                                      <td className="px-4 py-2 text-center">
-                                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>
-                                          {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : 'CRITICAL'}
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
+                            {!drillDownKPI ? (
+                              <div className="rounded-lg">
+                                <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">📊 KEY PERFORMANCE INDICATORS:</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="min-w-full">
+                                    <thead className="bg-blue-100 dark:bg-blue-900/30">
+                                      <tr>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Metric</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Inst Avg</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Contribution</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Trend</th>
+                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-blue-200 dark:divide-blue-900/20">
+                                      {kpis.map((kpi, kpiIndex) => (
+                                        <tr
+                                          key={kpiIndex}
+                                          className="hover:bg-blue-100 dark:hover:bg-blue-900/20 cursor-pointer"
+                                          onClick={() => {
+                                            setDrillDownKPI?.(kpi.name);
+                                            onKpiClick?.(kpi.name);
+                                          }}
+                                        >
+                                          <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
+                                          <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
+                                          <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                                            {kpi.name === 'Staff Adequacy Score' ? '87%' :
+                                              kpi.name === 'Productivity Achievement' ? '75-100%' :
+                                                kpi.name === 'Vacancy Impact' ? '46.7%' :
+                                                  kpi.name === 'Portfolio Load Balance' ? '50%' :
+                                                    kpi.name === 'Volume Achievement' ? '13%' :
+                                                      kpi.name === 'Portfolio quality' ? '71.64%' :
+                                                        kpi.name === 'Default contribution' ? '28.36%' :
+                                                          kpi.name === 'Collections efficiency' ? '71.64%' :
+                                                            kpi.name === 'Vetting compliance' ? '100%' :
+                                                              kpi.name === 'Product distribution mix' ? '87.31%' :
+                                                                kpi.name === 'Revenue yield per product' ? '38.17%' :
+                                                                  kpi.name === 'Product risk contribution' ? '28.36%' :
+                                                                    kpi.name === 'Margin alignment with strategy' ? '55%' :
+                                                                      kpi.name === 'Default rate (branch, province, institutional)' ? '28.36%' :
+                                                                        kpi.name === 'Default aging analysis' ? '43.95%' :
+                                                                          kpi.name === 'Recovery rate within 3 months' ? '56.05%' :
+                                                                            kpi.name === 'Risk migration trends' ? '20%' :
+                                                                              kpi.name === 'Branch revenue' ? '2.5%' :
+                                                                                kpi.name === 'Cost-to-income ratios' ? '55%' :
+                                                                                  kpi.name === 'Institutional average performance' ? '75-100%' :
+                                                                                    kpi.name === 'Growth trajectory alignment' ? '2.5%' :
+                                                                                      kpi.name === 'Revenue achievement' ? '27.9%' :
+                                                                                        kpi.name === 'Profitability contribution' ? '27.9%' :
+                                                                                          kpi.name === 'Cash Position Score' ? '50%' :
+                                                                                            kpi.name === 'Above-Threshold Risk' ? '0%' :
+                                                                                              kpi.name === 'Below-Threshold Risk' ? '0%' :
+                                                                                                kpi.name === 'Approved Exception Ratio' ? '100%' :
+                                                                                                  '--'}
+                                          </td>
+                                          <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">{kpi.target}</td>
+                                          <td className="px-4 py-2 text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                              <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
+                                              <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
+                                            </div>
+                                          </td>
+                                          <td className="px-4 py-2 text-center text-sm">
+                                            {kpi.name === 'Staff Adequacy Score' && staffAdequacyData ? `${parseFloat(staffAdequacyData.percentage_point).toFixed(2)} of ${staffAdequacyData.weight.replace('%', '')}pp` :
+                                              kpi.name === 'Productivity Achievement' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%', '')}pp` :
+                                                kpi.name === 'Vacancy Impact' && vacancyImpactData ? `${parseFloat(vacancyImpactData.percentage_point).toFixed(2)} of ${vacancyImpactData.weight.replace('%', '')}pp` :
+                                                  kpi.name === 'Volume Achievement' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point).toFixed(2)} of ${volumeAchievementData.weight.replace('%', '')}pp` :
+                                                    kpi.name === 'Portfolio Load Balance' && loanPortfolioLoadData ? `${parseFloat(loanPortfolioLoadData.percentage_point).toFixed(2)} of ${loanPortfolioLoadData.weight.replace('%', '')}pp` :
+                                                      kpi.name === 'Portfolio quality' && portfolioQualityData ? `${parseFloat(portfolioQualityData.percentage_point).toFixed(2)} of ${portfolioQualityData.weight.replace('%', '')}pp` :
+                                                        kpi.name === 'Default contribution' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point).toFixed(2)} of ${month1DefaultPerformanceData.weight.replace('%', '')}pp` :
+                                                          kpi.name === 'Collections efficiency' && collectionEfficiencyData ? `${parseFloat(collectionEfficiencyData.percentage_point).toFixed(2)} of ${collectionEfficiencyData.weight.replace('%', '')}pp` :
+                                                            kpi.name === 'Vetting compliance' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point).toFixed(2)} of ${productRiskScoreData.weight.replace('%', '')}pp` :
+                                                              kpi.name === 'Product distribution mix' && productDiversificationData ? `${parseFloat(productDiversificationData.percentage_point).toFixed(2)} of ${productDiversificationData.weight.replace('%', '')}pp` :
+                                                                kpi.name === 'Revenue yield per product' && yieldAchievementsData ? `${parseFloat(yieldAchievementsData.percentage_point).toFixed(2)} of ${yieldAchievementsData.weight.replace('%', '')}pp` :
+                                                                  kpi.name === 'Product risk contribution' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point).toFixed(2)} of ${productRiskScoreData.weight.replace('%', '')}pp` :
+                                                                    kpi.name === 'Margin alignment with strategy' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%', '')}pp` :
+                                                                      kpi.name === 'Default rate (branch, province, institutional)' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point).toFixed(2)} of ${month1DefaultPerformanceData.weight.replace('%', '')}pp` :
+                                                                        kpi.name === 'Default aging analysis' && longTermDelinquencyData ? `${parseFloat(longTermDelinquencyData.percentage_point).toFixed(2)} of ${longTermDelinquencyData.weight.replace('%', '')}pp` :
+                                                                          kpi.name === 'Recovery rate within 3 months' && month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.percentage_point).toFixed(2)} of ${month3RecoveryAchievementsData.weight.replace('%', '')}pp` :
+                                                                            kpi.name === 'Risk migration trends' && rollRateControlData ? `${parseFloat(rollRateControlData.percentage_point).toFixed(2)} of ${rollRateControlData.weight.replace('%', '')}pp` :
+                                                                              kpi.name === 'Branch revenue' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` :
+                                                                                kpi.name === 'Cost-to-income ratios' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%', '')}pp` :
+                                                                                  kpi.name === 'Institutional average performance' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%', '')}pp` :
+                                                                                    kpi.name === 'Growth trajectory alignment' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` :
+                                                                                      kpi.name === 'Revenue achievement' && revenueAchievementsData ? `${parseFloat(revenueAchievementsData.percentage_point).toFixed(2)} of ${revenueAchievementsData.weight.replace('%', '')}pp` :
+                                                                                        kpi.name === 'Profitability contribution' && profitabilityContributionData ? `${parseFloat(profitabilityContributionData.percentage_point).toFixed(2)} of ${profitabilityContributionData.weight.replace('%', '')}pp` :
+                                                                                          kpi.name === 'Cash Position Score' && cashPositionData ? `${parseFloat(cashPositionData.percentage_points || cashPositionData.percentage_point || '0').toFixed(2)} of 40pp` :
+                                                                                            kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `${parseFloat(aboveThresholdRiskData.percentage_points || aboveThresholdRiskData.percentage_point || '0').toFixed(2)} of 30pp` :
+                                                                                              kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `${parseFloat(belowThresholdRiskData.percentage_points || belowThresholdRiskData.percentage_point || '0').toFixed(2)} of 20pp` :
+                                                                                                '0'}
+                                          </td>
+                                          <td className="px-4 py-2 text-center">
+                                            {/* Trend already shown in Variance column */}
+                                            <span className={`text-xs ${kpi.trend === '↑' ? 'text-green-600' : kpi.trend === '↓' ? 'text-red-600' : 'text-gray-500'}`}>{kpi.trend}</span>
+                                          </td>
+                                          <td className="px-4 py-2 text-center">
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>
+                                              {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : 'CRITICAL'}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            ) : (
+                              /* Drill-down view for selected KPI */
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                    📊 DRILL-DOWN: {drillDownKPI}
+                                  </h4>
+                                  <button
+                                    onClick={() => {
+                                      setDrillDownKPI?.(null);
+                                      setSelectedKPI(null);
+                                      setDrillLevel(null);
+                                    }}
+                                    className="text-xs px-3 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded transition-colors"
+                                  >
+                                    ✕ Close
+                                  </button>
+                                </div>
+
+                                {drillLevel === 'province' && userLevel === 'institution' && (
+                                  <ProvinceLevelView
+                                    selectedKPI={selectedKPI}
+                                    onProvinceClick={(provinceId) => {
+                                      setSelectedProvince(provinceId);
+                                      setDrillLevel('district');
+                                    }}
+                                  />
+                                )}
+
+                                {drillLevel === 'district' && selectedKPI && (
+                                  <DistrictLevelView
+                                    selectedKPI={selectedKPI}
+                                    selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
+                                    onDistrictClick={(districtId: number) => {
+                                      setSelectedDistrict(districtId);
+                                      setDrillLevel('branch');
+                                    }}
+                                    onBack={() => {
+                                      if (userLevel === 'province') {
+                                        setSelectedKPI(null);
+                                        setDrillLevel(null);
+                                      } else {
+                                        setSelectedProvince(null);
+                                        setDrillLevel('province');
+                                      }
+                                    }}
+                                  />
+                                )}
+
+                                {drillLevel === 'branch' && selectedKPI && (
+                                  <BranchLevelView
+                                    selectedKPI={selectedKPI}
+                                    selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
+                                    selectedDistrict={selectedDistrict}
+                                    onBranchClick={(branchId: number) => {
+                                      setSelectedBranch(branchId);
+                                      setDrillLevel('consultant');
+                                    }}
+                                    onBack={() => {
+                                      if (userLevel === 'district') {
+                                        setSelectedKPI(null);
+                                        setDrillLevel(null);
+                                      } else {
+                                        setSelectedDistrict(null);
+                                        setDrillLevel('district');
+                                      }
+                                    }}
+                                  />
+                                )}
+
+                                {drillLevel === 'consultant' && selectedBranch && selectedKPI && (
+                                  <ConsultantLevelView
+                                    officeId={selectedBranch}
+                                    selectedKPI={selectedKPI}
+                                    onBack={() => setDrillLevel('branch')}
+                                  />
+                                )}
+                              </div>
+                            )}
+                         </div>
+                       </td>
+                     </tr>
+                   )}
                 </React.Fragment>
               );
             })}

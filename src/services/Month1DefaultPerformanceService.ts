@@ -7,6 +7,7 @@ export interface Month1DefaultPerformanceData {
   month_1_defaulted?: string;
   month_1_default_rate?: string;
   average_month_1_default_rate?: string;
+  average_score?: string;
   weight: string;
   percentage_point: string;
 }

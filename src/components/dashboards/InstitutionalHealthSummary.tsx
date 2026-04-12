@@ -1169,6 +1169,7 @@ export function InstitutionalHealthSummary({
   const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
+  const [drillDownKPI, setDrillDownKPI] = useState<string | null>(null);
   const [drillLevel, setDrillLevel] = useState<'province' | 'district' | 'branch' | 'consultant' | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<number | null>(null);
@@ -1283,7 +1284,14 @@ export function InstitutionalHealthSummary({
               userLevel={userLevel}
               userLevelLabel={userLevelLabel}
               expandedParam={expandedParam}
-              onToggleExpand={(paramName) => setExpandedParam(expandedParam === paramName ? null : paramName)}
+              onToggleExpand={(paramName) => {
+                setExpandedParam(expandedParam === paramName ? null : paramName);
+                if (expandedParam !== paramName) {
+                  setSelectedKPI(null);
+                  setDrillDownKPI(null);
+                  setDrillLevel(null);
+                }
+              }}
               getParameterKPIs={getParameterKPIs}
               getVarianceColor={getVarianceColor}
               getTrendBadge={getTrendBadge}
@@ -1311,26 +1319,37 @@ export function InstitutionalHealthSummary({
               belowThresholdRiskData={belowThresholdRiskData}
               approvedExceptionRatioData={approvedExceptionRatioData}
               onKpiClick={(kpiName) => {
-                if (userLevel === 'institution') {
-                  setSelectedKPI(kpiName);
-                  setDrillLevel('province');
+                if (selectedKPI === kpiName) {
+                  setSelectedKPI(null);
+                  setDrillDownKPI(null);
+                  setDrillLevel(null);
                   setSelectedProvince(null);
                   setSelectedDistrict(null);
                   setSelectedBranch(null);
-                } else if (userLevel === 'province') {
+                } else {
                   setSelectedKPI(kpiName);
-                  setDrillLevel('district');
-                  setSelectedProvince(null);
-                  setSelectedDistrict(null);
-                  setSelectedBranch(null);
-                } else if (userLevel === 'district') {
-                  setSelectedKPI(kpiName);
-                  setDrillLevel('branch');
+                  setDrillDownKPI(kpiName);
+                  if (userLevel === 'institution') setDrillLevel('province');
+                  else if (userLevel === 'province') setDrillLevel('district');
+                  else if (userLevel === 'district') setDrillLevel('branch');
                   setSelectedProvince(null);
                   setSelectedDistrict(null);
                   setSelectedBranch(null);
                 }
               }}
+              selectedKPI={selectedKPI}
+              drillDownKPI={drillDownKPI}
+              setDrillDownKPI={setDrillDownKPI}
+              drillLevel={drillLevel}
+              selectedProvince={selectedProvince}
+              selectedDistrict={selectedDistrict}
+              selectedBranch={selectedBranch}
+              setSelectedKPI={setSelectedKPI}
+              setDrillLevel={setDrillLevel}
+              setSelectedProvince={setSelectedProvince}
+              setSelectedDistrict={setSelectedDistrict}
+              setSelectedBranch={setSelectedBranch}
+              userProvinceId={userProvinceId}
             />
           ) : (
             <ParametersCardsView
@@ -1338,7 +1357,14 @@ export function InstitutionalHealthSummary({
               userLevel={userLevel}
               userLevelLabel={userLevelLabel}
               expandedParam={expandedParam}
-              onToggleExpand={(paramName) => setExpandedParam(expandedParam === paramName ? null : paramName)}
+              onToggleExpand={(paramName) => {
+                setExpandedParam(expandedParam === paramName ? null : paramName);
+                if (expandedParam !== paramName) {
+                  setSelectedKPI(null);
+                  setDrillDownKPI(null);
+                  setDrillLevel(null);
+                }
+              }}
               getParameterKPIs={getParameterKPIs}
               getVarianceColor={getVarianceColor}
               getTrendBadge={getTrendBadge}
@@ -1366,26 +1392,37 @@ export function InstitutionalHealthSummary({
               belowThresholdRiskData={belowThresholdRiskData}
               approvedExceptionRatioData={approvedExceptionRatioData}
               onKpiClick={(kpiName) => {
-                if (userLevel === 'institution') {
-                  setSelectedKPI(kpiName);
-                  setDrillLevel('province');
+                if (selectedKPI === kpiName) {
+                  setSelectedKPI(null);
+                  setDrillDownKPI(null);
+                  setDrillLevel(null);
                   setSelectedProvince(null);
                   setSelectedDistrict(null);
                   setSelectedBranch(null);
-                } else if (userLevel === 'province') {
+                } else {
                   setSelectedKPI(kpiName);
-                  setDrillLevel('district');
-                  setSelectedProvince(null);
-                  setSelectedDistrict(null);
-                  setSelectedBranch(null);
-                } else if (userLevel === 'district') {
-                  setSelectedKPI(kpiName);
-                  setDrillLevel('branch');
+                  setDrillDownKPI(kpiName);
+                  if (userLevel === 'institution') setDrillLevel('province');
+                  else if (userLevel === 'province') setDrillLevel('district');
+                  else if (userLevel === 'district') setDrillLevel('branch');
                   setSelectedProvince(null);
                   setSelectedDistrict(null);
                   setSelectedBranch(null);
                 }
               }}
+              selectedKPI={selectedKPI}
+              drillDownKPI={drillDownKPI}
+              setDrillDownKPI={setDrillDownKPI}
+              drillLevel={drillLevel}
+              selectedProvince={selectedProvince}
+              selectedDistrict={selectedDistrict}
+              selectedBranch={selectedBranch}
+              setSelectedKPI={setSelectedKPI}
+              setDrillLevel={setDrillLevel}
+              setSelectedProvince={setSelectedProvince}
+              setSelectedDistrict={setSelectedDistrict}
+              setSelectedBranch={setSelectedBranch}
+              userProvinceId={userProvinceId}
             />
           )}
 
@@ -1421,94 +1458,6 @@ export function InstitutionalHealthSummary({
             approvedExceptionRatioData={approvedExceptionRatioData}
           />
         </>
-      )}
-      {/* KPI Drill-down Modal */}
-      {selectedKPI && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[999999] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{selectedKPI}</h2>
-              <button
-                onClick={() => {
-                  setSelectedKPI(null);
-                  setDrillLevel(null);
-                  setSelectedProvince(null);
-                  setSelectedBranch(null);
-                }}
-                className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-6">
-              {/* Province Level View - Only show for institution level */}
-              {drillLevel === 'province' && userLevel === 'institution' && (
-                <ProvinceLevelView
-                  selectedKPI={selectedKPI}
-                  onProvinceClick={(provinceId) => {
-                    setSelectedProvince(provinceId);
-                    setDrillLevel('district');
-                  }}
-                />
-              )}
-
-              {/* District Level View */}
-              {(drillLevel === 'district') && selectedKPI && (
-                <DistrictLevelView
-                  selectedKPI={selectedKPI}
-                  selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
-                  onDistrictClick={(districtId: number) => {
-                    setSelectedDistrict(districtId);
-                    setDrillLevel('branch');
-                  }}
-                  onBack={() => {
-                    if (userLevel === 'province') {
-                      setSelectedKPI(null);
-                      setDrillLevel(null);
-                    } else {
-                      setSelectedProvince(null);
-                      setDrillLevel('province');
-                    }
-                  }}
-                />
-              )}
-
-              {/* Branch Level View - Show for district level or province level (direct) */}
-              {(drillLevel === 'branch') && selectedKPI && (
-                <BranchLevelView
-                  selectedKPI={selectedKPI}
-                  selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
-                  selectedDistrict={selectedDistrict}
-                  onBranchClick={(branchId: number) => {
-                    setSelectedBranch(branchId);
-                    setDrillLevel('consultant');
-                  }}
-                  onBack={() => {
-                    if (userLevel === 'district') {
-                      setSelectedKPI(null);
-                      setDrillLevel(null);
-                    } else {
-                      setSelectedDistrict(null);
-                      setDrillLevel('district');
-                    }
-                  }}
-                />
-              )}
-
-              {/* Consultant Level View */}
-              {drillLevel === 'consultant' && selectedBranch && selectedKPI && (
-                <ConsultantLevelView
-                  officeId={selectedBranch}
-                  selectedKPI={selectedKPI}
-                  onBack={() => setDrillLevel('branch')}
-                />
-              )}
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

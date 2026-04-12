@@ -1,6 +1,10 @@
 'use client';
 
 import React from 'react';
+import { ProvinceLevelView } from './ProvinceLevelView';
+import { DistrictLevelView } from './DistrictLevelView';
+import { BranchLevelView } from './BranchLevelView';
+import { ConsultantLevelView } from './ConsultantLevelView';
 
 interface KPI {
   name: string;
@@ -79,6 +83,19 @@ interface ParametersCardsViewProps {
   belowThresholdRiskData?: any;
   approvedExceptionRatioData?: any;
   onKpiClick?: (kpiName: string) => void;
+  selectedKPI: string | null;
+  drillLevel: 'province' | 'district' | 'branch' | 'consultant' | null;
+  selectedProvince: number | null;
+  selectedDistrict: number | null;
+  selectedBranch: number | null;
+  setSelectedKPI: (kpi: string | null) => void;
+  setDrillLevel: (level: 'province' | 'district' | 'branch' | 'consultant' | null) => void;
+  setSelectedProvince: (id: number | null) => void;
+  setSelectedDistrict: (id: number | null) => void;
+  setSelectedBranch: (id: number | null) => void;
+  userProvinceId?: number;
+  drillDownKPI?: string | null;
+  setDrillDownKPI?: (kpi: string | null) => void;
 }
 
 export function ParametersCardsView({
@@ -113,7 +130,20 @@ export function ParametersCardsView({
   aboveThresholdRiskData,
   belowThresholdRiskData,
   approvedExceptionRatioData,
-  onKpiClick
+  onKpiClick,
+  selectedKPI,
+  drillLevel,
+  selectedProvince,
+  selectedDistrict,
+  selectedBranch,
+  setSelectedKPI,
+  setDrillLevel,
+  setSelectedProvince,
+  setSelectedDistrict,
+  setSelectedBranch,
+  userProvinceId,
+  drillDownKPI,
+  setDrillDownKPI
 }: ParametersCardsViewProps) {
   const levelLabel = {
     institution: 'Institutional',
@@ -277,7 +307,10 @@ export function ParametersCardsView({
                     <div 
                       key={kpiIndex}
                       className="bg-white dark:bg-gray-800 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => onKpiClick?.(kpi.name)}
+                      onClick={() => {
+                        setDrillDownKPI?.(kpi.name);
+                        onKpiClick?.(kpi.name);
+                      }}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-gray-900 dark:text-white">{kpi.name}</span>
@@ -306,6 +339,69 @@ export function ParametersCardsView({
                           </div>
                         </div>
                       </div>
+                      {selectedKPI === kpi.name && (
+                        <div className="mt-4 pt-4 border-t border-blue-100 dark:border-blue-900/30">
+                          {drillLevel === 'province' && userLevel === 'institution' && (
+                            <ProvinceLevelView
+                              selectedKPI={selectedKPI}
+                              onProvinceClick={(provinceId) => {
+                                setSelectedProvince(provinceId);
+                                setDrillLevel('district');
+                              }}
+                            />
+                          )}
+
+                          {drillLevel === 'district' && selectedKPI && (
+                            <DistrictLevelView
+                              selectedKPI={selectedKPI}
+                              selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
+                              onDistrictClick={(districtId: number) => {
+                                setSelectedDistrict(districtId);
+                                setDrillLevel('branch');
+                              }}
+                              onBack={() => {
+                                if (userLevel === 'province') {
+                                  setSelectedKPI(null);
+                                  setDrillLevel(null);
+                                } else {
+                                  setSelectedProvince(null);
+                                  setDrillLevel('province');
+                                }
+                              }}
+                            />
+                          )}
+
+                          {drillLevel === 'branch' && selectedKPI && (
+                            <BranchLevelView
+                              selectedKPI={selectedKPI}
+                              selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
+                              selectedDistrict={selectedDistrict}
+                              onBranchClick={(branchId: number) => {
+                                setSelectedBranch(branchId);
+                                setDrillLevel('consultant');
+                              }}
+                              onBack={() => {
+                                if (userLevel === 'district') {
+                                  setSelectedKPI(null);
+                                  setDrillLevel(null);
+                                } else {
+                                  setSelectedDistrict(null);
+                                  setDrillLevel('district');
+                                }
+
+                              }}
+                            />
+                          )}
+
+                          {drillLevel === 'consultant' && selectedBranch && selectedKPI && (
+                            <ConsultantLevelView
+                              officeId={selectedBranch}
+                              selectedKPI={selectedKPI}
+                              onBack={() => setDrillLevel('branch')}
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
