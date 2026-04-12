@@ -113,8 +113,8 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
 
         // Fetch metrics for current and previous periods
         const [currentMetrics, previousMetrics] = await Promise.all([
-          metricsService.fetchConsultantsPerformanceByOffice(officeId, formatISODate(performancePeriod.start), formatISODate(performancePeriod.end)),
-          metricsService.fetchConsultantsPerformanceByOffice(officeId, formatISODate(previousCyclePeriod.start), formatISODate(previousCyclePeriod.end))
+          metricsService.fetchConsultantsPerformanceByOffice(Number(officeId), formatISODate(performancePeriod.start), formatISODate(performancePeriod.end)),
+          metricsService.fetchConsultantsPerformanceByOffice(Number(officeId), formatISODate(previousCyclePeriod.start), formatISODate(previousCyclePeriod.end))
         ]);
 
         // Create maps for quick lookup
@@ -277,7 +277,10 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
             <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">workspaces</span>
           </div>
           {staffingAdequacy !== null && (
-            <div className="flex items-center mt-1 gap-1.5">
+            <>
+              <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Staff Adequacy</span>
+              <div className="flex items-center mt-1 gap-1.5">
+            </>)
               <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                 <div
                   className={`h-1.5 rounded-full ${
@@ -285,15 +288,16 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
                     : staffingStatus === 'warning' ? 'bg-yellow-500'
                     : 'bg-red-500'
                   }`}
-                  style={{ width: `${Math.min(staffingAdequacy, 100)}%` }}
-                />
-              </div>
+                style={{ width: `${Math.min(staffingAdequacy, 100)}%` }}
+              />
+            </div>
               <span className={`text-xs font-bold ${
                 staffingStatus === 'good' ? 'text-green-600 dark:text-green-400'
                 : staffingStatus === 'warning' ? 'text-yellow-600 dark:text-yellow-400'
                 : 'text-red-600 dark:text-red-400'
-              }`}>{staffingAdequacy}%</span>
-            </div>
+              }`}>{Math.min(staffingAdequacy, 100)}%</span>
+              </div>
+            </>
           )}
         </div>
 
@@ -410,7 +414,7 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
                       ></div>
                     </div>
                     <span className="text-xs font-medium ml-2 text-gray-700 dark:text-gray-300">
-                      {user.performance.toFixed(1)}%
+                      {Math.min(user.performance, 100).toFixed(1)}%
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
