@@ -277,27 +277,26 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
             <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">workspaces</span>
           </div>
           {staffingAdequacy !== null && (
-            <>
+            <div className="flex flex-col">
               <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Staff Adequacy</span>
               <div className="flex items-center mt-1 gap-1.5">
-            </>)
-              <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                <div
-                  className={`h-1.5 rounded-full ${
-                    staffingStatus === 'good' ? 'bg-green-500'
-                    : staffingStatus === 'warning' ? 'bg-yellow-500'
-                    : 'bg-red-500'
-                  }`}
-                style={{ width: `${Math.min(staffingAdequacy, 100)}%` }}
-              />
-            </div>
-              <span className={`text-xs font-bold ${
-                staffingStatus === 'good' ? 'text-green-600 dark:text-green-400'
-                : staffingStatus === 'warning' ? 'text-yellow-600 dark:text-yellow-400'
-                : 'text-red-600 dark:text-red-400'
-              }`}>{Math.min(staffingAdequacy, 100)}%</span>
+                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                  <div
+                    className={`h-1.5 rounded-full ${
+                      staffingStatus === 'good' ? 'bg-green-500'
+                      : staffingStatus === 'warning' ? 'bg-yellow-500'
+                      : 'bg-red-500'
+                    }`}
+                    style={{ width: `${Math.min(staffingAdequacy, 100)}%` }}
+                  />
+                </div>
+                <span className={`text-xs font-bold ${
+                  staffingStatus === 'good' ? 'text-green-600 dark:text-green-400'
+                  : staffingStatus === 'warning' ? 'text-yellow-600 dark:text-yellow-400'
+                  : 'text-red-600 dark:text-red-400'
+                }`}>{Math.min(staffingAdequacy, 100)}%</span>
               </div>
-            </>
+            </div>
           )}
         </div>
 
