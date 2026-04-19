@@ -10,7 +10,7 @@ interface KPI {
   name: string;
   institutionalAvg: string;
   currentPeriod: string;
-  target: string;
+  target: string | number | { min: number; max: number };
   variance: string;
   trend: '↑' | '↓' | '→';
   status: 'good' | 'warning' | 'critical';

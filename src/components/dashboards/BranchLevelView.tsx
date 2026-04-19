@@ -27,6 +27,7 @@ import { fetchProfitabilityContribution } from '@/services/ProfitabilityContribu
 import { fetchCashPosition } from '@/services/CashPositionService';
 import { fetchAboveThresholdRisk } from '@/services/AboveThresholdRiskService';
 import { fetchBelowThresholdRisk } from '@/services/BelowThresholdRiskService';
+import { fetchApprovedExceptionRatio } from '@/services/ApprovedExceptionRatioService';
 
 interface BranchLevelViewProps {
   selectedKPI: string;
@@ -134,6 +135,9 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                 break;
               case 'Below-Threshold Risk':
                 data = await fetchBelowThresholdRisk(parseInt(branchId));
+                break;
+              case 'Approved Exception Ratio':
+                data = await fetchApprovedExceptionRatio(parseInt(branchId));
                 break;
               case 'Portfolio Load Balance':
                 data = await fetchLoanPortfolioLoad(parseInt(branchId));
@@ -388,11 +392,29 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
         status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
       }
-    } else if (selectedKPI === 'Above-Threshold Risk' || selectedKPI === 'Below-Threshold Risk') {
+    } else if (selectedKPI === 'Above-Threshold Risk') {
       current = data.score ? `${parseFloat(data.score).toFixed(2)}%` : '--';
-      target = 'Zero';
+      target = '100%';
       if (data.score) {
         const score = parseFloat(data.score);
+        variance = `${(score - 100).toFixed(2)}%`;
+        trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
+        status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+      }
+    } else if (selectedKPI === 'Below-Threshold Risk') {
+      current = data.score ? `${parseFloat(data.score).toFixed(2)}%` : '--';
+      target = '100%';
+      if (data.score) {
+        const score = parseFloat(data.score);
+        variance = `${(score - 100).toFixed(2)}%`;
+        trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
+        status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+      }
+    } else if (selectedKPI === 'Approved Exception Ratio') {
+      current = data.normalized_score ? `${parseFloat(data.normalized_score).toFixed(2)}%` : '--';
+      target = '100%';
+      if (data.normalized_score) {
+        const score = parseFloat(data.normalized_score);
         variance = `${(score - 100).toFixed(2)}%`;
         trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
         status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';

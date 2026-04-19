@@ -10,7 +10,7 @@ interface KPI {
   name: string;
   institutionalAvg: string;
   currentPeriod: string;
-  target: string;
+  target: string | number | { min: number; max: number };
   variance: string;
   trend: '↑' | '↓' | '→';
   status: 'good' | 'warning' | 'critical';
@@ -204,13 +204,22 @@ export function ParametersTableView({
 
               // Calculate progress percentage
               const userLevelScore = parseFloat(param.userLevelAvg.replace('%', ''));
-              let targetScore = parseFloat(param.target.toString().replace('%', '').replace('≥', '').replace('≤', ''));
+              let progress = 0;
 
-              if (isNaN(targetScore)) {
-                targetScore = 100;
+              if (typeof param.target === 'object' && param.target.min !== undefined) {
+                // Range target (e.g., Cash Position Score) - score is already percentage
+                progress = Math.min(Math.max(userLevelScore, 0), 100);
+              } else if (typeof param.target === 'number') {
+                // Numeric target
+                progress = Math.min(Math.max((userLevelScore / param.target) * 100, 0), 100);
+              } else {
+                // String target
+                let targetScore = parseFloat(param.target.toString().replace('%', '').replace('≥', '').replace('≤', ''));
+                if (isNaN(targetScore)) {
+                  targetScore = 100;
+                }
+                progress = Math.min(Math.max((userLevelScore / targetScore) * 100, 0), 100);
               }
-
-              const progress = Math.min(Math.max((userLevelScore / targetScore) * 100, 0), 100);
 
               return (
                 <React.Fragment key={index}>
@@ -237,18 +246,18 @@ export function ParametersTableView({
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                          {param.name === 'Branch Structure & Staffing' ? '87%' :
-                            param.name === 'Loan Consultant Performance' ? '45%' :
-                              param.name === 'Loan Products & Interest Rates' ? '58%' :
-                                param.name === 'Risk Management & Defaults' ? '45%' :
-                                  param.name === 'Revenue & Performance' ? '39%' :
-                                    param.name === 'Cash & Liquidity Management' ? '50%' :
+                          {param.institutionalAvg !== '--' ? param.institutionalAvg :
+                            param.name === 'Branch Structure & Staffing' ? '87%' :
+                              param.name === 'Loan Consultant Performance' ? '45%' :
+                                param.name === 'Loan Products & Interest Rates' ? '58%' :
+                                  param.name === 'Risk Management & Defaults' ? '45%' :
+                                    param.name === 'Revenue & Performance' ? '39%' :
                                       '--'}
                         </span>
-                        {param.name !== 'Cash & Liquidity Management' && param.userLevelAvg !== '--' && param.userLevelAvg !== '--%' && (
-                          <span className={`text-xs font-medium ${parseFloat(param.userLevelAvg) >= parseFloat(param.name === 'Branch Structure & Staffing' ? '87' : param.name === 'Loan Consultant Performance' ? '45' : param.name === 'Loan Products & Interest Rates' ? '58' : param.name === 'Risk Management & Defaults' ? '45' : param.name === 'Revenue & Performance' ? '39' : param.name === 'Cash & Liquidity Management' ? '50' : '0') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            {parseFloat(param.userLevelAvg) >= parseFloat(param.name === 'Branch Structure & Staffing' ? '87' : param.name === 'Loan Consultant Performance' ? '45' : param.name === 'Loan Products & Interest Rates' ? '58' : param.name === 'Risk Management & Defaults' ? '45' : param.name === 'Revenue & Performance' ? '39' : param.name === 'Cash & Liquidity Management' ? '50' : '0') ? '▲' : '▼'}
-                            {Math.abs(parseFloat(param.userLevelAvg) - parseFloat(param.name === 'Branch Structure & Staffing' ? '87' : param.name === 'Loan Consultant Performance' ? '45' : param.name === 'Loan Products & Interest Rates' ? '58' : param.name === 'Risk Management & Defaults' ? '45' : param.name === 'Revenue & Performance' ? '39' : param.name === 'Cash & Liquidity Management' ? '50' : '0')).toFixed(0)}%
+                        {param.userLevelAvg !== '--' && param.userLevelAvg !== '--%' && param.institutionalAvg !== '--' && (
+                          <span className={`text-xs font-medium ${parseFloat(param.userLevelAvg) >= parseFloat(param.institutionalAvg.replace('%', '')) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {parseFloat(param.userLevelAvg) >= parseFloat(param.institutionalAvg.replace('%', '')) ? '▲' : '▼'}
+                            {Math.abs(parseFloat(param.userLevelAvg) - parseFloat(param.institutionalAvg.replace('%', ''))).toFixed(0)}%
                           </span>
                         )}
                       </div>
@@ -265,14 +274,16 @@ export function ParametersTableView({
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-center">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(param.status)} mb-2 inline-block`}>
-                          {param.status === 'good' ? 'GOOD' : param.status === 'warning' ? 'WARNING' : 'CRITICAL'}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${userLevelScore >= 76 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                          userLevelScore >= 60 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                          'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'} mb-2 inline-block`}>
+                          {userLevelScore >= 76 ? 'GOOD' : userLevelScore >= 60 ? 'WARNING' : 'CRITICAL'}
                         </span>
                         <div className="flex items-center gap-2">
                           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                             <div
-                              className={`h-2 rounded-full transition-all duration-300 ${param.status === 'critical' ? 'bg-red-500' :
-                                param.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+                              className={`h-2 rounded-full transition-all duration-300 ${userLevelScore >= 76 ? 'bg-green-500' :
+                                userLevelScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
                                 }`}
                               style={{ width: `${progress}%` }}
                             />
@@ -296,18 +307,20 @@ export function ParametersTableView({
                                 <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">📊 KEY PERFORMANCE INDICATORS:</h4>
                                 <div className="overflow-x-auto">
                                   <table className="min-w-full">
-                                    <thead className="bg-blue-100 dark:bg-blue-900/30">
-                                      <tr>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Metric</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Inst Avg</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Contribution</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Trend</th>
-                                        <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Status</th>
-                                      </tr>
-                                    </thead>
+                                     <thead className="bg-blue-100 dark:bg-blue-900/30">
+                                       <tr>
+                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Metric</th>
+                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
+                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Inst Avg</th>
+                                         {param.name === 'Cash & Liquidity Management' && (
+                                           <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Total Cash Balance</th>
+                                         )}
+                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
+                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
+                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Contribution</th>
+                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Status</th>
+                                       </tr>
+                                     </thead>
                                     <tbody className="divide-y divide-blue-200 dark:divide-blue-900/20">
                                       {kpis.map((kpi, kpiIndex) => (
                                         <tr
@@ -320,37 +333,52 @@ export function ParametersTableView({
                                         >
                                           <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
                                           <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
-                                          <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                            {kpi.name === 'Staff Adequacy Score' ? '87%' :
-                                              kpi.name === 'Productivity Achievement' ? '75-100%' :
-                                                kpi.name === 'Vacancy Impact' ? '46.7%' :
-                                                  kpi.name === 'Portfolio Load Balance' ? '50%' :
-                                                    kpi.name === 'Volume Achievement' ? '13%' :
-                                                      kpi.name === 'Portfolio quality' ? '71.64%' :
-                                                        kpi.name === 'Default contribution' ? '28.36%' :
-                                                          kpi.name === 'Collections efficiency' ? '71.64%' :
-                                                            kpi.name === 'Vetting compliance' ? '100%' :
-                                                              kpi.name === 'Product distribution mix' ? '87.31%' :
-                                                                kpi.name === 'Revenue yield per product' ? '38.17%' :
-                                                                  kpi.name === 'Product risk contribution' ? '28.36%' :
-                                                                    kpi.name === 'Margin alignment with strategy' ? '55%' :
-                                                                      kpi.name === 'Default rate (branch, province, institutional)' ? '28.36%' :
-                                                                        kpi.name === 'Default aging analysis' ? '43.95%' :
-                                                                          kpi.name === 'Recovery rate within 3 months' ? '56.05%' :
-                                                                            kpi.name === 'Risk migration trends' ? '20%' :
-                                                                              kpi.name === 'Branch revenue' ? '2.5%' :
-                                                                                kpi.name === 'Cost-to-income ratios' ? '55%' :
-                                                                                  kpi.name === 'Institutional average performance' ? '75-100%' :
-                                                                                    kpi.name === 'Growth trajectory alignment' ? '2.5%' :
-                                                                                      kpi.name === 'Revenue achievement' ? '27.9%' :
-                                                                                        kpi.name === 'Profitability contribution' ? '27.9%' :
-                                                                                          kpi.name === 'Cash Position Score' ? '50%' :
-                                                                                            kpi.name === 'Above-Threshold Risk' ? '0%' :
-                                                                                              kpi.name === 'Below-Threshold Risk' ? '0%' :
-                                                                                                kpi.name === 'Approved Exception Ratio' ? '100%' :
-                                                                                                  '--'}
-                                          </td>
-                                          <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">{kpi.target}</td>
+                                           <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                                             {kpi.name === 'Cash Position Score' && cashPositionData ? `${(parseFloat(cashPositionData.score || cashPositionData.average_score || '0')).toFixed(2)}%` :
+                                               kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `${(parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0')).toFixed(2)}%` :
+                                                 kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0')).toFixed(2)}%` :
+                                                   kpi.name === 'Approved Exception Ratio' && approvedExceptionRatioData ? `${(parseFloat(approvedExceptionRatioData.normalized_score || approvedExceptionRatioData.average_score || '0')).toFixed(2)}%` :
+                                                     kpi.name === 'Staff Adequacy Score' ? '87%' :
+                                                       kpi.name === 'Productivity Achievement' ? '75-100%' :
+                                                         kpi.name === 'Vacancy Impact' ? '46.7%' :
+                                                           kpi.name === 'Portfolio Load Balance' ? '50%' :
+                                                             kpi.name === 'Volume Achievement' ? '13%' :
+                                                               kpi.name === 'Portfolio quality' ? '71.64%' :
+                                                                 kpi.name === 'Default contribution' ? '28.36%' :
+                                                                   kpi.name === 'Collections efficiency' ? '71.64%' :
+                                                                     kpi.name === 'Vetting compliance' ? '100%' :
+                                                                       kpi.name === 'Product distribution mix' ? '87.31%' :
+                                                                         kpi.name === 'Revenue yield per product' ? '38.17%' :
+                                                                           kpi.name === 'Product risk contribution' ? '28.36%' :
+                                                                             kpi.name === 'Margin alignment with strategy' ? '55%' :
+                                                                               kpi.name === 'Default rate (branch, province, institutional)' ? '28.36%' :
+                                                                                 kpi.name === 'Default aging analysis' ? '43.95%' :
+                                                                                   kpi.name === 'Recovery rate within 3 months' ? '56.05%' :
+                                                                                     kpi.name === 'Risk migration trends' ? '20%' :
+                                                                                       kpi.name === 'Branch revenue' ? '2.5%' :
+                                                                                         kpi.name === 'Cost-to-income ratios' ? '55%' :
+                                                                                           kpi.name === 'Institutional average performance' ? '75-100%' :
+                                                                                             kpi.name === 'Growth trajectory alignment' ? '2.5%' :
+                                                                                               kpi.name === 'Revenue achievement' ? '27.9%' :
+                                                                                                 kpi.name === 'Profitability contribution' ? '27.9%' :
+                                                                                                   '--'}
+                                           </td>
+                                           {param.name === 'Cash & Liquidity Management' && (
+                                             <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
+                                               {kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` :
+                                                 kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `K${aboveThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
+                                                   kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `K${belowThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
+                                                     kpi.name === 'Approved Exception Ratio' && approvedExceptionRatioData ? `K${approvedExceptionRatioData.totalCashBalance?.toLocaleString() || '--'}` :
+                                                       '--'}
+                                             </td>
+                                           )}
+                                           <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">
+                                             {kpi.name === 'Cash Position Score' && typeof kpi.target === 'object' ? `K${kpi.target.min.toLocaleString()} to K${kpi.target.max.toLocaleString()}` :
+                                               kpi.name === 'Above-Threshold Risk' ? '100%' :
+                                                 kpi.name === 'Below-Threshold Risk' ? '100%' :
+                                                   kpi.name === 'Approved Exception Ratio' ? '100%' :
+                                                     kpi.target}
+                                           </td>
                                           <td className="px-4 py-2 text-center">
                                             <div className="flex items-center justify-center gap-1">
                                               <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
@@ -385,10 +413,6 @@ export function ParametersTableView({
                                                                                             kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `${parseFloat(aboveThresholdRiskData.percentage_points || aboveThresholdRiskData.percentage_point || '0').toFixed(2)} of 30pp` :
                                                                                               kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `${parseFloat(belowThresholdRiskData.percentage_points || belowThresholdRiskData.percentage_point || '0').toFixed(2)} of 20pp` :
                                                                                                 '0'}
-                                          </td>
-                                          <td className="px-4 py-2 text-center">
-                                            {/* Trend already shown in Variance column */}
-                                            <span className={`text-xs ${kpi.trend === '↑' ? 'text-green-600' : kpi.trend === '↓' ? 'text-red-600' : 'text-gray-500'}`}>{kpi.trend}</span>
                                           </td>
                                           <td className="px-4 py-2 text-center">
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>

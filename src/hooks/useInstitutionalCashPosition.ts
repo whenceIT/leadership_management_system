@@ -52,9 +52,22 @@ export function useInstitutionalCashPosition(filters?: {
 
         const apiData = result.data;
         const totalCashBalance = apiData.totalCashBalance;
-        const minTarget = 20000;
-        const maxTarget = 30000;
-        const score = Math.min(Math.max((totalCashBalance - minTarget) / (maxTarget - minTarget) * 100, 0), 100);
+
+        // Calculate Cash Position Score based on roadmap logic
+        let score: number;
+        if (totalCashBalance >= 20000 && totalCashBalance <= 30000) {
+          score = 100;
+        } else if (totalCashBalance > 30000 && totalCashBalance <= 50000) {
+          const excess = totalCashBalance - 30000;
+          const penalty = (excess / 20000) * 40;
+          score = Math.max(100 - penalty, 60); // Declining from 100% to 60%
+        } else if (totalCashBalance < 20000 && totalCashBalance >= 10000) {
+          const shortfall = 20000 - totalCashBalance;
+          const penalty = (shortfall / 10000) * 50;
+          score = Math.max(100 - penalty, 50); // Declining from 100% to 50%
+        } else {
+          score = 0; // Above 50000 or below 10000
+        }
 
         const data: CashPositionData = {
           score,

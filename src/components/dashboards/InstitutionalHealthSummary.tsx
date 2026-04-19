@@ -14,7 +14,7 @@ interface KPI {
   name: string;
   institutionalAvg: string;
   currentPeriod: string;
-  target: string;
+  target: string | number | { min: number; max: number };
   variance: string;
   trend: '↑' | '↓' | '→';
   status: 'good' | 'warning' | 'critical';
@@ -743,12 +743,8 @@ function aggregateCashLiquidityManagementKPIs(
   const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
   const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
-  const validInstitutionalAvgs = kpis
-    .map(kpi => parseFloat(kpi.data?.instAvg || '0'))
-    .filter(score => !isNaN(score));
-  const institutionalAvg = validInstitutionalAvgs.length > 0
-    ? `${Math.round(validInstitutionalAvgs.reduce((a, b) => a + b, 0) / validInstitutionalAvgs.length)}%`
-    : '--';
+  // For institutional level, use the overall score as institutional avg
+  const institutionalAvg = `${overallScore}%`;
 
   return {
     institutionalAvg,
@@ -859,12 +855,12 @@ function getParameterKPIs(paramName: string,
     if (!data) return 0;
     // First check field1, then fall back to field2
     let value = data[field1];
-    if ((value === undefined || value === null) && field2) {
+    if ((value === undefined || value === null || isNaN(value)) && field2) {
       value = data[field2];
     }
-    if (value === undefined || value === null) return 0;
+    if (value === undefined || value === null || isNaN(value)) return 0;
     const num = typeof value === 'string' ? parseFloat(value) : (typeof value === 'number' ? value : 0);
-    return isNaN(num) ? 0 : num;
+    return isNaN(num) || !isFinite(num) ? 0 : num;
   };
 
   const kpis: ParameterKPIs = {
@@ -1085,36 +1081,36 @@ function getParameterKPIs(paramName: string,
     'Cash & Liquidity Management': [
       {
         name: 'Cash Position Score',
-        institutionalAvg: cashPositionData ? '--' : '--',
+        institutionalAvg: cashPositionData ? `${(parseFloat(cashPositionData.score || cashPositionData.average_score || '0')).toFixed(2)}` : '--',
         currentPeriod: cashPositionData ? `${(parseFloat(cashPositionData.score || cashPositionData.average_score || '0')).toFixed(2)}` : '--',
-        target: 'K20,000 to K30,000',
+        target: { min: 20000, max: 30000 },
         variance: cashPositionData ? `${(parseFloat(cashPositionData.score || cashPositionData.average_score || '0') - 100).toFixed(2)}%` : '--',
         trend: cashPositionData ? (parseFloat(cashPositionData.score || cashPositionData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
         status: cashPositionData ? (parseFloat(cashPositionData.score || cashPositionData.average_score || '0') >= 90 ? 'good' : parseFloat(cashPositionData.score || cashPositionData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Above-Threshold Risk',
-        institutionalAvg: aboveThresholdRiskData ? '--' : '--',
+        institutionalAvg: aboveThresholdRiskData ? `${(parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0')).toFixed(2)}` : '--',
         currentPeriod: aboveThresholdRiskData ? `${(parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0')).toFixed(2)}` : '--',
-        target: '0',
+        target: 100,
         variance: aboveThresholdRiskData ? `${(parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0') - 100).toFixed(2)}%` : '--',
         trend: aboveThresholdRiskData ? (parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
         status: aboveThresholdRiskData ? (parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Below-Threshold Risk',
-        institutionalAvg: belowThresholdRiskData ? '--' : '--',
+        institutionalAvg: belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0')).toFixed(2)}` : '--',
         currentPeriod: belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0')).toFixed(2)}` : '--',
-        target: '0',
+        target: 100,
         variance: belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') - 100).toFixed(2)}%` : '--',
         trend: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
         status: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Approved Exception Ratio',
-        institutionalAvg: approvedExceptionRatioData ? '0' : '0',
-        currentPeriod: approvedExceptionRatioData ? `${getScore(approvedExceptionRatioData, 'normalized_score', 'average_score').toFixed(2)}` : '0',
-        target: '100% approved',
+        institutionalAvg: approvedExceptionRatioData ? `${Math.max(0, getScore(approvedExceptionRatioData, 'normalized_score', 'average_score')).toFixed(2)}` : '--',
+        currentPeriod: approvedExceptionRatioData ? `${Math.max(0, getScore(approvedExceptionRatioData, 'normalized_score', 'average_score')).toFixed(2)}` : '--',
+        target: 100,
         variance: approvedExceptionRatioData ? `${(getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') - 100).toFixed(2)}%` : '0',
         trend: approvedExceptionRatioData ? (getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') >= 90 ? '↑' : '↓') : '→',
         status: approvedExceptionRatioData ? (getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') >= 90 ? 'good' : getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning'

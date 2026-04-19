@@ -14,6 +14,10 @@ import {
 import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { useUserKPI } from '@/hooks/useUserKPI';
 import ProvincialDataService, { ProvincialPerformanceData } from '@/services/ProvincialDataService';
+import { useInstitutionalCashPosition } from '@/hooks/useInstitutionalCashPosition';
+import { useInstitutionalAboveThresholdRisk } from '@/hooks/useInstitutionalAboveThresholdRisk';
+import { useInstitutionalBelowThresholdRisk } from '@/hooks/useInstitutionalBelowThresholdRisk';
+import { useInstitutionalApprovedExceptionRatio } from '@/hooks/useInstitutionalApprovedExceptionRatio';
 
 export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?: string }) {
   const [provincialData, setProvincialData] = useState<ProvincialPerformanceData[]>([]);
@@ -21,6 +25,12 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
 
   // Get user-specific KPI data
   const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Cash position metrics
+  const { data: cashPositionData } = useInstitutionalCashPosition();
+  const { data: aboveThresholdRiskData } = useInstitutionalAboveThresholdRisk();
+  const { data: belowThresholdRiskData } = useInstitutionalBelowThresholdRisk();
+  const { data: approvedExceptionRatioData } = useInstitutionalApprovedExceptionRatio();
   
   // Build KPIs from user-specific KPI data
   const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
@@ -254,7 +264,9 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
     );
   };
 
-  const summaryData = getInstitutionalSummaryData('institution', 'Whence Financial Services — Institutional View');
+  const summaryData = getInstitutionalSummaryData('institution', 'Whence Financial Services — Institutional View',
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData);
 
   // Institution metrics
   const institutionMetrics = [

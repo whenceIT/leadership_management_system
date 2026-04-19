@@ -80,6 +80,8 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
       value = parseFloat(data.average_score || '0');
     } else if (selectedKPI === 'Above-Threshold Risk' || selectedKPI === 'Below-Threshold Risk') {
       value = parseFloat(data.average_score || '0');
+    } else if (selectedKPI === 'Approved Exception Ratio') {
+      value = parseFloat(data.normalized_score || data.average_score || '0');
     }
 
     value = isNaN(value) ? 0 : value;
@@ -160,6 +162,8 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
         value = parseFloat(data?.average_score || '0');
       } else if (selectedKPI === 'Above-Threshold Risk' || selectedKPI === 'Below-Threshold Risk') {
         value = parseFloat(data?.average_score || '0');
+      } else if (selectedKPI === 'Approved Exception Ratio') {
+        value = parseFloat(data?.normalized_score || data?.average_score || '0');
       }
       
       if (!isNaN(value)) {
@@ -218,6 +222,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Province</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Offices Count</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Cash Balance</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Provincial Avg</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
@@ -491,18 +496,40 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                       trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
                       status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
                     }
-                  } else if (selectedKPI === 'Above-Threshold Risk' || selectedKPI === 'Below-Threshold Risk') {
+                   } else if (selectedKPI === 'Above-Threshold Risk') {
                     institutionalAvg = data.instAvg || '0';
                     currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = 'Zero';
-                    
+                    target = '100%';
+
                     if (data.average_score !== undefined) {
                       const score = parseFloat(data.average_score);
                       variance = `${(score - 100).toFixed(2)}%`;
                       trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
                       status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
                     }
-                  }
+                  } else if (selectedKPI === 'Below-Threshold Risk') {
+                    institutionalAvg = data.instAvg || '0';
+                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
+                    target = '100%';
+
+                    if (data.average_score !== undefined) {
+                      const score = parseFloat(data.average_score);
+                      variance = `${(score - 100).toFixed(2)}%`;
+                      trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
+                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                    }
+                   } else if (selectedKPI === 'Approved Exception Ratio') {
+                     institutionalAvg = data.instAvg || '0';
+                     currentPeriod = data.normalized_score ? `${parseFloat(data.normalized_score).toFixed(2)}%` : '0';
+                     target = '100%';
+
+                     if (data.normalized_score !== undefined) {
+                       const score = parseFloat(data.normalized_score);
+                       variance = `${(score - 100).toFixed(2)}%`;
+                       trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
+                       status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                     }
+                   }
                 }
 
                 // Determine background color based on ranking
@@ -528,6 +555,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
 
                     <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{province.name}</td>
                     <td className="px-4 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400">{officesCount} </td>
+                    <td className="px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400">K{data?.totalCashBalance?.toLocaleString() || '--'}</td>
                     <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{currentPeriod}</td>
                     {/* <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{actualLcs > 0 ? actualLcs : '--'}</td>
                     <td className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400">{contribution}</td> */}

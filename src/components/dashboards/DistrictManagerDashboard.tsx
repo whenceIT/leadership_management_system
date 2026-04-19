@@ -6,6 +6,10 @@ import { DashboardBase, KPICard, AlertCard, SectionCard, QuickInfoBar, JobPurpos
 import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { roleCardsData } from '@/data/role-cards-data';
 import { useUserKPI } from '@/hooks/useUserKPI';
+import { useInstitutionalCashPosition } from '@/hooks/useInstitutionalCashPosition';
+import { useInstitutionalAboveThresholdRisk } from '@/hooks/useInstitutionalAboveThresholdRisk';
+import { useInstitutionalBelowThresholdRisk } from '@/hooks/useInstitutionalBelowThresholdRisk';
+import { useInstitutionalApprovedExceptionRatio } from '@/hooks/useInstitutionalApprovedExceptionRatio';
 
 interface DistrictManagerDashboardProps {
   position?: string;
@@ -24,6 +28,12 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
 
   // Get user-specific KPI data
   const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  // Cash position metrics
+  const { data: cashPositionData } = useInstitutionalCashPosition();
+  const { data: aboveThresholdRiskData } = useInstitutionalAboveThresholdRisk();
+  const { data: belowThresholdRiskData } = useInstitutionalBelowThresholdRisk();
+  const { data: approvedExceptionRatioData } = useInstitutionalApprovedExceptionRatio();
   
   // Build KPIs from user-specific KPI data
   const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
@@ -133,7 +143,9 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
     );
   };
 
-  const summaryData = getInstitutionalSummaryData('district', 'District View');
+  const summaryData = getInstitutionalSummaryData('district', 'District View',
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData);
 
   return (
     <DashboardBase

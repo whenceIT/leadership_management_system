@@ -24,6 +24,7 @@ import { fetchDistrictGrowthTrajectory } from '@/services/GrowthTrajectoryServic
 import { fetchDistrictCashPosition } from '@/services/CashPositionService';
 import { fetchDistrictAboveThresholdRisk } from '@/services/AboveThresholdRiskService';
 import { fetchDistrictBelowThresholdRisk } from '@/services/BelowThresholdRiskService';
+import { fetchDistrictApprovedExceptionRatio } from '@/services/ApprovedExceptionRatioService';
 import { fetchDistrictLoanPortfolioLoad } from '@/services/LoanPortfolioLoadService';
 
 interface DistrictLevelViewProps {
@@ -149,6 +150,9 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
               case 'Below-Threshold Risk':
                 data = await fetchDistrictBelowThresholdRisk(district.id);
                 break;
+              case 'Approved Exception Ratio':
+                data = await fetchDistrictApprovedExceptionRatio(district.id);
+                break;
               case 'Portfolio Load Balance':
                 data = await fetchDistrictLoanPortfolioLoad(district.id);
                 break;
@@ -226,6 +230,7 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
       case 'Cash Position Score':
       case 'Above-Threshold Risk':
       case 'Below-Threshold Risk':
+      case 'Approved Exception Ratio':
         return ['District', 'Offices', 'Avg Score', 'PP', 'Status'];
       default:
         return ['District', 'Score', 'Status'];
@@ -490,13 +495,14 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                        data.percentage_point || 0
                      ];
                     break;
-                  }
-                   case 'Growth Trajectory':
-                   case 'Cash Position Score':
-                   case 'Above-Threshold Risk':
-                   case 'Below-Threshold Risk': {
-                     const score = parseFloat(data.average_score || '0');
-                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                   }
+                    case 'Growth Trajectory':
+                    case 'Cash Position Score':
+                    case 'Above-Threshold Risk':
+                    case 'Below-Threshold Risk':
+                    case 'Approved Exception Ratio': {
+                      const score = parseFloat(data.normalized_score || data.average_score || '0');
+                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
                       rowData = [
                         district.name,
                         district.offices_count || 0,
