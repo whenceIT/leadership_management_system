@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchInstitutionalApprovedExceptionRatio, InstitutionalAPIResponse } from '@/services/InstitutionalAPIService';
+import { fetchInstitutionalApprovedExceptionRatio } from '@/services/ApprovedExceptionRatioService';
+
+import { ApprovedExceptionRatioData } from '@/services/ApprovedExceptionRatioService';
 
 export function useInstitutionalApprovedExceptionRatio() {
-  const [data, setData] = useState<InstitutionalAPIResponse | null>(null);
+  const [data, setData] = useState<ApprovedExceptionRatioData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
