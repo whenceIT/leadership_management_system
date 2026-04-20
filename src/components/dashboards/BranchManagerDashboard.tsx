@@ -116,10 +116,10 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
   const { data: cashPositionData, isLoading: isCashPositionLoading, error: cashPositionError } = useCashPosition(3);
 
   // Fetch above threshold risk data
-  const { data: aboveThresholdRiskData, isLoading: isAboveThresholdRiskLoading, error: aboveThresholdRiskError } = useAboveThresholdRisk(3);
+  const { data: aboveThresholdRiskData, isLoading: isAboveThresholdRiskLoading, error: aboveThresholdRiskError } = useAboveThresholdRisk({ office_id: 3 });
 
   // Fetch below threshold risk data
-  const { data: belowThresholdRiskData, isLoading: isBelowThresholdRiskLoading, error: belowThresholdRiskError } = useBelowThresholdRisk(3);
+  const { data: belowThresholdRiskData, isLoading: isBelowThresholdRiskLoading, error: belowThresholdRiskError } = useBelowThresholdRisk({ office_id: 3 });
 
   // Fetch approved exception ratio data
   const { data: approvedExceptionRatioData, isLoading: isApprovedExceptionRatioLoading, error: approvedExceptionRatioError } = useApprovedExceptionRatio(3);
