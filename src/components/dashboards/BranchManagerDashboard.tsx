@@ -122,7 +122,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
   const { data: belowThresholdRiskData, isLoading: isBelowThresholdRiskLoading, error: belowThresholdRiskError } = useBelowThresholdRisk({ office_id: 3 });
 
   // Fetch approved exception ratio data
-  const { data: approvedExceptionRatioData, isLoading: isApprovedExceptionRatioLoading, error: approvedExceptionRatioError } = useApprovedExceptionRatio(3);
+  const { data: approvedExceptionRatioData, isLoading: isApprovedExceptionRatioLoading, error: approvedExceptionRatioError } = useApprovedExceptionRatio({ office_id: 3 });
 
   // Custom summary data with dynamic aggregated Branch Structure & Staffing
   const summaryData = useMemo(() => {
