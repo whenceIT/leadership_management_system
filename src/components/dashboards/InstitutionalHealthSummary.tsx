@@ -1166,21 +1166,21 @@ function getParameterKPIs(paramName: string,
       },
       {
         name: 'Below-Threshold Risk',
-        institutionalAvg: belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0')).toFixed(2)}` : '--',
-        currentPeriod: belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0')).toFixed(2)}` : '--',
+        institutionalAvg: belowThresholdRiskData && belowThresholdRiskData.totalCashBalance ? `${Math.min((belowThresholdRiskData.totalCashBalance / 20000) * 100, 100).toFixed(2)}` : '--',
+        currentPeriod: belowThresholdRiskData && belowThresholdRiskData.totalCashBalance ? `${Math.min((belowThresholdRiskData.totalCashBalance / 20000) * 100, 100).toFixed(2)}` : '--',
         target: 100,
-        variance: belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') - 100).toFixed(2)}%` : '--',
-        trend: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
-        status: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
+        variance: belowThresholdRiskData && belowThresholdRiskData.totalCashBalance ? `${(Math.min((belowThresholdRiskData.totalCashBalance / 20000) * 100, 100) - 100).toFixed(2)}%` : '--',
+        trend: belowThresholdRiskData && belowThresholdRiskData.totalCashBalance ? (Math.min((belowThresholdRiskData.totalCashBalance / 20000) * 100, 100) >= 90 ? '↑' : '↓') : '→',
+        status: belowThresholdRiskData && belowThresholdRiskData.totalCashBalance ? (Math.min((belowThresholdRiskData.totalCashBalance / 20000) * 100, 100) >= 90 ? 'good' : Math.min((belowThresholdRiskData.totalCashBalance / 20000) * 100, 100) >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Approved Exception Ratio',
-        institutionalAvg: approvedExceptionRatioData ? `${Math.max(0, getScore(approvedExceptionRatioData, 'normalized_score', 'average_score')).toFixed(2)}` : '--',
-        currentPeriod: approvedExceptionRatioData ? `${Math.max(0, getScore(approvedExceptionRatioData, 'normalized_score', 'average_score')).toFixed(2)}` : '--',
+        institutionalAvg: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? `${(approvedExceptionRatioData.totalExcess === 0 ? 100 : (approvedExceptionRatioData.approvedExcess / approvedExceptionRatioData.totalExcess) * 100).toFixed(2)}` : '--',
+        currentPeriod: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? `${(approvedExceptionRatioData.totalExcess === 0 ? 100 : (approvedExceptionRatioData.approvedExcess / approvedExceptionRatioData.totalExcess) * 100).toFixed(2)}` : '--',
         target: 100,
-        variance: approvedExceptionRatioData ? `${(getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') - 100).toFixed(2)}%` : '0',
-        trend: approvedExceptionRatioData ? (getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') >= 90 ? '↑' : '↓') : '→',
-        status: approvedExceptionRatioData ? (getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') >= 90 ? 'good' : getScore(approvedExceptionRatioData, 'normalized_score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning'
+        variance: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? `${((approvedExceptionRatioData.totalExcess === 0 ? 100 : (approvedExceptionRatioData.approvedExcess / approvedExceptionRatioData.totalExcess) * 100) - 100).toFixed(2)}%` : '0',
+        trend: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? ((approvedExceptionRatioData.totalExcess === 0 ? 100 : (approvedExceptionRatioData.approvedExcess / approvedExceptionRatioData.totalExcess) * 100) >= 90 ? '↑' : '↓') : '→',
+        status: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? ((approvedExceptionRatioData.totalExcess === 0 ? 100 : (approvedExceptionRatioData.approvedExcess / approvedExceptionRatioData.totalExcess) * 100) >= 90 ? 'good' : (approvedExceptionRatioData.totalExcess === 0 ? 100 : (approvedExceptionRatioData.approvedExcess / approvedExceptionRatioData.totalExcess) * 100) >= 70 ? 'warning' : 'critical') : 'warning'
       }
     ]
   };
