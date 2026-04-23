@@ -265,7 +265,7 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
   };
 
   const summaryData = getInstitutionalSummaryData('institution', 'Whence Financial Services — Institutional View',
-    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+    undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
     cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData);
 
   // Institution metrics

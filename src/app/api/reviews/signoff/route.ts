@@ -34,7 +34,7 @@ interface SignOffRecord {
 // Global in-memory store for development (replace with database in production)
 // This would typically be stored in a database table like 'review_signoffs'
 declare global {
-  // eslint-disable-next-line no-var
+   
   var signOffStore: SignOffRecord[] | undefined;
 }
 

@@ -321,10 +321,10 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
        });
      }
 
-     // Update Above-Threshold Risk key metric
-     if (aboveThresholdRiskData) {
-       const score = parseFloat(aboveThresholdRiskData.score || '0');
-       const percentagePoints = parseFloat(aboveThresholdRiskData.percentage_points || '0');
+      // Update Above-Threshold Risk key metric
+      if (aboveThresholdRiskData) {
+        const score = aboveThresholdRiskData.score;
+        const percentagePoints = aboveThresholdRiskData.percentage_point;
        
        keyMetrics = keyMetrics.map(metric => {
          if (metric.parameter === 'Above-Threshold Risk') {
@@ -343,10 +343,10 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
        });
      }
 
-     // Update Below-Threshold Risk key metric
-     if (belowThresholdRiskData) {
-       const score = parseFloat(belowThresholdRiskData.score || '0');
-       const percentagePoints = parseFloat(belowThresholdRiskData.percentage_points || '0');
+      // Update Below-Threshold Risk key metric
+      if (belowThresholdRiskData) {
+        const score = belowThresholdRiskData.score;
+        const percentagePoints = belowThresholdRiskData.percentage_point;
        
        keyMetrics = keyMetrics.map(metric => {
          if (metric.parameter === 'Below-Threshold Risk') {

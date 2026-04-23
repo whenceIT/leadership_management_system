@@ -329,7 +329,7 @@ export function ParametersCardsView({
                         </div>
                         <div>
                           <p className="text-gray-500 dark:text-gray-400">Target</p>
-                          <p className="font-semibold text-gray-700 dark:text-gray-300">{kpi.target}</p>
+                          <p className="font-semibold text-gray-700 dark:text-gray-300">{typeof kpi.target === 'object' && kpi.target ? `K${kpi.target.min.toLocaleString()} - K${kpi.target.max.toLocaleString()}` : kpi.target}</p>
                         </div>
                         <div>
                           <p className="text-gray-500 dark:text-gray-400">Variance</p>

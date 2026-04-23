@@ -13,6 +13,7 @@ export interface AboveThresholdRiskData {
   percentage_point?: string;
   totalCashBalance?: number;
   unapprovedExcess?: number;
+  approvedExcess?: number;
 }
 
 async function fetchKpiSummary(filters?: {
@@ -45,16 +46,17 @@ async function fetchKpiSummary(filters?: {
   return result.data;
 }
 
-function calculateAboveThresholdRisk(totalCashBalance: number): { score: number; unapprovedExcess: number } {
+function calculateAboveThresholdRisk(totalCashBalance: number, approvedExcess: number = 0): { score: number; unapprovedExcess: number } {
   const threshold = 30000;
-  const unapprovedExcess = Math.max(0, totalCashBalance - threshold);
+  const totalExcess = Math.max(0, totalCashBalance - threshold);
+  const unapprovedExcess = Math.max(0, totalExcess - approvedExcess);
   const score = totalCashBalance <= threshold ? 100 : 100 * (1 - (unapprovedExcess / totalCashBalance));
   return { score, unapprovedExcess };
 }
 
 export async function fetchAboveThresholdRisk(branchId: number): Promise<AboveThresholdRiskData> {
   const apiData = await fetchKpiSummary({ office_id: branchId });
-  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance);
+  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance, apiData.approvedExcess || 0);
 
   return {
     office_id: branchId.toString(),
@@ -62,13 +64,14 @@ export async function fetchAboveThresholdRisk(branchId: number): Promise<AboveTh
     average_score: score.toString(),
     totalCashBalance: apiData.totalCashBalance,
     unapprovedExcess,
+    approvedExcess: apiData.approvedExcess || 0,
     ...apiData
   };
 }
 
 export async function fetchProvincialAboveThresholdRisk(provinceId: number): Promise<AboveThresholdRiskData> {
   const apiData = await fetchKpiSummary({ province_id: provinceId });
-  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance);
+  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance, apiData.approvedExcess || 0);
 
   return {
     province_id: provinceId.toString(),
@@ -76,26 +79,28 @@ export async function fetchProvincialAboveThresholdRisk(provinceId: number): Pro
     average_score: score.toString(),
     totalCashBalance: apiData.totalCashBalance,
     unapprovedExcess,
+    approvedExcess: apiData.approvedExcess || 0,
     ...apiData
   };
 }
 
 export async function fetchInstitutionalAboveThresholdRisk(): Promise<AboveThresholdRiskData> {
   const apiData = await fetchKpiSummary();
-  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance);
+  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance, apiData.approvedExcess || 0);
 
   return {
     score: score.toString(),
     average_score: score.toString(),
     totalCashBalance: apiData.totalCashBalance,
     unapprovedExcess,
+    approvedExcess: apiData.approvedExcess || 0,
     ...apiData
   };
 }
 
 export async function fetchDistrictAboveThresholdRisk(districtId: number): Promise<AboveThresholdRiskData> {
   const apiData = await fetchKpiSummary({ district_id: districtId });
-  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance);
+  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance, apiData.approvedExcess || 0);
 
   return {
     district_id: districtId.toString(),
@@ -103,6 +108,7 @@ export async function fetchDistrictAboveThresholdRisk(districtId: number): Promi
     average_score: score.toString(),
     totalCashBalance: apiData.totalCashBalance,
     unapprovedExcess,
+    approvedExcess: apiData.approvedExcess || 0,
     ...apiData
   };
 }

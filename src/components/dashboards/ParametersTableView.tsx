@@ -206,7 +206,7 @@ export function ParametersTableView({
               const userLevelScore = parseFloat(param.userLevelAvg.replace('%', ''));
               let progress = 0;
 
-              if (typeof param.target === 'object' && param.target.min !== undefined) {
+              if (typeof param.target === 'object' && param.target && 'min' in param.target) {
                 // Range target (e.g., Cash Position Score) - score is already percentage
                 progress = Math.min(Math.max(userLevelScore, 0), 100);
               } else if (typeof param.target === 'number') {
@@ -373,11 +373,11 @@ export function ParametersTableView({
                                              </td>
                                            )}
                                            <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">
-                                             {kpi.name === 'Cash Position Score' && typeof kpi.target === 'object' ? `K${kpi.target.min.toLocaleString()} to K${kpi.target.max.toLocaleString()}` :
-                                               kpi.name === 'Above-Threshold Risk' ? '100%' :
-                                                 kpi.name === 'Below-Threshold Risk' ? '100%' :
-                                                   kpi.name === 'Approved Exception Ratio' ? '100%' :
-                                                     kpi.target}
+                                              {kpi.name === 'Cash Position Score' && typeof kpi.target === 'object' ? `K${kpi.target.min.toLocaleString()} to K${kpi.target.max.toLocaleString()}` :
+                                                kpi.name === 'Above-Threshold Risk' ? '100%' :
+                                                  kpi.name === 'Below-Threshold Risk' ? '100%' :
+                                                    kpi.name === 'Approved Exception Ratio' ? '100%' :
+                                                      typeof kpi.target === 'object' ? '--' : kpi.target}
                                            </td>
                                           <td className="px-4 py-2 text-center">
                                             <div className="flex items-center justify-center gap-1">

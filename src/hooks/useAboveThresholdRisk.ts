@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchAboveThresholdRisk, AboveThresholdRiskData as ServiceData } from '@/services/AboveThresholdRiskService';
 
 export interface AboveThresholdRiskData {
   score: number;
   average_score: number;
   percentage_point: number;
   totalCashBalance: number;
+  unapprovedExcess: number;
+  approvedExcess?: number;
 }
 
 export function useAboveThresholdRisk(filters?: {
@@ -26,30 +29,17 @@ export function useAboveThresholdRisk(filters?: {
       setError(null);
 
       try {
-        const queryParams = new URLSearchParams();
-        if (filters?.office_id) queryParams.append('office_id', filters.office_id.toString());
-        if (filters?.province_id) queryParams.append('province_id', filters.province_id.toString());
-        if (filters?.district_id) queryParams.append('district_id', filters.district_id.toString());
-        if (filters?.start_date) queryParams.append('start_date', filters.start_date);
-        if (filters?.end_date) queryParams.append('end_date', filters.end_date);
+        if (!filters?.office_id) throw new Error('office_id is required');
 
-        const url = `https://smartbackend.whencefinancesystem.com/api/kpi-scores/summary${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Network response was not ok');
-
-        const result = await response.json();
-        if (!result.success) throw new Error('API returned success false');
-
-        const apiData = result.data;
-        const totalCashBalance = apiData.totalCashBalance;
-        const maxTarget = 30000;
-        const score = totalCashBalance > maxTarget ? 0 : 100;
+        const serviceData: ServiceData = await fetchAboveThresholdRisk(filters.office_id);
 
         const data: AboveThresholdRiskData = {
-          score,
-          average_score: score,
-          percentage_point: score,
-          totalCashBalance,
+          score: parseFloat(serviceData.score || '0'),
+          average_score: parseFloat(serviceData.average_score || '0'),
+          percentage_point: parseFloat(serviceData.percentage_points || '0'),
+          totalCashBalance: serviceData.totalCashBalance || 0,
+          unapprovedExcess: serviceData.unapprovedExcess || 0,
+          approvedExcess: serviceData.approvedExcess || 0,
         };
 
         setData(data);
@@ -60,8 +50,10 @@ export function useAboveThresholdRisk(filters?: {
       }
     };
 
-    fetchData();
-  }, [filters?.office_id, filters?.province_id, filters?.district_id, filters?.start_date, filters?.end_date]);
+    if (filters?.office_id) {
+      fetchData();
+    }
+  }, [filters?.office_id]);
 
   return {
     data,
