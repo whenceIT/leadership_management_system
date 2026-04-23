@@ -389,9 +389,6 @@ function calculateCashPositionScore(cash: number): number {
   if (cash < 10000) return 0;
   return 0;
 }
-  if (trend === '↓') return 'text-red-600 dark:text-gray-600 text-lg font-bold';
-  return 'text-orange-500 dark:text-gray-600 text-lg font-bold';
-}
 
 function getStatusBadge(status: 'good' | 'warning' | 'critical') {
   switch (status) {
