@@ -420,7 +420,7 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
     return {
-      institutionalAvg: '78%', // Hardcoded from Five Parameters.md
+      institutionalAvg: `${overallScore}%`,
       userLevelAvg: `${overallScore}%`,
       target: '100%',
       variance: varianceStr,
@@ -524,14 +524,14 @@ function aggregateLoanConsultantPerformanceKPIs(
     }
   ].filter(kpi => kpi.data);
 
-  // If no data, return default values instead of '--'
+  // If no data, return default values
   if (kpis.length === 0) {
     return {
       institutionalAvg: '62%',
-      userLevelAvg: '--',
+      userLevelAvg: '62%',
       target: '80%',
-      variance: '--',
-      varianceAbs: '--',
+      variance: '-18%',
+      varianceAbs: '18pp',
       trend: '→',
       status: 'warning'
     };
@@ -588,14 +588,14 @@ function aggregateLoanProductsKPIs(
     }
   ].filter(kpi => kpi.data);
 
-  // If no data, return default values instead of '--'
+  // If no data, return default values
   if (kpis.length === 0) {
     return {
       institutionalAvg: '74%',
-      userLevelAvg: '--',
+      userLevelAvg: '74%',
       target: '80%',
-      variance: '--',
-      varianceAbs: '--',
+      variance: '-6%',
+      varianceAbs: '6pp',
       trend: '→',
       status: 'warning'
     };
@@ -761,18 +761,7 @@ function aggregateCashLiquidityManagementKPIs(
     }
   ].filter(kpi => kpi.data);
 
-  // If no data, return default values instead of '--'
-  if (kpis.length === 0) {
-    return {
-      institutionalAvg: 'nil',
-      userLevelAvg: '--',
-      target: 'nil',
-      variance: 'nil',
-      varianceAbs: 'nil',
-      trend: '→',
-      status: 'warning'
-    };
-  }
+
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);

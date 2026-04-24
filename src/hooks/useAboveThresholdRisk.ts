@@ -10,6 +10,8 @@ export interface AboveThresholdRiskData {
   totalCashBalance: number;
   unapprovedExcess: number;
   approvedExcess?: number;
+  unapprovedExcessAmount?: number;
+  totalExcessAmount?: number;
 }
 
 export function useAboveThresholdRisk(filters?: {
@@ -40,6 +42,8 @@ export function useAboveThresholdRisk(filters?: {
           totalCashBalance: serviceData.totalCashBalance || 0,
           unapprovedExcess: serviceData.unapprovedExcess || 0,
           approvedExcess: serviceData.approvedExcess || 0,
+          unapprovedExcessAmount: serviceData.unapprovedExcessAmount || 0,
+          totalExcessAmount: serviceData.totalExcessAmount || 0,
         };
 
         setData(data);

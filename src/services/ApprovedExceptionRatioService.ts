@@ -45,19 +45,18 @@ async function fetchKpiSummary(filters?: {
   return result.data;
 }
 
-function calculateApprovedExceptionRatio(totalCashBalance: number, approvedExcessAmount: number = 0): { score: number; totalExcess: number; approvedExcess: number; normalized_score: number } {
-  const threshold = 30000;
-  const totalExcess = Math.max(0, totalCashBalance - threshold);
-  const approvedExcess = Math.min(approvedExcessAmount, totalExcess);
-  const score = totalExcess === 0 ? 100 : (approvedExcess / totalExcess) * 100;
-  const normalized_score = score; // Same for now
+function calculateApprovedExceptionRatio(approvedExcessAmount: number, totalExcessAmount: number): { score: number; totalExcess: number; approvedExcess: number; normalized_score: number } {
+  const score = totalExcessAmount === 0 ? 100 : (approvedExcessAmount / totalExcessAmount) * 100;
+  const normalized_score = score;
+  const totalExcess = totalExcessAmount;
+  const approvedExcess = approvedExcessAmount;
 
   return { score, totalExcess, approvedExcess, normalized_score };
 }
 
 export async function fetchApprovedExceptionRatio(branchId: number): Promise<ApprovedExceptionRatioData> {
   const apiData = await fetchKpiSummary({ office_id: branchId });
-  const { score, totalExcess, approvedExcess, normalized_score } = calculateApprovedExceptionRatio(apiData.totalCashBalance, apiData.approvedExcess || 0);
+  const { score, totalExcess, approvedExcess, normalized_score } = calculateApprovedExceptionRatio(apiData.approvedExcessAmount || 0, apiData.totalExcessAmount || 0);
 
   return {
     office_id: branchId.toString(),
@@ -77,7 +76,7 @@ export async function fetchApprovedExceptionRatio(branchId: number): Promise<App
 
 export async function fetchProvincialApprovedExceptionRatio(provinceId: number): Promise<ApprovedExceptionRatioData> {
   const apiData = await fetchKpiSummary({ province_id: provinceId });
-  const { score, totalExcess, approvedExcess, normalized_score } = calculateApprovedExceptionRatio(apiData.totalCashBalance, apiData.approvedExcess || 0);
+  const { score, totalExcess, approvedExcess, normalized_score } = calculateApprovedExceptionRatio(apiData.approvedExcessAmount || 0, apiData.totalExcessAmount || 0);
 
   return {
     province_id: provinceId.toString(),
@@ -97,7 +96,7 @@ export async function fetchProvincialApprovedExceptionRatio(provinceId: number):
 
 export async function fetchInstitutionalApprovedExceptionRatio(): Promise<ApprovedExceptionRatioData> {
   const apiData = await fetchKpiSummary();
-  const { score, totalExcess, approvedExcess, normalized_score } = calculateApprovedExceptionRatio(apiData.totalCashBalance, apiData.approvedExcess || 0);
+  const { score, totalExcess, approvedExcess, normalized_score } = calculateApprovedExceptionRatio(apiData.approvedExcessAmount || 0, apiData.totalExcessAmount || 0);
 
   return {
     period: `${apiData.startDate} to ${apiData.endDate}`,
@@ -116,7 +115,7 @@ export async function fetchInstitutionalApprovedExceptionRatio(): Promise<Approv
 
 export async function fetchDistrictApprovedExceptionRatio(districtId: number): Promise<ApprovedExceptionRatioData> {
   const apiData = await fetchKpiSummary({ district_id: districtId });
-  const { score, totalExcess, approvedExcess, normalized_score } = calculateApprovedExceptionRatio(apiData.totalCashBalance, apiData.approvedExcess || 0);
+  const { score, totalExcess, approvedExcess, normalized_score } = calculateApprovedExceptionRatio(apiData.approvedExcessAmount || 0, apiData.totalExcessAmount || 0);
 
   return {
     district_id: districtId.toString(),

@@ -252,7 +252,8 @@ export function ParametersTableView({
                                 param.name === 'Loan Products & Interest Rates' ? '58%' :
                                   param.name === 'Risk Management & Defaults' ? '45%' :
                                     param.name === 'Revenue & Performance' ? '39%' :
-                                      '--'}
+                                      param.name === 'Cash & Liquidity Management' ? '50%' :
+                                        '--'}
                         </span>
                         {param.userLevelAvg !== '--' && param.userLevelAvg !== '--%' && param.institutionalAvg !== '--' && (
                           <span className={`text-xs font-medium ${parseFloat(param.userLevelAvg) >= parseFloat(param.institutionalAvg.replace('%', '')) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
@@ -334,13 +335,14 @@ export function ParametersTableView({
                                           <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
                                           <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
                                            <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                             {kpi.name === 'Cash Position Score' && cashPositionData ? `${(parseFloat(cashPositionData.score || cashPositionData.average_score || '0')).toFixed(2)}%` :
-                                               kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `${(parseFloat(aboveThresholdRiskData.score || aboveThresholdRiskData.average_score || '0')).toFixed(2)}%` :
-                                                 kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.score || belowThresholdRiskData.average_score || '0')).toFixed(2)}%` :
-                                                   kpi.name === 'Approved Exception Ratio' && approvedExceptionRatioData ? `${(parseFloat(approvedExceptionRatioData.normalized_score || approvedExceptionRatioData.average_score || '0')).toFixed(2)}%` :
-                                                     kpi.name === 'Staff Adequacy Score' ? '87%' :
-                                                       kpi.name === 'Productivity Achievement' ? '75-100%' :
-                                                         kpi.name === 'Vacancy Impact' ? '46.7%' :
+                                              {kpi.name === 'Cash & Liquidity Management' ? '50%' :
+                                                kpi.name === 'Cash Position Score' ? '50' :
+                                                kpi.name === 'Above-Threshold Risk' ? '50' :
+                                                  kpi.name === 'Below-Threshold Risk' ? '50' :
+                                                    kpi.name === 'Approved Exception Ratio' ? '50' :
+                                                      kpi.name === 'Staff Adequacy Score' ? '87%' :
+                                                        kpi.name === 'Productivity Achievement' ? '75-100%' :
+                                                          kpi.name === 'Vacancy Impact' ? '46.7%' :
                                                            kpi.name === 'Portfolio Load Balance' ? '50%' :
                                                              kpi.name === 'Volume Achievement' ? '13%' :
                                                                kpi.name === 'Portfolio quality' ? '71.64%' :
