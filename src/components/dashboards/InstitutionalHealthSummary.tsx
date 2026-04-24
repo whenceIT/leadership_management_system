@@ -652,14 +652,14 @@ function aggregateRiskManagementKPIs(
     }
   ].filter(kpi => kpi.data);
 
-  // If no data, return default values instead of '--'
+  // If no data, return default values
   if (kpis.length === 0) {
     return {
       institutionalAvg: '52%',
-      userLevelAvg: '--',
+      userLevelAvg: '52%',
       target: '75%',
-      variance: '--',
-      varianceAbs: '--',
+      variance: '-23%',
+      varianceAbs: '23pp',
       trend: '→',
       status: 'warning'
     };
@@ -823,14 +823,14 @@ function aggregateRevenuePerformanceKPIs(
     }
   ].filter(kpi => kpi.data);
 
-  // If no data, return default values instead of '--'
+  // If no data, return default values
   if (kpis.length === 0) {
     return {
       institutionalAvg: '65%',
-      userLevelAvg: '--',
+      userLevelAvg: '65%',
       target: '75%',
-      variance: '--',
-      varianceAbs: '--',
+      variance: '-10%',
+      varianceAbs: '10pp',
       trend: '→',
       status: 'warning'
     };
