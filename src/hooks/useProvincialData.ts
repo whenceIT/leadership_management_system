@@ -42,6 +42,16 @@ export function useProvincialData(selectedKPI: string | null) {
         const provinceService = ProvinceService.getInstance();
         const provincesList = await provinceService.getProvincesWithOfficeCounts();
         setProvinces(provincesList);
+        
+        // Also store office counts in provincialData for easy access
+        const officeCountsMap: ProvincialData = {};
+        provincesList.forEach((province: any) => {
+          officeCountsMap[province.id] = {
+            offices_count: province.offices_count || 0,
+            totalCashBalance: province.totalCashBalance || 0
+          };
+        });
+        setProvincialData(officeCountsMap);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load provinces');
       }

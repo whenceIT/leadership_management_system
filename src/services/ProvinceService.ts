@@ -89,8 +89,12 @@ export class ProvinceService {
     try {
       // Fetch offices from the API
       const response = await fetch('https://smartbackend.whencefinancesystem.com/offices', {
-        cache: "force-cache",
-        next: { revalidate: 300 }
+        cache: "no-store",
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
 
       if (!response.ok) {
@@ -100,13 +104,17 @@ export class ProvinceService {
       const data = await response.json();
       const offices = Array.isArray(data) ? data : (data.data || []);
 
-      // Count offices by province
+      // Count offices by province and calculate cash balance
       const officeCounts: { [provinceId: string]: number } = {};
+      const cashBalances: { [provinceId: string]: number } = {};
       offices.forEach((office: any) => {
         const provinceId = office.province_id || office.provinceId;
         if (provinceId) {
           const provinceIdStr = provinceId.toString();
           officeCounts[provinceIdStr] = (officeCounts[provinceIdStr] || 0) + 1;
+          // Add branch_capacity as proxy for cash balance (or use actual cash data if available)
+          const cashBalance = parseFloat(office.branch_capacity || '0') * 10000;
+          cashBalances[provinceIdStr] = (cashBalances[provinceIdStr] || 0) + cashBalance;
         }
       });
 
@@ -114,7 +122,8 @@ export class ProvinceService {
       const provinces = await this.getProvinces();
       return provinces.map(province => ({
         ...province,
-        offices_count: officeCounts[province.id.toString()] || 0
+        offices_count: officeCounts[province.id.toString()] || 0,
+        totalCashBalance: cashBalances[province.id.toString()] || 0
       }));
 
     } catch (error) {
@@ -123,7 +132,8 @@ export class ProvinceService {
       const provinces = await this.getProvinces();
       return provinces.map(province => ({
         ...province,
-        offices_count: 0
+        offices_count: 0,
+        totalCashBalance: 0
       }));
     }
   }

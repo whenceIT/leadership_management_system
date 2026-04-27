@@ -41,9 +41,7 @@ export function useOffice() {
     const fetchOffices = async () => {
       try {
         setLoading(true);
-        const response = await fetch('https://smartbackend.whencefinancesystem.com/offices', {
-          cache: "no-store"
-        });
+        const response = await fetch('https://smartbackend.whencefinancesystem.com/offices');
         if (!response.ok) {
           throw new Error('Failed to fetch offices');
         }

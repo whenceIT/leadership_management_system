@@ -28,8 +28,12 @@ export function useDistrict() {
         // Fetch offices to count by district
         try {
           const officesResponse = await fetch('https://smartbackend.whencefinancesystem.com/offices', {
-            cache: "force-cache",
-            next: { revalidate: 300 }
+            cache: "no-store",
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
           });
 
           if (officesResponse.ok) {

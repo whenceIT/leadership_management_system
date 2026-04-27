@@ -8,6 +8,329 @@ interface ProvinceLevelViewProps {
   onProvinceClick: (provinceId: number) => void;
 }
 
+interface KPIConfig {
+  getValue: (data: any) => number;
+  getTarget: (data: any) => number;
+  formatValue: (value: number) => string;
+  formatVariance: (variance: number) => string;
+  formatInstitutionAvg: (value: number) => string;
+  isLowerBetter: boolean;
+  getTrend: (value: number, target: number) => '↑' | '↓' | '→';
+  getStatus: (value: number, target: number) => 'good' | 'warning' | 'critical';
+  displayTarget: (data: any) => string;
+}
+
+const kpiConfigs: Record<string, KPIConfig> = {
+  'Staff Adequacy Score': {
+    getValue: (data) => parseFloat(data.average_normalized_score || '0'),
+    getTarget: (data) => data.target || 90,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.8 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.8 ? 'warning' : 'critical',
+    displayTarget: () => '90%'
+  },
+  'Productivity Achievement': {
+    getValue: (data) => parseFloat(data.average_normalized_score || '0'),
+    getTarget: (data) => data.target || 90,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.8 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.8 ? 'warning' : 'critical',
+    displayTarget: () => '90%'
+  },
+  'Vacancy Impact': {
+    getValue: (data) => parseFloat(data.average_normalized_score || '0'),
+    getTarget: (data) => data.target || 10,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.2 ? '→' : '↓',
+    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.2 ? 'warning' : 'critical',
+    displayTarget: () => '0%'
+  },
+  'Portfolio Load Balance': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: (data) => data.target || 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
+    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
+    displayTarget: () => '100%'
+  },
+  'Volume Achievement': {
+    getValue: (data) => parseFloat(data.average_normalized_score || '0'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
+    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
+    displayTarget: () => '100%'
+  },
+  'Portfolio quality': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 5,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v <= t ? '↑' : v <= t * 2 ? '→' : '↓',
+    getStatus: (v, t) => v <= t ? 'good' : v <= t * 2 ? 'warning' : 'critical',
+    displayTarget: () => '≤5%'
+  },
+  'Default contribution': {
+    getValue: (data) => parseFloat(data.average_month_1_default_rate || '0'),
+    getTarget: () => 15,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.33 ? '→' : '↓',
+    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.33 ? 'warning' : 'critical',
+    displayTarget: () => '≤15%'
+  },
+  'Default rate (branch, province, institutional)': {
+    getValue: (data) => parseFloat(data.average_month_1_default_rate || '0'),
+    getTarget: () => 15,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.33 ? '→' : '↓',
+    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.33 ? 'warning' : 'critical',
+    displayTarget: () => '≤15%'
+  },
+  'Collections efficiency': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 75,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.87 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.87 ? 'warning' : 'critical',
+    displayTarget: () => '≥75%'
+  },
+  'Vetting compliance': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 1.0,
+    formatValue: (v) => `${v.toFixed(2)}`,
+    formatVariance: (v) => `${v.toFixed(2)}`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.5 ? '→' : '↓',
+    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.5 ? 'warning' : 'critical',
+    displayTarget: () => '≤1.0'
+  },
+  'Product risk contribution': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 1.0,
+    formatValue: (v) => `${v.toFixed(2)}`,
+    formatVariance: (v) => `${v.toFixed(2)}`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.5 ? '→' : '↓',
+    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.5 ? 'warning' : 'critical',
+    displayTarget: () => '≤1.0'
+  },
+  'Product distribution mix': {
+    getValue: (data) => parseFloat(data.average_HHI || '0'),
+    getTarget: () => 0.3,
+    formatValue: (v) => `${v.toFixed(3)}`,
+    formatVariance: (v) => `${v.toFixed(3)}`,
+    formatInstitutionAvg: (v) => `${v.toFixed(3)}`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v < t ? '↑' : v < t * 1.33 ? '→' : '↓',
+    getStatus: (v, t) => v < t ? 'good' : v < t * 1.33 ? 'warning' : 'critical',
+    displayTarget: () => 'HHI < 0.3'
+  },
+  'Revenue yield per product': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: (data) => parseFloat(data.target) || 38.2,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.9 ? 'warning' : 'critical',
+    displayTarget: (data) => data.target ? `≥${data.target}%` : '≥38.2%'
+  },
+  'Margin alignment with strategy': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: (data) => parseFloat(data.target) || 55,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.1 ? '→' : '↓',
+    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.1 ? 'warning' : 'critical',
+    displayTarget: (data) => data.target ? `≤${data.target}%` : '≤55%'
+  },
+  'Cost-to-income ratios': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: (data) => parseFloat(data.target) || 55,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.1 ? '→' : '↓',
+    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.1 ? 'warning' : 'critical',
+    displayTarget: (data) => data.target ? `≤${data.target}%` : '≤55%'
+  },
+  'Default aging analysis': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: (data) => parseFloat(data.target) || 43.95,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.1 ? '→' : '↓',
+    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.1 ? 'warning' : 'critical',
+    displayTarget: (data) => data.target ? `≤${data.target}%` : '≤43.95%'
+  },
+  'Recovery rate within 1 month': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.9 ? 'warning' : 'critical',
+    displayTarget: () => '≥100%'
+  },
+  'Recovery rate within 3 months': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.9 ? 'warning' : 'critical',
+    displayTarget: () => '≥100%'
+  },
+  'Risk migration trends': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 20,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.5 ? '→' : '↓',
+    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.5 ? 'warning' : 'critical',
+    displayTarget: () => '≤20%'
+  },
+  'Branch revenue': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 2.5,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `K${v.toLocaleString()}`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= 0 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= 0 ? 'warning' : 'critical',
+    displayTarget: () => '≥2.5%'
+  },
+  'Growth trajectory alignment': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 2.5,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= 0 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= 0 ? 'warning' : 'critical',
+    displayTarget: () => '≥2.5%'
+  },
+  'Institutional average performance': {
+    getValue: (data) => parseFloat(data.average_normalized_score || '0'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.9 ? 'warning' : 'critical',
+    displayTarget: () => '≥100%'
+  },
+  'Revenue achievement': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.9 ? 'warning' : 'critical',
+    displayTarget: () => '≥100%'
+  },
+  'Profitability contribution': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= 90 ? '↑' : v >= 70 ? '→' : '↓',
+    getStatus: (v, t) => v >= 90 ? 'good' : v >= 70 ? 'warning' : 'critical',
+    displayTarget: () => '≥ institutional avg'
+  },
+  'Cash Position Score': {
+    getValue: (data) => parseFloat(data.average_score || '0'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
+    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
+    displayTarget: () => 'Within range (K20k-K30k)'
+  },
+  'Above-Threshold Risk': {
+    getValue: (data) => parseFloat(data.above_threshold_risk || data.average_score || '0'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: true,
+    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
+    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
+    displayTarget: () => '100% (Zero unapproved)'
+  },
+  'Below-Threshold Risk': {
+    getValue: (data) => parseFloat(data.below_threshold_risk || data.average_score || '0'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
+    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
+    displayTarget: () => '100% (Above K20k)'
+  },
+  'Approved Exception Ratio': {
+    getValue: (data) => parseFloat(data.approved_exception_ratio || data.normalized_score || '0'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
+    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
+    displayTarget: () => '100% (All approved)'
+  }
+};
+
 export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLevelViewProps) {
   const { provincialData, provinces, loading, error } = useProvincialData(selectedKPI);
 
@@ -33,159 +356,41 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
 
   // Function to get current period value for sorting
   const getCurrentPeriodValue = (province: any) => {
+    const config = kpiConfigs[selectedKPI || ''];
+    if (!config) return 0;
+
     const data = provincialData[province.id];
     if (!data) return 0;
 
-    let value = 0;
+    const value = config.getValue(data);
+    const cleanValue = isNaN(value) ? 0 : value;
 
-    if (selectedKPI === 'Staff Adequacy Score') {
-      value = parseFloat(data.average_normalized_score || '0');
-    } else if (selectedKPI === 'Productivity Achievement') {
-      value = parseFloat(data.average_normalized_score || '0');
-    } else if (selectedKPI === 'Vacancy Impact') {
-      value = parseFloat(data.average_normalized_score || '0');
-    } else if (selectedKPI === 'Portfolio Load Balance') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Volume Achievement') {
-      value = parseFloat(data.average_normalized_score || '0');
-    } else if (selectedKPI === 'Portfolio quality') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Default contribution' || selectedKPI === 'Default rate (branch, province, institutional)') {
-      value = parseFloat(data.average_month_1_default_rate || '0');
-    } else if (selectedKPI === 'Collections efficiency') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Vetting compliance' || selectedKPI === 'Product risk contribution') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Product distribution mix') {
-      value = parseFloat(data.average_HHI || '0');
-    } else if (selectedKPI === 'Revenue yield per product') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Margin alignment with strategy' || selectedKPI === 'Cost-to-income ratios') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Default aging analysis') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Recovery rate within 1 month' || selectedKPI === 'Recovery rate within 3 months') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Risk migration trends') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Branch revenue' || selectedKPI === 'Growth trajectory alignment') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Institutional average performance') {
-      value = parseFloat(data.average_normalized_score || '0');
-    } else if (selectedKPI === 'Revenue achievement') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Profitability contribution') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Cash Position Score') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Above-Threshold Risk' || selectedKPI === 'Below-Threshold Risk') {
-      value = parseFloat(data.average_score || '0');
-    } else if (selectedKPI === 'Approved Exception Ratio') {
-      value = parseFloat(data.normalized_score || data.average_score || '0');
-    }
-
-    value = isNaN(value) ? 0 : value;
-
-    // For KPIs where lower values are better, invert the value for sorting purposes
-    const lowerIsBetterKPIs = [
-      'Portfolio quality',
-      'Default contribution',
-      'Default rate (branch, province, institutional)',
-      'Vetting compliance',
-      'Product risk contribution',
-      'Product distribution mix',
-      'Margin alignment with strategy',
-      'Cost-to-income ratios',
-      'Default aging analysis',
-      'Risk migration trends',
-      'Vacancy Impact',
-      'Above-Threshold Risk',
-      'Below-Threshold Risk'
-    ];
-
-    if (lowerIsBetterKPIs.includes(selectedKPI || '')) {
-      // Invert the value - higher inverted value means lower original value
-      return 100 - value;
-    }
-
-    return value;
+    return config.isLowerBetter ? 100 - cleanValue : cleanValue;
   };
 
   // Calculate Institution Avg by summing Province Avg values
   const calculateInstitutionAvg = () => {
+    const config = kpiConfigs[selectedKPI || ''];
+    if (!config) return '--';
+
     let total = 0;
     let count = 0;
-    
+
     provinces.forEach(province => {
       const data = provincialData[province.id];
-      let value = 0;
-      
-      if (selectedKPI === 'Staff Adequacy Score') {
-        value = parseFloat(data?.average_normalized_score || '0');
-      } else if (selectedKPI === 'Productivity Achievement') {
-        value = parseFloat(data?.average_normalized_score || '0');
-      } else if (selectedKPI === 'Vacancy Impact') {
-        value = parseFloat(data?.average_normalized_score || '0');
-      } else if (selectedKPI === 'Portfolio Load Balance') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Volume Achievement') {
-        value = parseFloat(data?.average_normalized_score || '0');
-      } else if (selectedKPI === 'Portfolio quality') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Default contribution' || selectedKPI === 'Default rate (branch, province, institutional)') {
-        value = parseFloat(data?.average_month_1_default_rate || '0');
-      } else if (selectedKPI === 'Collections efficiency') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Vetting compliance' || selectedKPI === 'Product risk contribution') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Product distribution mix') {
-        value = parseFloat(data?.average_HHI || '0');
-      } else if (selectedKPI === 'Revenue yield per product') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Margin alignment with strategy' || selectedKPI === 'Cost-to-income ratios') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Default aging analysis') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Recovery rate within 1 month' || selectedKPI === 'Recovery rate within 3 months') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Risk migration trends') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Branch revenue' || selectedKPI === 'Growth trajectory alignment') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Institutional average performance') {
-        value = parseFloat(data?.average_normalized_score || '0');
-      } else if (selectedKPI === 'Revenue achievement') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Profitability contribution') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Cash Position Score') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Above-Threshold Risk' || selectedKPI === 'Below-Threshold Risk') {
-        value = parseFloat(data?.average_score || '0');
-      } else if (selectedKPI === 'Approved Exception Ratio') {
-        value = parseFloat(data?.normalized_score || data?.average_score || '0');
-      }
-      
-      if (!isNaN(value)) {
-        total += value;
-        count++;
+      if (data) {
+        const value = config.getValue(data);
+        if (!isNaN(value)) {
+          total += value;
+          count++;
+        }
       }
     });
-    
+
     if (count === 0) return '--';
-    
+
     const average = total / count;
-    
-    // Determine the format based on selected KPI
-    if (selectedKPI === 'Product distribution mix') {
-      return `${average.toFixed(3)}`; // HHI format
-    } else if (selectedKPI === 'Vetting compliance' || selectedKPI === 'Product risk contribution') {
-      return `${average.toFixed(2)}`; // Decimal format
-    } else if (selectedKPI === 'Branch revenue') {
-      return `K${average.toLocaleString()}`; // Currency format
-    } else {
-      return `${average.toFixed(2)}%`; // Percentage format
-    }
+    return config.formatInstitutionAvg(average);
   };
 
   // Sort provinces by current period value in descending order
@@ -243,294 +448,57 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                 let actualLcs = 0;
                 let contribution = '--';
 
-                if (data) {
-                  // Handle both array and object data formats
-                  // The provincial API returns an array of branch data
-                  let branchArray: any[] = [];
-                  
-                  if (Array.isArray(data)) {
-                    branchArray = data;
-                  } else if (data.branches) {
-                    branchArray = data.branches;
-                  }
-                  
-                  // Aggregate actual_lcs and percentage_point from all branches
-                  if (branchArray.length > 0) {
-                    actualLcs = branchArray.reduce((sum: number, branch: any) => sum + (branch.actual_lcs || 0), 0);
-                    const totalPP = branchArray.reduce((sum: number, branch: any) => sum + (branch.percentage_point || 0), 0);
-                    if (totalPP > 0) {
-                      contribution = `${totalPP.toFixed(2)}pp`;
-                    }
-                  } else if (data.total_actual_lcs) {
-                    // Fallback to aggregated values if available
-                    actualLcs = data.total_actual_lcs;
-                    if (data.total_percentage_point) {
-                      contribution = `${parseFloat(data.total_percentage_point).toFixed(2)}pp`;
-                    }
-                  } else if (data.actual_lcs) {
-                    // Single branch data
-                    actualLcs = data.actual_lcs;
-                    if (data.percentage_point) {
-                      contribution = `${parseFloat(data.percentage_point).toFixed(2)}pp`;
-                    }
-                  }
+                 if (data) {
+                   // Handle both array and object data formats
+                   // The provincial API returns an array of branch data
+                   let branchArray: any[] = [];
 
-                  if (selectedKPI === 'Staff Adequacy Score') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_normalized_score ? `${parseFloat(data.average_normalized_score).toFixed(2)}%` : '0';
-                    
-                    if (data.average_normalized_score !== undefined) {
-                      const score = parseFloat(data.average_normalized_score);
-                      variance = `${(score - data.target).toFixed(2)}%`;
-                      trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Productivity Achievement') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_normalized_score ? `${parseFloat(data.average_normalized_score).toFixed(2)}%` : '0';
-                    
-                    if (data.average_normalized_score !== undefined) {
-                      const score = parseFloat(data.average_normalized_score);
-                      variance = `${(score - data.target).toFixed(2)}%`;
-                      trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Vacancy Impact') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_normalized_score ? `${parseFloat(data.average_normalized_score).toFixed(2)}%` : '0';
-                    target = '0%';
-                    
-                    if (data.average_normalized_score !== undefined) {
-                      const score = parseFloat(data.average_normalized_score);
-                      variance = `${(score - data.target).toFixed(2)}%`;
-                      trend = score <= 10 ? '↑' : score <= 20 ? '→' : '↓';
-                      status = score <= 10 ? 'good' : score <= 20 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Portfolio Load Balance') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = '100%';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - data.target).toFixed(2)}%`;
-                      trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Volume Achievement') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_normalized_score ? `${parseFloat(data.average_normalized_score).toFixed(2)}%` : '0';
-                    target = '100%';
-                    
-                    if (data.average_normalized_score !== undefined) {
-                      const score = parseFloat(data.average_normalized_score);
-                      variance = `${(score - 100).toFixed(2)}%`;
-                      trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Portfolio quality') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = '≤5%';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 5).toFixed(2)}%`;
-                      trend = score <= 5 ? '↑' : score <= 10 ? '→' : '↓';
-                      status = score <= 5 ? 'good' : score <= 10 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Default contribution' || selectedKPI === 'Default rate (branch, province, institutional)') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_month_1_default_rate ? `${parseFloat(data.average_month_1_default_rate).toFixed(2)}%` : '0';
-                    target = '≤15%';
-                    
-                    if (data.average_month_1_default_rate !== undefined) {
-                      const score = parseFloat(data.average_month_1_default_rate);
-                      variance = `${(score - 15).toFixed(2)}%`;
-                      trend = score <= 15 ? '↑' : score <= 20 ? '→' : '↓';
-                      status = score <= 15 ? 'good' : score <= 20 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Collections efficiency') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = '≥75%';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 75).toFixed(2)}%`;
-                      trend = score >= 75 ? '↑' : score >= 65 ? '→' : '↓';
-                      status = score >= 75 ? 'good' : score >= 65 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Vetting compliance' || selectedKPI === 'Product risk contribution') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}` : '0';
-                    target = '≤1.0';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 1.0).toFixed(2)}`;
-                      trend = score <= 1.0 ? '↑' : score <= 1.5 ? '→' : '↓';
-                      status = score <= 1.0 ? 'good' : score <= 1.5 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Product distribution mix') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_HHI ? `${parseFloat(data.average_HHI).toFixed(3)}` : '0';
-                    target = 'HHI < 0.3';
-                    
-                    if (data.average_HHI !== undefined) {
-                      const score = parseFloat(data.average_HHI);
-                      variance = `${(score - 0.3).toFixed(3)}`;
-                      trend = score < 0.3 ? '↑' : score < 0.4 ? '→' : '↓';
-                      status = score < 0.3 ? 'good' : score < 0.4 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Revenue yield per product') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0%';
-                    target = data.target || '≥38.2%';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      const targetValue = parseFloat(data.target || '38.2');
-                      variance = `${(score - targetValue).toFixed(2)}%`;
-                      trend = score >= targetValue ? '↑' : score >= targetValue * 0.9 ? '→' : '↓';
-                      status = score >= targetValue ? 'good' : score >= targetValue * 0.9 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Margin alignment with strategy' || selectedKPI === 'Cost-to-income ratios') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0%';
-                    target = data.target || '≤55%';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      const targetValue = parseFloat(data.target || '55');
-                      variance = `${(score - targetValue).toFixed(2)}%`;
-                      trend = score <= targetValue ? '↑' : score <= targetValue * 1.1 ? '→' : '↓';
-                      status = score <= targetValue ? 'good' : score <= targetValue * 1.1 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Default aging analysis') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0%';
-                    target = data.target || '≤43.95%';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      const targetValue = parseFloat(data.target || '43.95');
-                      variance = `${(score - targetValue).toFixed(2)}%`;
-                      trend = score <= targetValue ? '↑' : score <= targetValue * 1.1 ? '→' : '↓';
-                      status = score <= targetValue ? 'good' : score <= targetValue * 1.1 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Recovery rate within 1 month' || selectedKPI === 'Recovery rate within 3 months') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = '≥100%';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 100).toFixed(2)}%`;
-                      trend = score >= 100 ? '↑' : score >= 90 ? '→' : '↓';
-                      status = score >= 100 ? 'good' : score >= 90 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Risk migration trends') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = '≤20%';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 20).toFixed(2)}%`;
-                      trend = score <= 20 ? '↑' : score <= 30 ? '→' : '↓';
-                      status = score <= 20 ? 'good' : score <= 30 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Branch revenue' || selectedKPI === 'Growth trajectory alignment') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = '≥2.5%';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 2.5).toFixed(2)}%`;
-                      trend = score >= 2.5 ? '↑' : score >= 0 ? '→' : '↓';
-                      status = score >= 2.5 ? 'good' : score >= 0 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Institutional average performance') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_normalized_score ? `${parseFloat(data.average_normalized_score).toFixed(2)}%` : '0';
-                    target = '≥100%';
-                    
-                    if (data.average_normalized_score !== undefined) {
-                      const score = parseFloat(data.average_normalized_score);
-                      variance = `${(score - 100).toFixed(2)}%`;
-                      trend = score >= 100 ? '↑' : score >= 90 ? '→' : '↓';
-                      status = score >= 100 ? 'good' : score >= 90 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Revenue achievement') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = '≥100%';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 100).toFixed(2)}%`;
-                      trend = score >= 100 ? '↑' : score >= 90 ? '→' : '↓';
-                      status = score >= 100 ? 'good' : score >= 90 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Profitability contribution') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = '≥ institutional avg';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 100).toFixed(2)}%`;
-                      trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Cash Position Score') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = 'Within range';
-                    
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 100).toFixed(2)}%`;
-                      trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    }
-                   } else if (selectedKPI === 'Above-Threshold Risk') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = '100%';
+                   if (Array.isArray(data)) {
+                     branchArray = data;
+                   } else if (data.branches) {
+                     branchArray = data.branches;
+                   }
 
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 100).toFixed(2)}%`;
-                      trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    }
-                  } else if (selectedKPI === 'Below-Threshold Risk') {
-                    institutionalAvg = data.instAvg || '0';
-                    currentPeriod = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '0';
-                    target = '100%';
-
-                    if (data.average_score !== undefined) {
-                      const score = parseFloat(data.average_score);
-                      variance = `${(score - 100).toFixed(2)}%`;
-                      trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    }
-                   } else if (selectedKPI === 'Approved Exception Ratio') {
-                     institutionalAvg = data.instAvg || '0';
-                     currentPeriod = data.normalized_score ? `${parseFloat(data.normalized_score).toFixed(2)}%` : '0';
-                     target = '100%';
-
-                     if (data.normalized_score !== undefined) {
-                       const score = parseFloat(data.normalized_score);
-                       variance = `${(score - 100).toFixed(2)}%`;
-                       trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-                       status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                   // Aggregate actual_lcs and percentage_point from all branches
+                   if (branchArray.length > 0) {
+                     actualLcs = branchArray.reduce((sum: number, branch: any) => sum + (branch.actual_lcs || 0), 0);
+                     const totalPP = branchArray.reduce((sum: number, branch: any) => sum + (branch.percentage_point || 0), 0);
+                     if (totalPP > 0) {
+                       contribution = `${totalPP.toFixed(2)}pp`;
+                     }
+                   } else if (data.total_actual_lcs) {
+                     // Fallback to aggregated values if available
+                     actualLcs = data.total_actual_lcs;
+                     if (data.total_percentage_point) {
+                       contribution = `${parseFloat(data.total_percentage_point).toFixed(2)}pp`;
+                     }
+                   } else if (data.actual_lcs) {
+                     // Single branch data
+                     actualLcs = data.actual_lcs;
+                     if (data.percentage_point) {
+                       contribution = `${parseFloat(data.percentage_point).toFixed(2)}pp`;
                      }
                    }
-                }
+
+                   const config = kpiConfigs[selectedKPI || ''];
+                   if (config) {
+                     const rawValue = config.getValue(data);
+                     if (!isNaN(rawValue)) {
+                       const targetValue = config.getTarget(data);
+                       currentPeriod = config.formatValue(rawValue);
+                       variance = config.formatVariance(rawValue - targetValue);
+                       trend = config.getTrend(rawValue, targetValue);
+                       status = config.getStatus(rawValue, targetValue);
+                     }
+                     target = config.displayTarget(data);
+                   } else {
+                     currentPeriod = '0';
+                     target = '100%';
+                     variance = '0';
+                     trend = '→';
+                     status = 'warning';
+                   }
+                 }
 
                 // Determine background color based on ranking
                 let bgColor = '';
@@ -542,7 +510,9 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                   bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
                 }
 
-                const officesCount = data?.offices_count || province.offices_count || 0;
+                // Get office count from province object (not from data which gets overwritten by KPI data)
+                const officesCount = province.offices_count || 0;
+                const totalCashBalance = province.totalCashBalance || 0;
 
                 return (
                   <tr
@@ -555,7 +525,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
 
                     <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{province.name}</td>
                     <td className="px-4 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400">{officesCount} </td>
-                    <td className="px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400">K{data?.totalCashBalance?.toLocaleString() || '--'}</td>
+                    <td className="px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400">K{totalCashBalance > 0 ? totalCashBalance.toLocaleString() : '--'}</td>
                     <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{currentPeriod}</td>
                     {/* <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{actualLcs > 0 ? actualLcs : '--'}</td>
                     <td className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400">{contribution}</td> */}
