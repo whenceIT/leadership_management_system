@@ -30,6 +30,8 @@ export interface Office {
   districtId?: string | number | null;
   district_id?: string | number | null; // API often uses snake_case
   province_id?: string | number | null;
+  withinhereWalletId?: string | null;
+  withinhere_wallet_id?: string | null; // raw API field
 }
 
 export function useOffice() {
@@ -60,6 +62,7 @@ export function useOffice() {
           createdAt: o.created_at ?? o.createdAt ?? null,
           updatedAt: o.updated_at ?? o.updatedAt ?? null,
           active: !!o.active,
+          withinhereWalletId: o.withinhere_wallet_id ?? o.withinhereWalletId ?? null,
         }));
         
         setOffices(normalized);

@@ -371,45 +371,6 @@ function getTrendBadge(trend: '↑' | '↓' | '→') {
   return 'text-orange-500 dark:text-gray-600 text-lg font-bold';
 }
 
-function calculateCashPositionScore(cash: number): number {
-  const min = 20000;
-  const max = 30000;
-  if (cash >= min && cash <= max) return 100;
-  if (cash > max && cash <= 50000) {
-    const excess = cash - max;
-    const penalty = (excess / (50000 - max)) * 40;
-    return Math.max(60, 100 - penalty);
-  }
-  if (cash > 50000) return 0;
-  if (cash >= 10000 && cash < min) {
-    const deficit = min - cash;
-    const penalty = (deficit / (min - 10000)) * 50;
-    return Math.max(50, 100 - penalty);
-  }
-  if (cash < 10000) return 0;
-  return 0;
-}
-
-function calculateAboveThresholdRiskScore(unapprovedExcessAmount: number, totalCashBalance: number): number {
-  if (totalCashBalance <= 0) return 0;
-  const riskRatio = unapprovedExcessAmount / totalCashBalance;
-  return Math.max(0, Math.min(100, 100 * (1 - riskRatio)));
-}
-
-function calculateBelowThresholdRiskScore(totalCashBalance: number): number {
-  const threshold = 20000;
-  if (totalCashBalance >= threshold) {
-    return 100;
-  } else {
-    return (totalCashBalance / threshold) * 100;
-  }
-}
-
-function calculateApprovedExceptionRatioScore(approvedExcess: number, totalExcess: number): number {
-  if (totalExcess === 0) return 100;
-  return (approvedExcess / totalExcess) * 100;
-}
-
 function getStatusBadge(status: 'good' | 'warning' | 'critical') {
   switch (status) {
     case 'good': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
@@ -713,10 +674,8 @@ function aggregateCashLiquidityManagementKPIs(
   belowThresholdRiskData?: any,
   approvedExceptionRatioData?: any
 ): Partial<ParameterSummary> {
-  // Check if we have totalCashBalance to calculate score
-  if (cashPositionData && (cashPositionData.data?.totalCashBalance !== undefined || cashPositionData.totalCashBalance !== undefined)) {
-    const cash = parseFloat(cashPositionData.data?.totalCashBalance || cashPositionData.totalCashBalance || '0');
-    const score = calculateCashPositionScore(cash);
+  if (cashPositionData && (cashPositionData.score || cashPositionData.average_score)) {
+    const score = parseFloat(String(cashPositionData.score || cashPositionData.average_score || '0'));
     const target = 100;
     const variance = score - target;
     const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
@@ -728,29 +687,7 @@ function aggregateCashLiquidityManagementKPIs(
     return {
       institutionalAvg: '--',
       userLevelAvg: `${score.toFixed(1)}%`,
-      target: 'K20,000 to K30,000',
-      variance: varianceStr,
-      varianceAbs,
-      trend,
-      status
-    };
-  }
-
-  // Check if we have the new cash position score data format
-  if (cashPositionData && (cashPositionData.score || cashPositionData.average_score)) {
-    const score = parseFloat(cashPositionData.score || cashPositionData.average_score || '0');
-    const target = 100; // Since the API returns scores up to 100
-    const variance = score - target;
-    const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
-    const varianceAbs = `${Math.abs(variance)}pp`;
-
-    const trend = score >= 90 ? '↑' : '↓';
-    const status: 'good' | 'warning' | 'critical' = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-
-    return {
-      institutionalAvg: '--',
-      userLevelAvg: `${score.toFixed(1)}%`,
-      target: 'K20,000 to K30,000',
+      target: '100%',
       variance: varianceStr,
       varianceAbs,
       trend,
@@ -766,22 +703,20 @@ function aggregateCashLiquidityManagementKPIs(
     },
     {
       data: aboveThresholdRiskData,
-      getScore: (d: any) => calculateAboveThresholdRiskScore(d.unapprovedExcessAmount, d.totalCashBalance),
+      getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(aboveThresholdRiskData?.weight || '30') / 100
     },
     {
       data: belowThresholdRiskData,
-      getScore: (d: any) => calculateBelowThresholdRiskScore(d.totalCashBalance),
+      getScore: (d: any) => parseFloat(d?.average_score || '0'),
       weight: parseFloat(belowThresholdRiskData?.weight || '20') / 100
     },
     {
       data: approvedExceptionRatioData,
-      getScore: (d: any) => calculateApprovedExceptionRatioScore(d.approvedExcess, d.totalExcess),
+      getScore: (d: any) => parseFloat(String(d?.average_score ?? 0)),
       weight: parseFloat(approvedExceptionRatioData?.weight || '10') / 100
     }
   ].filter(kpi => kpi.data);
-
-
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
@@ -1134,62 +1069,57 @@ function getParameterKPIs(paramName: string,
         name: 'Cash Position Score',
         institutionalAvg: (() => {
           if (!cashPositionData) return '--';
-          const cash = parseFloat(cashPositionData.data?.totalCashBalance || cashPositionData.totalCashBalance || '0');
-          const score = calculateCashPositionScore(cash);
+          const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
           return `${score.toFixed(2)}`;
         })(),
         currentPeriod: (() => {
           if (!cashPositionData) return '--';
-          const cash = parseFloat(cashPositionData.data?.totalCashBalance || cashPositionData.totalCashBalance || '0');
-          const score = calculateCashPositionScore(cash);
+          const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
           return `${score.toFixed(2)}`;
         })(),
         target: { min: 20000, max: 30000 },
         variance: (() => {
           if (!cashPositionData) return '--';
-          const cash = parseFloat(cashPositionData.data?.totalCashBalance || cashPositionData.totalCashBalance || '0');
-          const score = calculateCashPositionScore(cash);
+          const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
           return `${(score - 100).toFixed(2)}%`;
         })(),
         trend: (() => {
           if (!cashPositionData) return '→';
-          const cash = parseFloat(cashPositionData.data?.totalCashBalance || cashPositionData.totalCashBalance || '0');
-          const score = calculateCashPositionScore(cash);
+          const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
           return score >= 90 ? '↑' : '↓';
         })(),
         status: (() => {
           if (!cashPositionData) return 'warning';
-          const cash = parseFloat(cashPositionData.data?.totalCashBalance || cashPositionData.totalCashBalance || '0');
-          const score = calculateCashPositionScore(cash);
+          const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
           return score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
         })()
       },
       {
         name: 'Above-Threshold Risk',
-        institutionalAvg: aboveThresholdRiskData ? `${calculateAboveThresholdRiskScore(aboveThresholdRiskData.unapprovedExcessAmount, aboveThresholdRiskData.totalCashBalance).toFixed(2)}` : '--',
-        currentPeriod: aboveThresholdRiskData ? `${calculateAboveThresholdRiskScore(aboveThresholdRiskData.unapprovedExcessAmount, aboveThresholdRiskData.totalCashBalance).toFixed(2)}` : '--',
+        institutionalAvg: aboveThresholdRiskData ? `${parseFloat(aboveThresholdRiskData.average_score || '0').toFixed(2)}` : '--',
+        currentPeriod: aboveThresholdRiskData ? `${parseFloat(aboveThresholdRiskData.average_score || '0').toFixed(2)}` : '--',
         target: 100,
-        variance: aboveThresholdRiskData ? `${(calculateAboveThresholdRiskScore(aboveThresholdRiskData.unapprovedExcessAmount, aboveThresholdRiskData.totalCashBalance) - 100).toFixed(2)}%` : '--',
-        trend: aboveThresholdRiskData ? (calculateAboveThresholdRiskScore(aboveThresholdRiskData.unapprovedExcessAmount, aboveThresholdRiskData.totalCashBalance) >= 90 ? '↑' : '↓') : '→',
-        status: aboveThresholdRiskData ? (calculateAboveThresholdRiskScore(aboveThresholdRiskData.unapprovedExcessAmount, aboveThresholdRiskData.totalCashBalance) >= 90 ? 'good' : calculateAboveThresholdRiskScore(aboveThresholdRiskData.unapprovedExcessAmount, aboveThresholdRiskData.totalCashBalance) >= 70 ? 'warning' : 'critical') : 'warning'
+        variance: aboveThresholdRiskData ? `${(parseFloat(aboveThresholdRiskData.average_score || '0') - 100).toFixed(2)}%` : '--',
+        trend: aboveThresholdRiskData ? (parseFloat(aboveThresholdRiskData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
+        status: aboveThresholdRiskData ? (parseFloat(aboveThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(aboveThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Below-Threshold Risk',
-        institutionalAvg: belowThresholdRiskData ? `${calculateBelowThresholdRiskScore(belowThresholdRiskData.totalCashBalance).toFixed(2)}` : '--',
-        currentPeriod: belowThresholdRiskData ? `${calculateBelowThresholdRiskScore(belowThresholdRiskData.totalCashBalance).toFixed(2)}` : '--',
+        institutionalAvg: belowThresholdRiskData ? `${parseFloat(belowThresholdRiskData.average_score || '0').toFixed(2)}` : '--',
+        currentPeriod: belowThresholdRiskData ? `${parseFloat(belowThresholdRiskData.average_score || '0').toFixed(2)}` : '--',
         target: 100,
-        variance: belowThresholdRiskData ? `${(calculateBelowThresholdRiskScore(belowThresholdRiskData.totalCashBalance) - 100).toFixed(2)}%` : '--',
-        trend: belowThresholdRiskData ? (calculateBelowThresholdRiskScore(belowThresholdRiskData.totalCashBalance) >= 90 ? '↑' : '↓') : '→',
-        status: belowThresholdRiskData ? (calculateBelowThresholdRiskScore(belowThresholdRiskData.totalCashBalance) >= 90 ? 'good' : calculateBelowThresholdRiskScore(belowThresholdRiskData.totalCashBalance) >= 70 ? 'warning' : 'critical') : 'warning'
+        variance: belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.average_score || '0') - 100).toFixed(2)}%` : '--',
+        trend: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
+        status: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(belowThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
       },
       {
         name: 'Approved Exception Ratio',
-        institutionalAvg: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? `${calculateApprovedExceptionRatioScore(approvedExceptionRatioData.approvedExcess, approvedExceptionRatioData.totalExcess).toFixed(2)}` : '--',
-        currentPeriod: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? `${calculateApprovedExceptionRatioScore(approvedExceptionRatioData.approvedExcess, approvedExceptionRatioData.totalExcess).toFixed(2)}` : '--',
+        institutionalAvg: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? `${parseFloat(String(approvedExceptionRatioData.average_score ?? 0)).toFixed(2)}` : '--',
+        currentPeriod: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? `${parseFloat(String(approvedExceptionRatioData.average_score ?? 0)).toFixed(2)}` : '--',
         target: 100,
-        variance: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? `${(calculateApprovedExceptionRatioScore(approvedExceptionRatioData.approvedExcess, approvedExceptionRatioData.totalExcess) - 100).toFixed(2)}%` : '0',
-        trend: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? (calculateApprovedExceptionRatioScore(approvedExceptionRatioData.approvedExcess, approvedExceptionRatioData.totalExcess) >= 90 ? '↑' : '↓') : '→',
-        status: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? (calculateApprovedExceptionRatioScore(approvedExceptionRatioData.approvedExcess, approvedExceptionRatioData.totalExcess) >= 90 ? 'good' : calculateApprovedExceptionRatioScore(approvedExceptionRatioData.approvedExcess, approvedExceptionRatioData.totalExcess) >= 70 ? 'warning' : 'critical') : 'warning'
+        variance: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? `${(parseFloat(String(approvedExceptionRatioData.average_score ?? 0)) - 100).toFixed(2)}%` : '0',
+        trend: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? (parseFloat(String(approvedExceptionRatioData.average_score ?? 0)) >= 90 ? '↑' : '↓') : '→',
+        status: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? (parseFloat(String(approvedExceptionRatioData.average_score ?? 0)) >= 90 ? 'good' : parseFloat(String(approvedExceptionRatioData.average_score ?? 0)) >= 70 ? 'warning' : 'critical') : 'warning'
       }
     ]
   };
@@ -1404,6 +1334,7 @@ export function InstitutionalHealthSummary({
                   if (userLevel === 'institution') setDrillLevel('province');
                   else if (userLevel === 'province') setDrillLevel('district');
                   else if (userLevel === 'district') setDrillLevel('branch');
+                  else if (userLevel === 'branch') setDrillLevel('branch');
                   setSelectedProvince(null);
                   setSelectedDistrict(null);
                   setSelectedBranch(null);
@@ -1477,6 +1408,7 @@ export function InstitutionalHealthSummary({
                   if (userLevel === 'institution') setDrillLevel('province');
                   else if (userLevel === 'province') setDrillLevel('district');
                   else if (userLevel === 'district') setDrillLevel('branch');
+                  else if (userLevel === 'branch') setDrillLevel('branch');
                   setSelectedProvince(null);
                   setSelectedDistrict(null);
                   setSelectedBranch(null);
@@ -1534,6 +1466,7 @@ export function InstitutionalHealthSummary({
     </div>
   );
 }
+
 
 
 

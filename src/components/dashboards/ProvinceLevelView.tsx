@@ -510,7 +510,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                   bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
                 }
 
-                // Get office count from province object (not from data which gets overwritten by KPI data)
+                console.log('Province:', province, 'Data:', data);
                 const officesCount = province.offices_count || 0;
                 const totalCashBalance = province.totalCashBalance || 0;
 

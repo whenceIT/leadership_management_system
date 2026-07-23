@@ -4,7 +4,6 @@ import React from 'react';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { DistrictLevelView } from './DistrictLevelView';
 import { BranchLevelView } from './BranchLevelView';
-import { ConsultantLevelView } from './ConsultantLevelView';
 
 interface KPI {
   name: string;
@@ -314,7 +313,7 @@ export function ParametersTableView({
                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Inst Avg</th>
                                          {param.name === 'Cash & Liquidity Management' && (
-                                           <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Total Cash Balance</th>
+                                           <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Cash Balance</th>
                                          )}
                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
@@ -336,10 +335,10 @@ export function ParametersTableView({
                                           <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
                                            <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
                                               {kpi.name === 'Cash & Liquidity Management' ? '50%' :
-                                                kpi.name === 'Cash Position Score' ? '50' :
-                                                kpi.name === 'Above-Threshold Risk' ? '50' :
-                                                  kpi.name === 'Below-Threshold Risk' ? '50' :
-                                                    kpi.name === 'Approved Exception Ratio' ? '50' :
+                                                kpi.name === 'Cash Position Score' ? '50%' :
+                                                kpi.name === 'Above-Threshold Risk' ? '50%' :
+                                                  kpi.name === 'Below-Threshold Risk' ? '50%' :
+                                                    kpi.name === 'Approved Exception Ratio' ? '50%' :
                                                       kpi.name === 'Staff Adequacy Score' ? '87%' :
                                                         kpi.name === 'Productivity Achievement' ? '75-100%' :
                                                           kpi.name === 'Vacancy Impact' ? '46.7%' :
@@ -368,9 +367,9 @@ export function ParametersTableView({
                                            {param.name === 'Cash & Liquidity Management' && (
                                              <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
                                                {kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` :
-                                                 kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `K${aboveThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
-                                                   kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `K${belowThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
-                                                     kpi.name === 'Approved Exception Ratio' && approvedExceptionRatioData ? `K${approvedExceptionRatioData.totalCashBalance?.toLocaleString() || '--'}` :
+                                                 kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `K${aboveThresholdRiskData.totalCashBalance?.toLocaleString() || cashPositionData.totalCashBalance?.toLocaleString() ||  '--'}` :
+                                                   kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `K${belowThresholdRiskData.totalCashBalance?.toLocaleString() || cashPositionData.totalCashBalance?.toLocaleString() || '--'}` :
+                                                     kpi.name === 'Approved Exception Ratio' && approvedExceptionRatioData ? `K${approvedExceptionRatioData.totalCashBalance?.toLocaleString() ||cashPositionData.totalCashBalance?.toLocaleString() ||  '--'}` :
                                                        '--'}
                                              </td>
                                            )}
@@ -487,7 +486,6 @@ export function ParametersTableView({
                                     selectedDistrict={selectedDistrict}
                                     onBranchClick={(branchId: number) => {
                                       setSelectedBranch(branchId);
-                                      setDrillLevel('consultant');
                                     }}
                                     onBack={() => {
                                       if (userLevel === 'district') {
@@ -498,14 +496,7 @@ export function ParametersTableView({
                                         setDrillLevel('district');
                                       }
                                     }}
-                                  />
-                                )}
-
-                                {drillLevel === 'consultant' && selectedBranch && selectedKPI && (
-                                  <ConsultantLevelView
-                                    officeId={selectedBranch}
-                                    selectedKPI={selectedKPI}
-                                    onBack={() => setDrillLevel('branch')}
+                                    userLevel={userLevel}
                                   />
                                 )}
                               </div>

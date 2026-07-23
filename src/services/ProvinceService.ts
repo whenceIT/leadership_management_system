@@ -102,21 +102,72 @@ export class ProvinceService {
       }
 
       const data = await response.json();
+      console.log('Provinces', data);
       const offices = Array.isArray(data) ? data : (data.data || []);
 
-      // Count offices by province and calculate cash balance
+      // Count offices by province
       const officeCounts: { [provinceId: string]: number } = {};
-      const cashBalances: { [provinceId: string]: number } = {};
       offices.forEach((office: any) => {
         const provinceId = office.province_id || office.provinceId;
         if (provinceId) {
           const provinceIdStr = provinceId.toString();
           officeCounts[provinceIdStr] = (officeCounts[provinceIdStr] || 0) + 1;
-          // Add branch_capacity as proxy for cash balance (or use actual cash data if available)
-          const cashBalance = parseFloat(office.branch_capacity || '0') * 10000;
-          cashBalances[provinceIdStr] = (cashBalances[provinceIdStr] || 0) + cashBalance;
         }
       });
+
+      // Group offices by province for cash balance calculation
+      const provinceOffices: { [provinceId: string]: any[] } = {};
+      offices.forEach((office: any) => {
+        const provinceId = office.province_id || office.provinceId;
+        if (provinceId) {
+          const provinceIdStr = provinceId.toString();
+          if (!provinceOffices[provinceIdStr]) {
+            provinceOffices[provinceIdStr] = [];
+          }
+          provinceOffices[provinceIdStr].push(office);
+        }
+      });
+
+      // Calculate cash balance per province from ledger API
+      const cashBalances: { [provinceId: string]: number } = {};
+      
+      for (const [provinceId, provOffices] of Object.entries(provinceOffices)) {
+        let totalCash = 0;
+        
+        // Get unique wallet IDs for this province
+        const walletIds = provOffices
+          .map(o => o.withinhereWalletId || o.withinhere_wallet_id)
+          .filter((id): id is string => !!id);
+        
+        // Fetch cash balances from ledger API for offices with wallet IDs
+        if (walletIds.length > 0) {
+          const ledgerPromises = walletIds.map(walletId => 
+            fetch('https://withinheremobileapi.com/api/v1/lmsuser/branch_ledger', {
+              method: 'POST',
+              cache: "no-store",
+              headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              },
+              body: JSON.stringify({
+                wallet_id: walletId,
+                start_date: '2026-01-01',
+                end_date: new Date().toISOString().split('T')[0]
+              })
+            })
+            .then(res => res.ok ? res.json() : { user: { cash_balance: '0' } })
+            .then(result => result?.success ? parseFloat(result?.user?.cash_balance || '0') : 0)
+            .catch(() => 0)
+          );
+          
+          const cashBalancesList = await Promise.all(ledgerPromises);
+          totalCash = cashBalancesList.reduce((sum, cash) => sum + cash, 0);
+        }
+        
+        cashBalances[provinceId] = totalCash;
+      }
 
       // Get provinces and add office counts
       const provinces = await this.getProvinces();
@@ -127,7 +178,7 @@ export class ProvinceService {
       }));
 
     } catch (error) {
-      console.error('Error fetching office counts:', error);
+      console.error('Error fetching province data:', error);
       // Return provinces with 0 office count on error
       const provinces = await this.getProvinces();
       return provinces.map(province => ({

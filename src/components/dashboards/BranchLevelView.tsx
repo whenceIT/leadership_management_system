@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useOffice } from '@/hooks/useOffice';
 import { useProvince } from '@/hooks/useProvince';
 import { useDistrict } from '@/hooks/useDistrict';
+import { useUserPosition } from '@/hooks/useUserPosition';
 
 // Import all provincial service functions (we'll reuse them for branch level)
 import { fetchStaffAdequacyPerformance } from '@/services/StaffAdequacyService';
@@ -28,24 +29,40 @@ import { fetchCashPosition } from '@/services/CashPositionService';
 import { fetchAboveThresholdRisk } from '@/services/AboveThresholdRiskService';
 import { fetchBelowThresholdRisk } from '@/services/BelowThresholdRiskService';
 import { fetchApprovedExceptionRatio } from '@/services/ApprovedExceptionRatioService';
+import { ConsultantLevelView } from './ConsultantLevelView';
 
 interface BranchLevelViewProps {
   selectedKPI: string;
   selectedProvince: number;
   selectedDistrict: number | string | null;
+  userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant';
   onBranchClick: (branchId: number) => void;
   onBack: () => void;
 }
 
-export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistrict, onBranchClick, onBack }: BranchLevelViewProps) {
+export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistrict, userLevel, onBranchClick, onBack }: BranchLevelViewProps) {
   const { getOfficesByProvince, getOfficesByDistrict } = useOffice();
   const { getProvinceName } = useProvince();
   const { getDistrictName } = useDistrict();
+  const { user } = useUserPosition();
   const provinceName = getProvinceName(selectedProvince);
   const districtName = selectedDistrict ? getDistrictName(typeof selectedDistrict === 'string' ? parseInt(selectedDistrict) : selectedDistrict) : null;
   const [branchData, setBranchData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedBranchForDrill, setSelectedBranchForDrill] = useState<number | null>(null);
+
+  const userBranchId = useMemo(() => {
+    if (!user) return null;
+    const id = user.office_id || user.officeId;
+    return id ? Number(id) : null;
+  }, [user]);
+
+  useEffect(() => {
+    if (userLevel === 'branch' && userBranchId && !selectedBranchForDrill) {
+      setSelectedBranchForDrill(userBranchId);
+    }
+  }, [userLevel, userBranchId, selectedBranchForDrill]);
 
   // Memoize branches to prevent infinite re-renders
   // Filter by district if selected, otherwise by province
@@ -424,6 +441,24 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
     return { current, target, variance, trend, status, contribution, actualLcs };
   };
 
+  if (error) {
+    return (
+      <div className="text-red-600 dark:text-red-400 py-8 text-center">
+        Error: {error}
+      </div>
+    );
+  }
+
+  if (selectedBranchForDrill) {
+    return (
+      <ConsultantLevelView
+        officeId={selectedBranchForDrill}
+        selectedKPI={selectedKPI}
+        onBack={() => setSelectedBranchForDrill(null)}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -565,7 +600,10 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                 <tr 
                   key={branch.id} 
                   className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                  onClick={() => onBranchClick(Number(branch.id))}
+                  onClick={() => {
+                    onBranchClick(Number(branch.id));
+                    setSelectedBranchForDrill(Number(branch.id));
+                  }}
                 >
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
                   <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{kpiValue.current}</td>

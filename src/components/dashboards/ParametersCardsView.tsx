@@ -4,7 +4,6 @@ import React from 'react';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { DistrictLevelView } from './DistrictLevelView';
 import { BranchLevelView } from './BranchLevelView';
-import { ConsultantLevelView } from './ConsultantLevelView';
 
 interface KPI {
   name: string;
@@ -318,7 +317,7 @@ export function ParametersCardsView({
                           {kpi.status}
                         </span>
                       </div>
-                      <div className="grid grid-cols-4 gap-2 text-xs">
+                      <div className="grid grid-cols-5 gap-2 text-xs">
                         <div>
                           <p className="text-gray-500 dark:text-gray-400">Current</p>
                           <p className="font-semibold text-gray-900 dark:text-white">{kpi.currentPeriod}%</p>
@@ -337,6 +336,16 @@ export function ParametersCardsView({
                             <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
                             <span className={`font-semibold ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
                           </div>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 dark:text-gray-400">Cash Balance</p>
+                          <p className="font-semibold text-green-600 dark:text-green-400">
+                            {param.name === 'Cash & Liquidity Management' && kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` :
+                              param.name === 'Cash & Liquidity Management' && kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `K${aboveThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
+                                param.name === 'Cash & Liquidity Management' && kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `K${belowThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
+                                  param.name === 'Cash & Liquidity Management' && kpi.name === 'Approved Exception Ratio' && approvedExceptionRatioData ? `K${approvedExceptionRatioData.totalCashBalance?.toLocaleString() || '--'}` :
+                                    '--'}
+                          </p>
                         </div>
                       </div>
                       {selectedKPI === kpi.name && (
@@ -378,7 +387,6 @@ export function ParametersCardsView({
                               selectedDistrict={selectedDistrict}
                               onBranchClick={(branchId: number) => {
                                 setSelectedBranch(branchId);
-                                setDrillLevel('consultant');
                               }}
                               onBack={() => {
                                 if (userLevel === 'district') {
@@ -390,14 +398,7 @@ export function ParametersCardsView({
                                 }
 
                               }}
-                            />
-                          )}
-
-                          {drillLevel === 'consultant' && selectedBranch && selectedKPI && (
-                            <ConsultantLevelView
-                              officeId={selectedBranch}
-                              selectedKPI={selectedKPI}
-                              onBack={() => setDrillLevel('branch')}
+                              userLevel={userLevel}
                             />
                           )}
                         </div>

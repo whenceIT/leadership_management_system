@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { fetchApprovedExceptionRatio, ApprovedExceptionRatioData as ServiceData } from '@/services/ApprovedExceptionRatioService';
 
 export interface ApprovedExceptionRatioData {
   score: number;
@@ -9,6 +10,9 @@ export interface ApprovedExceptionRatioData {
   weight: string;
   totalFullPayments: number;
   totalNewLoans: number;
+  totalCashBalance: number;
+  totalExcess: number;
+  approvedExcess: number;
 }
 
 export function useApprovedExceptionRatio(filters?: {
@@ -28,32 +32,20 @@ export function useApprovedExceptionRatio(filters?: {
       setError(null);
 
       try {
-        const queryParams = new URLSearchParams();
-        if (filters?.office_id) queryParams.append('office_id', filters.office_id.toString());
-        if (filters?.province_id) queryParams.append('province_id', filters.province_id.toString());
-        if (filters?.district_id) queryParams.append('district_id', filters.district_id.toString());
-        if (filters?.start_date) queryParams.append('start_date', filters.start_date);
-        if (filters?.end_date) queryParams.append('end_date', filters.end_date);
+        if (!filters?.office_id) throw new Error('office_id is required');
 
-        const url = `https://smartbackend.whencefinancesystem.com/api/kpi-scores/summary${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Network response was not ok');
-
-        const result = await response.json();
-        if (!result.success) throw new Error('API returned success false');
-
-        const apiData = result.data;
-        const totalFullPayments = apiData.totalFullPayments;
-        const totalNewLoans = apiData.totalNewLoans;
-        const score = totalNewLoans > 0 ? (totalFullPayments / totalNewLoans) * 100 : 0;
+        const serviceData: ServiceData = await fetchApprovedExceptionRatio(filters.office_id);
 
         const data: ApprovedExceptionRatioData = {
-          score,
-          average_score: score,
-          percentage_point: score,
-          weight: '10%',
-          totalFullPayments,
-          totalNewLoans,
+          score: parseFloat(serviceData.score || '0'),
+              average_score: parseFloat(String(serviceData.average_score ?? 0)),
+          percentage_point: parseFloat(serviceData.percentage_point || '0'),
+          weight: serviceData.weight || '10%',
+          totalFullPayments: serviceData.approvedExcess || 0,
+          totalNewLoans: serviceData.totalExcess || 0,
+          totalCashBalance: serviceData.totalCashBalance || 0,
+          totalExcess: serviceData.totalExcess || 0,
+          approvedExcess: serviceData.approvedExcess || 0,
         };
 
         setData(data);
@@ -64,8 +56,10 @@ export function useApprovedExceptionRatio(filters?: {
       }
     };
 
-    fetchData();
-  }, [filters?.office_id, filters?.province_id, filters?.district_id, filters?.start_date, filters?.end_date]);
+    if (filters?.office_id) {
+      fetchData();
+    }
+  }, [filters?.office_id]);
 
   return {
     data,

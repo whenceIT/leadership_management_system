@@ -1,3 +1,5 @@
+import { Office } from '@/hooks/useOffice';
+
 export interface AboveThresholdRiskData {
   office_id?: string;
   province_id?: string;
@@ -18,51 +20,73 @@ export interface AboveThresholdRiskData {
   totalExcessAmount?: number;
 }
 
-async function fetchKpiSummary(filters?: {
-  office_id?: number;
-  province_id?: number;
-  district_id?: number;
-  start_date?: string;
-  end_date?: string;
-}) {
-  const queryParams = new URLSearchParams();
-  if (filters?.office_id) queryParams.append('office_id', filters.office_id.toString());
-  if (filters?.province_id) queryParams.append('province_id', filters.province_id.toString());
-  if (filters?.district_id) queryParams.append('district_id', filters.district_id.toString());
-  if (filters?.start_date) queryParams.append('start_date', filters.start_date);
-  if (filters?.end_date) queryParams.append('end_date', filters.end_date);
+const LEDGER_API = 'https://withinheremobileapi.com/api/v1/lmsuser/branch_ledger';
 
-  const url = `https://smartbackend.whencefinancesystem.com/api/kpi-scores/summary${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-  const response = await fetch(url, {
-    cache: "force-cache",
-    next: { revalidate: 300 }
+async function fetchKpiSummary(walletId: string, startDate = '2026-01-01', endDate?: string) {
+  const payload: any = {
+    wallet_id: walletId,
+    start_date: startDate,
+    end_date: endDate || new Date().toISOString().split('T')[0],
+  };
+
+  const response = await fetch(LEDGER_API, {
+    method: 'POST',
+    cache: "no-store",
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    },
+    body: JSON.stringify(payload)
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch KPI summary: ${response.statusText}`);
+    throw new Error(`Failed to fetch branch ledger: ${response.statusText}`);
   }
 
   const result = await response.json();
-  if (!result.success) throw new Error('API returned success false');
-
-  return result.data;
+  if (!result?.success) throw new Error('API returned success false');
+  return result;
 }
 
-function calculateAboveThresholdRisk(totalCashBalance: number, unapprovedExcessAmount: number, totalExcessAmount: number): { score: number; unapprovedExcess: number } {
-  const score = totalCashBalance <= 30000 ? 100 : 100 * (1 - (unapprovedExcessAmount / totalCashBalance));
+async function getOfficesFromApi(): Promise<Office[]> {
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/offices');
+  if (!response.ok) throw new Error('Failed to fetch offices');
+  const data = await response.json();
+  return Array.isArray(data) ? data : (data.data || []);
+}
+
+export function calculateAboveThresholdRisk(totalCashBalance: number, unapprovedExcessAmount: number, totalExcessAmount: number): { score: number; unapprovedExcess: number } {
+  const rawScore = totalCashBalance <= 30000 ? 100 : 100 * (1 - (unapprovedExcessAmount / totalCashBalance));
+  const score = Math.max(0, Math.min(100, rawScore));
   const unapprovedExcess = unapprovedExcessAmount;
   return { score, unapprovedExcess };
 }
 
+function getTotalCashBalance(data: any): number {
+  if (!data) return 0;
+  if (data?.user?.cash_balance) return parseFloat(data.user.cash_balance);
+  return parseFloat(data.total_cash || data.cashBalance || data.totalCashBalance || '0');
+}
+
 export async function fetchAboveThresholdRisk(branchId: number): Promise<AboveThresholdRiskData> {
-  const apiData = await fetchKpiSummary({ office_id: branchId });
-  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance, apiData.unapprovedExcessAmount || 0, apiData.totalExcessAmount || 0);
+  const offices = await getOfficesFromApi();
+  const office = offices.find(o => String(o.id) === String(branchId));
+  const walletId = office?.withinhereWalletId || office?.withinhere_wallet_id;
+
+  if (!walletId) {
+    throw new Error(`No withinhere_wallet_id found for branch ${branchId}`);
+  }
+
+  const apiData = await fetchKpiSummary(walletId);
+  const { score, unapprovedExcess } = calculateAboveThresholdRisk(getTotalCashBalance(apiData), apiData.unapprovedExcessAmount || 0, apiData.totalExcessAmount || 0);
 
   return {
     office_id: branchId.toString(),
     score: score.toString(),
     average_score: score.toString(),
-    totalCashBalance: apiData.totalCashBalance,
+    totalCashBalance: getTotalCashBalance(apiData),
     unapprovedExcess,
     approvedExcess: apiData.approvedExcess || 0,
     ...apiData
@@ -70,45 +94,103 @@ export async function fetchAboveThresholdRisk(branchId: number): Promise<AboveTh
 }
 
 export async function fetchProvincialAboveThresholdRisk(provinceId: number): Promise<AboveThresholdRiskData> {
-  const apiData = await fetchKpiSummary({ province_id: provinceId });
-  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance, apiData.unapprovedExcessAmount || 0, apiData.totalExcessAmount || 0);
+  const offices = await getOfficesFromApi();
+  const provinceOffices = offices.filter(o => String(o.provinceId) === String(provinceId));
+
+  let totalCashBalance = 0;
+  let totalUnapprovedExcess = 0;
+  let totalExcessAmount = 0;
+
+  const ledgerPromises = provinceOffices
+    .map(o => o.withinhereWalletId || o.withinhere_wallet_id)
+    .filter((id): id is string => !!id)
+    .map(walletId => fetchKpiSummary(walletId).catch(() => ({ total_cash: 0, cashBalance: 0, totalCashBalance: 0, unapprovedExcessAmount: 0, totalExcessAmount: 0 })));
+
+  const results = await Promise.all(ledgerPromises);
+  results.forEach(r => {
+    totalCashBalance += getTotalCashBalance(r);
+    totalUnapprovedExcess += (r.unapprovedExcessAmount || 0);
+    totalExcessAmount += (r.totalExcessAmount || 0);
+  });
+
+  const { score, unapprovedExcess } = calculateAboveThresholdRisk(totalCashBalance, totalUnapprovedExcess, totalExcessAmount);
 
   return {
     province_id: provinceId.toString(),
     score: score.toString(),
     average_score: score.toString(),
-    totalCashBalance: apiData.totalCashBalance,
+    totalCashBalance,
+    unapprovedExcessAmount: unapprovedExcess,
+    totalExcessAmount,
     unapprovedExcess,
-    approvedExcess: apiData.approvedExcess || 0,
-    ...apiData
+    approvedExcess: 0,
   };
 }
 
 export async function fetchInstitutionalAboveThresholdRisk(): Promise<AboveThresholdRiskData> {
-  const apiData = await fetchKpiSummary();
-  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance, apiData.unapprovedExcessAmount || 0, apiData.totalExcessAmount || 0);
+  const offices = await getOfficesFromApi();
+  const validWallets = offices
+    .map(o => o.withinhereWalletId || o.withinhere_wallet_id)
+    .filter((id): id is string => !!id);
+
+  let totalCashBalance = 0;
+  let totalUnapprovedExcess = 0;
+  let totalExcessAmount = 0;
+
+  const ledgerPromises = validWallets.map(walletId =>
+    fetchKpiSummary(walletId).catch(() => ({ total_cash: 0, cashBalance: 0, totalCashBalance: 0, unapprovedExcessAmount: 0, totalExcessAmount: 0 }))
+  );
+
+  const results = await Promise.all(ledgerPromises);
+  results.forEach(r => {
+    totalCashBalance += getTotalCashBalance(r);
+    totalUnapprovedExcess += (r.unapprovedExcessAmount || 0);
+    totalExcessAmount += (r.totalExcessAmount || 0);
+  });
+
+  const { score, unapprovedExcess } = calculateAboveThresholdRisk(totalCashBalance, totalUnapprovedExcess, totalExcessAmount);
 
   return {
     score: score.toString(),
     average_score: score.toString(),
-    totalCashBalance: apiData.totalCashBalance,
+    totalCashBalance,
+    unapprovedExcessAmount: totalUnapprovedExcess,
+    totalExcessAmount,
     unapprovedExcess,
-    approvedExcess: apiData.approvedExcess || 0,
-    ...apiData
+    approvedExcess: 0,
   };
 }
 
 export async function fetchDistrictAboveThresholdRisk(districtId: number): Promise<AboveThresholdRiskData> {
-  const apiData = await fetchKpiSummary({ district_id: districtId });
-  const { score, unapprovedExcess } = calculateAboveThresholdRisk(apiData.totalCashBalance, apiData.unapprovedExcessAmount || 0, apiData.totalExcessAmount || 0);
+  const offices = await getOfficesFromApi();
+  const districtOffices = offices.filter(o => String(o.districtId) === String(districtId));
+
+  let totalCashBalance = 0;
+  let totalUnapprovedExcess = 0;
+  let totalExcessAmount = 0;
+
+  const ledgerPromises = districtOffices
+    .map(o => o.withinhereWalletId || o.withinhere_wallet_id)
+    .filter((id): id is string => !!id)
+    .map(walletId => fetchKpiSummary(walletId).catch(() => ({ total_cash: 0, cashBalance: 0, totalCashBalance: 0, unapprovedExcessAmount: 0, totalExcessAmount: 0 })));
+
+  const results = await Promise.all(ledgerPromises);
+  results.forEach(r => {
+    totalCashBalance += getTotalCashBalance(r);
+    totalUnapprovedExcess += (r.unapprovedExcessAmount || 0);
+    totalExcessAmount += (r.totalExcessAmount || 0);
+  });
+
+  const { score, unapprovedExcess } = calculateAboveThresholdRisk(totalCashBalance, totalUnapprovedExcess, totalExcessAmount);
 
   return {
     district_id: districtId.toString(),
     score: score.toString(),
     average_score: score.toString(),
-    totalCashBalance: apiData.totalCashBalance,
+    totalCashBalance,
+    unapprovedExcessAmount: unapprovedExcess,
+    totalExcessAmount,
     unapprovedExcess,
-    approvedExcess: apiData.approvedExcess || 0,
-    ...apiData
+    approvedExcess: 0,
   };
 }

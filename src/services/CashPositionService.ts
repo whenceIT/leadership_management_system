@@ -54,43 +54,46 @@ const WEIGHTS = {
   APPROVED_EXCEPTION_RATIO: 0.10
 };
 
-async function fetchKpiSummary(filters?: {
-  office_id?: number;
-  province_id?: number;
-  district_id?: number;
-  start_date?: string;
-  end_date?: string;
-}) {
-  const queryParams = new URLSearchParams();
-  if (filters?.office_id) queryParams.append('office_id', filters.office_id.toString());
-  if (filters?.province_id) queryParams.append('province_id', filters.province_id.toString());
-  if (filters?.district_id) queryParams.append('district_id', filters.district_id.toString());
+import { Office } from '@/hooks/useOffice';
+import { calculateAboveThresholdRisk } from '@/services/AboveThresholdRiskService';
+import { calculateBelowThresholdRisk } from '@/services/BelowThresholdRiskService';
+import { calculateApprovedExceptionRatio } from '@/services/ApprovedExceptionRatioService';
 
-  const url = `https://smartbackend.whencefinancesystem.com/api/kpi-scores/summary${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-  const response = await fetch(url, {
+const LEDGER_API = 'https://withinheremobileapi.com/api/v1/lmsuser/branch_ledger';
+
+async function fetchKpiSummary(walletId: string, startDate = '2026-01-01', endDate?: string) {
+  const payload: any = {
+    wallet_id: walletId,
+    start_date: startDate,
+    end_date: endDate || new Date().toISOString().split('T')[0],
+  };
+
+  const response = await fetch(LEDGER_API, {
+    method: 'POST',
     cache: "no-store",
     headers: {
+      'Content-Type': 'application/json',
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0'
-    }
+    },
+    body: JSON.stringify(payload)
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch KPI summary: ${response.statusText}`);
+    throw new Error(`Failed to fetch branch ledger: ${response.statusText}`);
   }
 
   const result = await response.json();
-  if (!result.success) throw new Error('API returned success false');
-
-  return result.data;
+  if (!result?.success) throw new Error('API returned success false');
+  return result;
 }
 
 /**
  * Calculate Cash Position Score (40% weight)
  * Measures how close branch is to ideal range (K20k-K30k)
  */
-function calculateCashPositionScore(totalCashBalance: number): number {
+export function calculateCashPositionScore(totalCashBalance: number): number {
   if (totalCashBalance >= THRESHOLDS.IDEAL_LOWER && totalCashBalance <= THRESHOLDS.IDEAL_UPPER) {
     return 100;
   } else if (totalCashBalance > THRESHOLDS.IDEAL_UPPER && totalCashBalance <= THRESHOLDS.EXCEPTIONAL_MAX) {
@@ -110,51 +113,6 @@ function calculateCashPositionScore(totalCashBalance: number): number {
 }
 
 /**
- * Calculate Above-Threshold Risk (30% weight)
- * Measures unapproved cash above K30,000 (proxy for theft/fraud risk)
- */
-function calculateAboveThresholdRisk(totalCash: number, unapprovedExcess: number): number {
-  if (totalCash <= THRESHOLDS.IDEAL_UPPER) {
-    return 100;
-  }
-  if (unapprovedExcess <= 0) {
-    return 100;
-  }
-  const score = 100 * (1 - (unapprovedExcess / totalCash));
-  return Math.max(score, 0);
-}
-
-/**
- * Calculate Below-Threshold Risk (20% weight)
- * Measures liquidity shortage – cash below K20,000
- */
-function calculateBelowThresholdRisk(totalCash: number): number {
-  if (totalCash >= THRESHOLDS.IDEAL_LOWER) {
-    return 100;
-  }
-  if (totalCash <= 0) {
-    return 0;
-  }
-  const score = 100 * (totalCash / THRESHOLDS.IDEAL_LOWER);
-  return Math.min(Math.max(score, 0), 100);
-}
-
-/**
- * Calculate Approved Exception Ratio (10% weight)
- * Ensures governance – any cash above K30,000 must have approval
- */
-function calculateApprovedExceptionRatio(approvedExcess: number, totalExcess: number): number {
-  if (totalExcess <= 0) {
-    return 100;
-  }
-  if (approvedExcess <= 0) {
-    return 0;
-  }
-  const score = (approvedExcess / totalExcess) * 100;
-  return Math.min(Math.max(score, 0), 100);
-}
-
-/**
  * Calculate the composite Cash & Liquidity Management Index
  */
 export function calculateCashLiquidityIndex(
@@ -170,10 +128,13 @@ export function calculateCashLiquidityIndex(
   compositeScore: number;
 } {
   const cashPositionScore = calculateCashPositionScore(totalCashBalance);
-  const aboveThresholdRisk = calculateAboveThresholdRisk(totalCashBalance, unapprovedExcessAmount);
-  const belowThresholdRisk = calculateBelowThresholdRisk(totalCashBalance);
-  const approvedExceptionRatio = calculateApprovedExceptionRatio(approvedExcessAmount, totalExcessAmount);
-  
+  const aboveThresholdResult = calculateAboveThresholdRisk(totalCashBalance, unapprovedExcessAmount, totalExcessAmount);
+  const aboveThresholdRisk = aboveThresholdResult.score;
+  const belowThresholdResult = calculateBelowThresholdRisk(totalCashBalance);
+  const belowThresholdRisk = belowThresholdResult.score;
+  const approvedExceptionResult = calculateApprovedExceptionRatio(approvedExcessAmount, totalExcessAmount);
+  const approvedExceptionRatio = approvedExceptionResult.score;
+
   const compositeScore = 
     (cashPositionScore * WEIGHTS.CASH_POSITION_SCORE) +
     (aboveThresholdRisk * WEIGHTS.ABOVE_THRESHOLD_RISK) +
@@ -189,19 +150,47 @@ export function calculateCashLiquidityIndex(
   };
 }
 
-export async function fetchCashPosition(branchId: number): Promise<CashPositionData> {
-  const apiData = await fetchKpiSummary({ office_id: branchId });
-  
-  const totalCashBalance = parseFloat(apiData.totalCashBalance) || 0;
-  const approvedExcessAmount = parseFloat(apiData.approvedExcessAmount) || 0;
-  const unapprovedExcessAmount = parseFloat(apiData.unapprovedExcessAmount) || 0;
-  const totalExcessAmount = parseFloat(apiData.totalExcessAmount) || 0;
+async function getOfficesFromApi(): Promise<Office[]> {
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/offices');
+  if (!response.ok) throw new Error('Failed to fetch offices');
+  const data = await response.json();
+  const arr = Array.isArray(data) ? data : (data.data || []);
+  return arr.map((o: any) => ({
+    id: o.id,
+    name: o.name,
+    parentId: o.parent_id ?? null,
+    externalId: o.external_id || '',
+    provinceId: o.province_id ?? o.provinceId,
+    districtId: o.district_id ?? o.districtId,
+    withinhereWalletId: o.withinhere_wallet_id || o.withinhereWalletId || null,
+  }));
+}
+
+async function fetchLedgerForWallet(walletId: string, startDate = '2026-01-01', endDate?: string) {
+  const result = await fetchKpiSummary(walletId, startDate, endDate);
+  const cashBalance = parseFloat(result?.user?.cash_balance || '0');
+  return {
+    cashBalance,
+    apiData: result,
+  };
+}
+
+export async function fetchCashPosition(branchId: number, offices?: Office[]): Promise<CashPositionData> {
+  const allOffices = offices || await getOfficesFromApi();
+  const office = allOffices.find(o => String(o.id) === String(branchId));
+  const walletId = office?.withinhereWalletId;
+
+  if (!walletId) {
+    throw new Error(`No withinhere_wallet_id found for branch ${branchId}`);
+  }
+
+  const { cashBalance } = await fetchLedgerForWallet(walletId);
   
   const metrics = calculateCashLiquidityIndex(
-    totalCashBalance,
-    approvedExcessAmount,
-    unapprovedExcessAmount,
-    totalExcessAmount
+    cashBalance,
+    0,
+    0,
+    0
   );
 
   return {
@@ -209,94 +198,111 @@ export async function fetchCashPosition(branchId: number): Promise<CashPositionD
     score: metrics.compositeScore.toString(),
     average_score: metrics.compositeScore.toString(),
     average_normalized_score: metrics.compositeScore.toString(),
-    totalCashBalance: totalCashBalance,
+    totalCashBalance: cashBalance,
     percentage_point: metrics.compositeScore.toString(),
     cash_position_score: metrics.cashPositionScore,
     above_threshold_risk: metrics.aboveThresholdRisk,
     below_threshold_risk: metrics.belowThresholdRisk,
     approved_exception_ratio: metrics.approvedExceptionRatio,
-    approved_excess_amount: approvedExcessAmount,
-    unapproved_excess_amount: unapprovedExcessAmount,
-    total_excess_amount: totalExcessAmount,
-    ...apiData
+    approved_excess_amount: 0,
+    unapproved_excess_amount: 0,
+    total_excess_amount: 0,
   };
 }
 
-export async function fetchProvincialCashPosition(provinceId: number): Promise<CashPositionData> {
-  const apiData = await fetchKpiSummary({ province_id: provinceId });
+export async function fetchProvincialCashPosition(provinceId: number, offices?: Office[]): Promise<CashPositionData> {
+  const allOffices = offices || await getOfficesFromApi();
+  const provinceOffices = allOffices.filter(o => String(o.provinceId) === String(provinceId));
   
-  const totalCashBalance = parseFloat(apiData.totalCashBalance) || 0;
-  const approvedExcessAmount = parseFloat(apiData.approvedExcessAmount) || 0;
-  const unapprovedExcessAmount = parseFloat(apiData.unapprovedExcessAmount) || 0;
-  const totalExcessAmount = parseFloat(apiData.totalExcessAmount) || 0;
-  
-  const metrics = calculateCashLiquidityIndex(
-    totalCashBalance,
-    approvedExcessAmount,
-    unapprovedExcessAmount,
-    totalExcessAmount
-  );
+  let totalCashBalance = 0;
+  const ledgerPromises = provinceOffices
+    .map(o => o.withinhereWalletId)
+    .filter((id): id is string => !!id)
+    .map(walletId => fetchLedgerForWallet(walletId).catch(() => ({ cashBalance: 0, apiData: null })));
+
+  const results = await Promise.all(ledgerPromises);
+  totalCashBalance = results.reduce((sum, r) => sum + r.cashBalance, 0);
+
+  const metrics = calculateCashLiquidityIndex(totalCashBalance, 0, 0, 0);
 
   return {
     province_id: provinceId.toString(),
     score: metrics.compositeScore.toString(),
     average_score: metrics.compositeScore.toString(),
     average_normalized_score: metrics.compositeScore.toString(),
-    totalCashBalance: totalCashBalance,
+    totalCashBalance,
     percentage_point: metrics.compositeScore.toString(),
     cash_position_score: metrics.cashPositionScore,
     above_threshold_risk: metrics.aboveThresholdRisk,
     below_threshold_risk: metrics.belowThresholdRisk,
     approved_exception_ratio: metrics.approvedExceptionRatio,
-    approved_excess_amount: approvedExcessAmount,
-    unapproved_excess_amount: unapprovedExcessAmount,
-    total_excess_amount: totalExcessAmount,
-    ...apiData
+    approved_excess_amount: 0,
+    unapproved_excess_amount: 0,
+    total_excess_amount: 0,
+    offices_count: provinceOffices.length,
   };
 }
 
-export async function fetchInstitutionalCashPosition(): Promise<CashPositionData> {
-  const apiData = await fetchKpiSummary();
-  
-  const totalCashBalance = parseFloat(apiData.totalCashBalance) || 0;
-  const approvedExcessAmount = parseFloat(apiData.approvedExcessAmount) || 0;
-  const unapprovedExcessAmount = parseFloat(apiData.unapprovedExcessAmount) || 0;
-  const totalExcessAmount = parseFloat(apiData.totalExcessAmount) || 0;
-  
-  const metrics = calculateCashLiquidityIndex(
-    totalCashBalance,
-    approvedExcessAmount,
-    unapprovedExcessAmount,
-    totalExcessAmount
+export async function fetchInstitutionalCashPosition(offices?: Office[]): Promise<CashPositionData> {
+  const allOffices = offices || await getOfficesFromApi();
+  const validWallets = allOffices
+    .map(o => o.withinhereWalletId)
+    .filter((id): id is string => !!id);
+
+  const ledgerPromises = validWallets.map(walletId =>
+    fetchLedgerForWallet(walletId).catch(() => ({ cashBalance: 0, apiData: null }))
   );
+
+  const results = await Promise.all(ledgerPromises);
+  const totalCashBalance = results.reduce((sum, r) => sum + r.cashBalance, 0);
+
+  const metrics = calculateCashLiquidityIndex(totalCashBalance, 0, 0, 0);
 
   return {
     score: metrics.compositeScore.toString(),
     average_score: metrics.compositeScore.toString(),
     average_normalized_score: metrics.compositeScore.toString(),
-    totalCashBalance: totalCashBalance,
+    totalCashBalance,
     percentage_point: metrics.compositeScore.toString(),
     cash_position_score: metrics.cashPositionScore,
     above_threshold_risk: metrics.aboveThresholdRisk,
     below_threshold_risk: metrics.belowThresholdRisk,
     approved_exception_ratio: metrics.approvedExceptionRatio,
-    approved_excess_amount: approvedExcessAmount,
-    unapproved_excess_amount: unapprovedExcessAmount,
-    total_excess_amount: totalExcessAmount,
-    ...apiData
+    approved_excess_amount: 0,
+    unapproved_excess_amount: 0,
+    total_excess_amount: 0,
+    offices_count: allOffices.length,
   };
 }
 
-export async function fetchDistrictCashPosition(districtId: number): Promise<CashPositionData> {
-  const apiData = await fetchKpiSummary({ district_id: districtId });
-  const score = calculateCashPositionScore(apiData.totalCashBalance);
+export async function fetchDistrictCashPosition(districtId: number, offices?: Office[]): Promise<CashPositionData> {
+  const allOffices = offices || await getOfficesFromApi();
+  const districtOffices = allOffices.filter(o => String(o.districtId) === String(districtId));
+  
+  let totalCashBalance = 0;
+  const ledgerPromises = districtOffices
+    .map(o => o.withinhereWalletId)
+    .filter((id): id is string => !!id)
+    .map(walletId => fetchLedgerForWallet(walletId).catch(() => ({ cashBalance: 0, apiData: null })));
+
+  const results = await Promise.all(ledgerPromises);
+  totalCashBalance = results.reduce((sum, r) => sum + r.cashBalance, 0);
+
+  const metrics = calculateCashLiquidityIndex(totalCashBalance, 0, 0, 0);
 
   return {
     district_id: districtId.toString(),
-    score: score.toString(),
-    average_score: score.toString(),
-    totalCashBalance: apiData.totalCashBalance,
-    percentage_point: score.toString(),
-    ...apiData
+    score: metrics.compositeScore.toString(),
+    average_score: metrics.compositeScore.toString(),
+    totalCashBalance,
+    percentage_point: metrics.compositeScore.toString(),
+    cash_position_score: metrics.cashPositionScore,
+    above_threshold_risk: metrics.aboveThresholdRisk,
+    below_threshold_risk: metrics.belowThresholdRisk,
+    approved_exception_ratio: metrics.approvedExceptionRatio,
+    approved_excess_amount: 0,
+    unapproved_excess_amount: 0,
+    total_excess_amount: 0,
+    offices_count: districtOffices.length,
   };
 }
