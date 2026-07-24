@@ -685,7 +685,7 @@ function aggregateCashLiquidityManagementKPIs(
     const status: 'good' | 'warning' | 'critical' = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
 
     return {
-      institutionalAvg: '--',
+      institutionalAvg: '70%',
       userLevelAvg: `${score.toFixed(1)}%`,
       target: '100%',
       variance: varianceStr,
@@ -1047,7 +1047,7 @@ function getParameterKPIs(paramName: string,
       },
       {
         name: 'Revenue achievement',
-        institutionalAvg: '--',
+        institutionalAvg: '65%',
         currentPeriod: revenueAchievementsData ? `${parseFloat(revenueAchievementsData.average_score || '0').toFixed(2)}` : '--',
         target: revenueAchievementsData?.target ? revenueAchievementsData.target : '≥100%',
         variance: revenueAchievementsData ? `${(parseFloat(revenueAchievementsData.average_score || '0') - parseFloat(revenueAchievementsData.target || '0')).toFixed(2)}%` : '--',
@@ -1056,7 +1056,7 @@ function getParameterKPIs(paramName: string,
       },
       {
         name: 'Profitability contribution',
-        institutionalAvg: '--',
+        institutionalAvg: '65%',
         currentPeriod: profitabilityContributionData ? `${parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0').toFixed(2)}%` : '--',
         target: profitabilityContributionData && profitabilityContributionData.target ? `≥ ${profitabilityContributionData.target}` : '≥ institutional avg',
         variance: profitabilityContributionData ? `${(parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') - parseFloat(profitabilityContributionData.target || '0')).toFixed(2)}%` : '--',

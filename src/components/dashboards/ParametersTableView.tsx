@@ -246,12 +246,12 @@ export function ParametersTableView({
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
                           {param.institutionalAvg !== '--' ? param.institutionalAvg :
-                            param.name === 'Branch Structure & Staffing' ? '87%' :
-                              param.name === 'Loan Consultant Performance' ? '45%' :
-                                param.name === 'Loan Products & Interest Rates' ? '58%' :
-                                  param.name === 'Risk Management & Defaults' ? '45%' :
-                                    param.name === 'Revenue & Performance' ? '39%' :
-                                      param.name === 'Cash & Liquidity Management' ? '50%' :
+                            param.name === 'Branch Structure & Staffing' ? '78%' :
+                              param.name === 'Loan Consultant Performance' ? '62%' :
+                                param.name === 'Loan Products & Interest Rates' ? '74%' :
+                                  param.name === 'Risk Management & Defaults' ? '52%' :
+                                    param.name === 'Revenue & Performance' ? '65%' :
+                                      param.name === 'Cash & Liquidity Management' ? '70%' :
                                         '--'}
                         </span>
                         {param.userLevelAvg !== '--' && param.userLevelAvg !== '--%' && param.institutionalAvg !== '--' && (
@@ -334,45 +334,44 @@ export function ParametersTableView({
                                           <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
                                           <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
                                            <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                              {kpi.name === 'Cash & Liquidity Management' ? '50%' :
-                                                kpi.name === 'Cash Position Score' ? '50%' :
-                                                kpi.name === 'Above-Threshold Risk' ? '50%' :
-                                                  kpi.name === 'Below-Threshold Risk' ? '50%' :
-                                                    kpi.name === 'Approved Exception Ratio' ? '50%' :
-                                                      kpi.name === 'Staff Adequacy Score' ? '87%' :
-                                                        kpi.name === 'Productivity Achievement' ? '75-100%' :
-                                                          kpi.name === 'Vacancy Impact' ? '46.7%' :
-                                                           kpi.name === 'Portfolio Load Balance' ? '50%' :
-                                                             kpi.name === 'Volume Achievement' ? '13%' :
+                                                {kpi.name === 'Cash & Liquidity Management' ? '70%' :
+                                                  kpi.name === 'Cash Position Score' ? '75%' :
+                                                  kpi.name === 'Above-Threshold Risk' ? '85%' :
+                                                    kpi.name === 'Below-Threshold Risk' ? '80%' :
+                                                      kpi.name === 'Approved Exception Ratio' ? '85%' :
+                                                       kpi.name === 'Staff Adequacy Score' ? '85%' :
+                                                         kpi.name === 'Productivity Achievement' ? '75%' :
+                                                           kpi.name === 'Vacancy Impact' ? '1.2' :
+                                                             kpi.name === 'Portfolio Load Balance' ? '85%' :
+                                                               kpi.name === 'Volume Achievement' ? '90%' :
                                                                kpi.name === 'Portfolio quality' ? '71.64%' :
                                                                  kpi.name === 'Default contribution' ? '28.36%' :
-                                                                   kpi.name === 'Collections efficiency' ? '71.64%' :
-                                                                     kpi.name === 'Vetting compliance' ? '100%' :
-                                                                          kpi.name === 'Product distribution mix' ? '--' :
-                                                                         kpi.name === 'Revenue yield per product' ? '38.17%' :
+                                                                    kpi.name === 'Collections efficiency' ? '58%' :
+                                                                                         kpi.name === 'Vetting compliance' ? '88%' :
+                                                                           kpi.name === 'Product distribution mix' ? '0.38%' :
+                                                                          kpi.name === 'Revenue yield per product' ? '36.5%' :
                                                                            kpi.name === 'Product risk contribution' ? '28.36%' :
-                                                                             kpi.name === 'Margin alignment with strategy' ? '55%' :
+                                                                              kpi.name === 'Margin alignment with strategy' ? '67%' :
                                                                                kpi.name === 'Default rate (branch, province, institutional)' ? '28.36%' :
                                                                                  kpi.name === 'Default aging analysis' ? '43.95%' :
                                                                                    kpi.name === 'Recovery rate within 3 months' ? '56.05%' :
-                                                                                     kpi.name === 'Risk migration trends' ? '20%' :
-                                                                                       kpi.name === 'Branch revenue' ? '2.5%' :
+                                                                                          kpi.name === 'Risk migration trends' ? '20%' :
+                                                                                            kpi.name === 'Branch revenue' ? '1.8%' :
                                                                                                 kpi.name === 'Cost-to-income ratios' ? '55%' :
                                                                                                    kpi.name === 'Efficiency Ratio (CIR)' ? '67%' :
-                                                                                                    kpi.name === 'Institutional average performance' ? '75-100%' :
-                                                                                                      kpi.name === 'Growth trajectory alignment' ? '2.5%' :
-                                                                                                        kpi.name === 'Revenue achievement' ? '27.9%' :
-                                                                                                          kpi.name === 'Profitability contribution' ? '27.9%' :
-                                                                                                            kpi.name === 'Cash Position Score' ? '50%' :
-                                                                                                              '--'}
+                                                                                                     kpi.name === 'Institutional average performance' ? '75%' :
+                                                                                                       kpi.name === 'Growth trajectory alignment' ? '1.8%' :
+                                                                                         kpi.name === 'Revenue achievement' ? '65%' :
+                                                                                           kpi.name === 'Profitability contribution' ? '65%' :
+                                                                                            'N/A'}
                                            </td>
                                            {param.name === 'Cash & Liquidity Management' && (
                                              <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
-                                               {kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` :
-                                                 kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `K${ cashPositionData.totalCashBalance?.toLocaleString() || aboveThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
-                                                   kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `K${ cashPositionData.totalCashBalance?.toLocaleString() || belowThresholdRiskData.totalCashBalance?.toLocaleString() ||'--'}` :
-                                                     kpi.name === 'Approved Exception Ratio' && approvedExceptionRatioData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || approvedExceptionRatioData.totalCashBalance?.toLocaleString() ||  '--'}` :
-                                                       '--'}
+                                                {kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` :
+                                                  kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `K${aboveThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
+                                                    kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `K${belowThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
+                                                      kpi.name === 'Approved Exception Ratio' && approvedExceptionRatioData ? `K${approvedExceptionRatioData.totalCashBalance?.toLocaleString() || '--'}` :
+                                                        '--'}
                                              </td>
                                            )}
                                            <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">

@@ -174,33 +174,33 @@ export function ParametersCardsView({
   // Standard operating averages for each KPI
   const getStandardOperatingAverage = (kpiName: string): string => {
     switch (kpiName) {
-      case 'Staff Adequacy Score': return '87%';
-      case 'Productivity Achievement': return '75-100%';
-      case 'Vacancy Impact': return '46.7%';
-      case 'Portfolio Load Balance': return '50%';
-      case 'Volume Achievement': return '13%';
+      case 'Staff Adequacy Score': return '85%';
+      case 'Productivity Achievement': return '75%';
+      case 'Vacancy Impact': return '1.2';
+      case 'Portfolio Load Balance': return '85%';
+      case 'Volume Achievement': return '90%';
       case 'Portfolio quality': return '71.64%';
       case 'Default contribution': return '28.36%';
-      case 'Collections efficiency': return '71.64%';
-      case 'Vetting compliance': return '100%';
-      case 'Product distribution mix': return '87.31%';
-      case 'Revenue yield per product': return '38.17%';
+      case 'Collections efficiency': return '58%';
+      case 'Vetting compliance': return '88%';
+      case 'Product distribution mix': return '0.38%';
+      case 'Revenue yield per product': return '36.5%';
       case 'Product risk contribution': return '28.36%';
-      case 'Margin alignment with strategy': return '55%';
+      case 'Margin alignment with strategy': return '67%';
       case 'Default rate (branch, province, institutional)': return '28.36%';
       case 'Default aging analysis': return '43.95%';
       case 'Recovery rate within 3 months': return '56.05%';
       case 'Risk migration trends': return '20%';
-      case 'Branch revenue': return '2.5%';
+      case 'Branch revenue': return '1.8%';
       case 'Cost-to-income ratios': return '55%';
-      case 'Institutional average performance': return '75-100%';
-      case 'Growth trajectory alignment': return '2.5%';
-      case 'Revenue achievement': return '27.9%';
-      case 'Profitability contribution': return '27.9%';
-      case 'Cash Position Score': return '50%';
-      case 'Above-Threshold Risk': return '0%';
-      case 'Below-Threshold Risk': return '0%';
-      case 'Approved Exception Ratio': return '100%';
+      case 'Institutional average performance': return '75%';
+      case 'Growth trajectory alignment': return '1.8%';
+      case 'Revenue achievement': return '65%';
+      case 'Profitability contribution': return '65%';
+      case 'Cash Position Score': return '75%';
+      case 'Above-Threshold Risk': return '85%';
+      case 'Below-Threshold Risk': return '80%';
+      case 'Approved Exception Ratio': return '85%';
       default: return '--';
     }
   };
