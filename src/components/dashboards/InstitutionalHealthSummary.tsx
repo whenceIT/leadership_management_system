@@ -1030,7 +1030,7 @@ function getParameterKPIs(paramName: string,
       {
         name: 'Efficiency Ratio (CIR)',
         institutionalAvg: '--',
-        currentPeriod: efficiencyRatioData ? `${parseFloat(efficiencyRatioData.average_score || '0').toFixed(2)}` : '--',
+        currentPeriod: efficiencyRatioData ? `${parseFloat(efficiencyRatioData.average_score || '0').toFixed(2)}` : '0',
         target: efficiencyRatioData ? efficiencyRatioData.target : '≤55%',
         variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.average_score || '0') - parseFloat(efficiencyRatioData.target || '0')).toFixed(2)}` : '--',
         trend: efficiencyRatioData ? (parseFloat(efficiencyRatioData.average_score || '0') <= parseFloat(efficiencyRatioData.target || '0') ? '↑' : '↓') : '↑',
