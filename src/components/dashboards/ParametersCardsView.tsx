@@ -347,16 +347,12 @@ export function ParametersCardsView({
                           <p className="text-gray-500 dark:text-gray-400">Contribution</p>
                           <p className="font-semibold text-purple-600 dark:text-purple-400">{kpi.contribution || '--'}</p>
                         </div>
-                        <div>
-                          <p className="text-gray-500 dark:text-gray-400">Cash Balance</p>
-                          <p className="font-semibold text-green-600 dark:text-green-400">
-                            {param.name === 'Cash & Liquidity Management' && kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` :
-                              param.name === 'Cash & Liquidity Management' && kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `K${aboveThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
-                                param.name === 'Cash & Liquidity Management' && kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `K${belowThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
-                                  param.name === 'Cash & Liquidity Management' && kpi.name === 'Approved Exception Ratio' && approvedExceptionRatioData ? `K${approvedExceptionRatioData.totalCashBalance?.toLocaleString() || '--'}` :
-                                    '--'}
-                          </p>
-                        </div>
+                        {param.name === 'Cash & Liquidity Management' && kpi.name === 'Cash Position Score' && cashPositionData ? (
+                          <div>
+                            <p className="text-gray-500 dark:text-gray-400">Cash Balance</p>
+                            <p className="font-semibold text-green-600 dark:text-green-400">K{cashPositionData.totalCashBalance?.toLocaleString() || '--'}</p>
+                          </div>
+                        ) : null}
                       </div>
                       {selectedKPI === kpi.name && (
                         <div className="mt-4 pt-4 border-t border-blue-100 dark:border-blue-900/30">

@@ -329,34 +329,14 @@ export function getHeadlineParameters(options?: {
           branchAvg: "K35,000"
         },
         {
-          name: "Above-Threshold Risk",
-          score: 94,
-          weight: 30,
-          current: "K5,000 unapproved",
-          target: "Zero unapproved excess",
-          instAvg: "K2,000",
-          provAvg: "K3,000",
-          branchAvg: "K5,000"
-        },
-        {
-          name: "Below-Threshold Risk",
-          score: 62,
-          weight: 20,
-          current: "K15,000",
-          target: "≥ K20,000",
+          name: "Cash Position Score",
+          score: 85,
+          weight: 100,
+          current: "K25,000",
+          target: "K20,000 - K30,000",
           instAvg: "K22,000",
-          provAvg: "K21,000",
-          branchAvg: "K15,000"
-        },
-        {
-          name: "Approved Exception Ratio",
-          score: 76,
-          weight: 10,
-          current: "67% approved",
-          target: "100% approved",
-          instAvg: "85%",
-          provAvg: "80%",
-          branchAvg: "67%"
+          provAvg: "K23,000",
+          branchAvg: "K25,000"
         }
       ]
     }

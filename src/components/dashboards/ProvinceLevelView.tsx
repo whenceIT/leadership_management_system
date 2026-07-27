@@ -296,28 +296,6 @@ const kpiConfigs: Record<string, KPIConfig> = {
     getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
     displayTarget: () => 'Within range (K20k-K30k)'
   },
-  'Above-Threshold Risk': {
-    getValue: (data) => parseFloat(data.above_threshold_risk || data.average_score || '0'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
-    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
-    displayTarget: () => '100% (Zero unapproved)'
-  },
-  'Below-Threshold Risk': {
-    getValue: (data) => parseFloat(data.below_threshold_risk || data.average_score || '0'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
-    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
-    displayTarget: () => '100% (Above K20k)'
-  },
   'Approved Exception Ratio': {
     getValue: (data) => parseFloat(data.approved_exception_ratio || data.normalized_score || '0'),
     getTarget: () => 100,

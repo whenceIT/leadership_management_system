@@ -35,9 +35,6 @@ import { useInstitutionalRevenueAchievements } from '@/hooks/useInstitutionalRev
 import { useInstitutionalProfitabilityContribution } from '@/hooks/useInstitutionalProfitabilityContribution';
 import { useInstitutionalRollRateControl } from '@/hooks/useInstitutionalRollRateControl';
 import { useInstitutionalCashPosition } from '@/hooks/useInstitutionalCashPosition';
-import { useInstitutionalAboveThresholdRisk } from '@/hooks/useInstitutionalAboveThresholdRisk';
-import { useInstitutionalBelowThresholdRisk } from '@/hooks/useInstitutionalBelowThresholdRisk';
-import { useInstitutionalApprovedExceptionRatio } from '@/hooks/useInstitutionalApprovedExceptionRatio';
 
 export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?: string }) {
   const [provincialData, setProvincialData] = useState<ProvincialPerformanceData[]>([]);
@@ -74,10 +71,6 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
   const { data: profitabilityContributionData } = useInstitutionalProfitabilityContribution();
   const { data: rollRateControlData } = useInstitutionalRollRateControl();
   const { data: cashPositionData } = useInstitutionalCashPosition();
-  const { data: aboveThresholdRiskData } = useInstitutionalAboveThresholdRisk();
-  const { data: belowThresholdRiskData } = useInstitutionalBelowThresholdRisk();
-  const { data: approvedExceptionRatioData } = useInstitutionalApprovedExceptionRatio();
-
   // Fetch provincial performance data
   useEffect(() => {
     const fetchProvincialData = async () => {
@@ -324,9 +317,9 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
     revenueAchievementsData,
     profitabilityContributionData,
     cashPositionData,
-    aboveThresholdRiskData,
-    belowThresholdRiskData,
-    approvedExceptionRatioData
+    undefined, // aboveThresholdRiskData - retired
+    undefined, // belowThresholdRiskData - retired
+    undefined  // approvedExceptionRatioData - retired
   );
 
   // Institution metrics
@@ -374,9 +367,6 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
         revenueAchievementsData={revenueAchievementsData}
         profitabilityContributionData={profitabilityContributionData}
         cashPositionData={cashPositionData}
-        aboveThresholdRiskData={aboveThresholdRiskData}
-        belowThresholdRiskData={belowThresholdRiskData}
-        approvedExceptionRatioData={approvedExceptionRatioData}
         isLoading={isLoading || isKpiLoading}
       />
     

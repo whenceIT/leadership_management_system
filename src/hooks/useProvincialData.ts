@@ -21,9 +21,6 @@ import { fetchProvincialGrowthTrajectory } from '@/services/GrowthTrajectoryServ
 import { fetchProvincialRevenueAchievements } from '@/services/RevenueAchievementsService';
 import { fetchProvincialProfitabilityContribution } from '@/services/ProfitabilityContributionService';
 import { fetchProvincialCashPosition } from '@/services/CashPositionService';
-import { fetchProvincialAboveThresholdRisk } from '@/services/AboveThresholdRiskService';
-import { fetchProvincialBelowThresholdRisk } from '@/services/BelowThresholdRiskService';
-import { fetchProvincialApprovedExceptionRatio } from '@/services/ApprovedExceptionRatioService';
 
 export interface ProvincialData {
   [provinceId: number]: any;
@@ -140,15 +137,6 @@ export function useProvincialData(selectedKPI: string | null) {
               newProvincialData[province.id] = data;
             } else if (selectedKPI === 'Cash Position Score') {
               const data = await fetchProvincialCashPosition(province.id);
-              newProvincialData[province.id] = data;
-            } else if (selectedKPI === 'Above-Threshold Risk') {
-              const data = await fetchProvincialAboveThresholdRisk(province.id);
-              newProvincialData[province.id] = data;
-            } else if (selectedKPI === 'Below-Threshold Risk') {
-              const data = await fetchProvincialBelowThresholdRisk(province.id);
-              newProvincialData[province.id] = data;
-            } else if (selectedKPI === 'Approved Exception Ratio') {
-              const data = await fetchProvincialApprovedExceptionRatio(province.id);
               newProvincialData[province.id] = data;
             }
             // Add other KPI fetch logic here as needed

@@ -334,22 +334,19 @@ export function ParametersTableView({
                                         >
                                           <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
                                           <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
-                                           <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                                {kpi.name === 'Cash & Liquidity Management' ? '70%' :
-                                                  kpi.name === 'Cash Position Score' ? '75%' :
-                                                  kpi.name === 'Above-Threshold Risk' ? '85%' :
-                                                    kpi.name === 'Below-Threshold Risk' ? '80%' :
-                                                      kpi.name === 'Approved Exception Ratio' ? '85%' :
-                                                       kpi.name === 'Staff Adequacy Score' ? '85%' :
-                                                         kpi.name === 'Productivity Achievement' ? '75%' :
-                                                           kpi.name === 'Vacancy Impact' ? '1.2' :
-                                                             kpi.name === 'Portfolio Load Balance' ? '85%' :
-                                                               kpi.name === 'Volume Achievement' ? '90%' :
-                                                               kpi.name === 'Portfolio quality' ? '71.64%' :
-                                                                 kpi.name === 'Default contribution' ? '28.36%' :
+                                            <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                                                 {kpi.name === 'Cash & Liquidity Management' ? '70%' :
+                                                   kpi.name === 'Cash Position Score' ? '75%' :
+                                                   kpi.name === 'Staff Adequacy Score' ? '85%' :
+                                                      kpi.name === 'Productivity Achievement' ? '75%' :
+                                                        kpi.name === 'Vacancy Impact' ? '1.2' :
+                                                          kpi.name === 'Portfolio Load Balance' ? '85%' :
+                                                            kpi.name === 'Volume Achievement' ? '90%' :
+                                                            kpi.name === 'Portfolio quality' ? '71.64%' :
+                                                              kpi.name === 'Default contribution' ? '28.36%' :
                                                                     kpi.name === 'Collections efficiency' ? '58%' :
-                                                                                         kpi.name === 'Vetting compliance' ? '88%' :
-                                                                           kpi.name === 'Product distribution mix' ? '0.38%' :
+                                                                      kpi.name === 'Vetting compliance' ? '88%' :
+                                                                        kpi.name === 'Product distribution mix' ? '0.38%' :
                                                                           kpi.name === 'Revenue yield per product' ? '36.5%' :
                                                                            kpi.name === 'Product risk contribution' ? '28.36%' :
                                                                               kpi.name === 'Margin alignment with strategy' ? '67%' :
@@ -366,22 +363,15 @@ export function ParametersTableView({
                                                                                            kpi.name === 'Profitability contribution' ? '65%' :
                                                                                             'N/A'}
                                            </td>
-                                           {param.name === 'Cash & Liquidity Management' && (
-                                             <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
-                                                {kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` :
-                                                  kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `K${aboveThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
-                                                    kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `K${belowThresholdRiskData.totalCashBalance?.toLocaleString() || '--'}` :
-                                                      kpi.name === 'Approved Exception Ratio' && approvedExceptionRatioData ? `K${approvedExceptionRatioData.totalCashBalance?.toLocaleString() || '--'}` :
-                                                        '--'}
-                                             </td>
-                                           )}
-                                           <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">
-                                              {kpi.name === 'Cash Position Score' && typeof kpi.target === 'object' ? `K${kpi.target.min.toLocaleString()} to K${kpi.target.max.toLocaleString()}` :
-                                                kpi.name === 'Above-Threshold Risk' ? '100%' :
-                                                  kpi.name === 'Below-Threshold Risk' ? '100%' :
-                                                    kpi.name === 'Approved Exception Ratio' ? '100%' :
-                                                      typeof kpi.target === 'object' ? '--' : kpi.target}
-                                           </td>
+                                            {param.name === 'Cash & Liquidity Management' && (
+                                              <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
+                                                 {kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` : '--'}
+                                              </td>
+                                            )}
+                                            <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">
+                                               {kpi.name === 'Cash Position Score' && typeof kpi.target === 'object' ? `K${kpi.target.min.toLocaleString()} to K${kpi.target.max.toLocaleString()}` :
+                                                 typeof kpi.target === 'object' ? '--' : kpi.target}
+                                            </td>
                                           <td className="px-4 py-2 text-center">
                                             <div className="flex items-center justify-center gap-1">
                                               <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>

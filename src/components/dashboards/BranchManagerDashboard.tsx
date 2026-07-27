@@ -23,9 +23,6 @@ import { useProductRiskScore } from '@/hooks/useProductRiskScore';
 import { useRollRateControl } from '@/hooks/useRollRateControl';
 import { useYieldAchievements } from '@/hooks/useYieldAchievements';
 import { useCashPosition } from '@/hooks/useCashPosition';
-import { useAboveThresholdRisk } from '@/hooks/useAboveThresholdRisk';
-import { useBelowThresholdRisk } from '@/hooks/useBelowThresholdRisk';
-import { useApprovedExceptionRatio } from '@/hooks/useApprovedExceptionRatio';
 
 interface BranchManagerDashboardProps {
   userTier?: string | null;
@@ -115,15 +112,6 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
   // Fetch cash position data
   const { data: cashPositionData, isLoading: isCashPositionLoading, error: cashPositionError } = useCashPosition(3);
 
-  // Fetch above threshold risk data
-  const { data: aboveThresholdRiskData, isLoading: isAboveThresholdRiskLoading, error: aboveThresholdRiskError } = useAboveThresholdRisk({ office_id: 3 });
-
-  // Fetch below threshold risk data
-  const { data: belowThresholdRiskData, isLoading: isBelowThresholdRiskLoading, error: belowThresholdRiskError } = useBelowThresholdRisk({ office_id: 3 });
-
-  // Fetch approved exception ratio data
-  const { data: approvedExceptionRatioData, isLoading: isApprovedExceptionRatioLoading, error: approvedExceptionRatioError } = useApprovedExceptionRatio({ office_id: 3 });
-
   // Custom summary data with dynamic aggregated Branch Structure & Staffing
   const summaryData = useMemo(() => {
     const baseData = getInstitutionalSummaryData(
@@ -148,9 +136,9 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       undefined, // revenueAchievementsData - not available
       undefined, // profitabilityContributionData - not available
       cashPositionData,
-      aboveThresholdRiskData,
-      belowThresholdRiskData,
-      approvedExceptionRatioData
+      undefined, // aboveThresholdRiskData - retired
+      undefined, // belowThresholdRiskData - retired
+      undefined  // approvedExceptionRatioData - retired
     );
     let updatedData = { ...baseData };
 
@@ -319,53 +307,9 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
          }
          return metric;
        });
-     }
+      }
 
-      // Update Above-Threshold Risk key metric
-      if (aboveThresholdRiskData) {
-        const score = aboveThresholdRiskData.score;
-        const percentagePoints = aboveThresholdRiskData.percentage_point;
-       
-       keyMetrics = keyMetrics.map(metric => {
-         if (metric.parameter === 'Above-Threshold Risk') {
-           return {
-             ...metric,
-             institutionalAvg: '--',
-             currentPeriod: `${score.toFixed(1)}%`,
-             target: 'Zero',
-             variance: `${(score - 100).toFixed(1)}%`,
-             trend: (score >= 90 ? '↑' : '↓') as '↑' | '↓' | '→',
-             provAvg: '90%',
-             contribution: `${percentagePoints.toFixed(1)}/30pp ${score >= 90 ? '▲' : '▼'}`
-           };
-         }
-         return metric;
-       });
-     }
-
-      // Update Below-Threshold Risk key metric
-      if (belowThresholdRiskData) {
-        const score = belowThresholdRiskData.score;
-        const percentagePoints = belowThresholdRiskData.percentage_point;
-       
-       keyMetrics = keyMetrics.map(metric => {
-         if (metric.parameter === 'Below-Threshold Risk') {
-           return {
-             ...metric,
-             institutionalAvg: '--',
-             currentPeriod: `${score.toFixed(1)}%`,
-             target: 'Zero',
-             variance: `${(score - 100).toFixed(1)}%`,
-             trend: (score >= 90 ? '↑' : '↓') as '↑' | '↓' | '→',
-             provAvg: '90%',
-             contribution: `${percentagePoints.toFixed(1)}/20pp ${score >= 90 ? '▲' : '▼'}`
-           };
-         }
-         return metric;
-       });
-     }
-
-    // Recalculate overall score based on updated parameters
+      // Recalculate overall score based on updated parameters
     const overallScore = Math.round(
       updatedData.parameters.reduce((sum, param) => {
         const score = parseFloat(param.userLevelAvg.replace('%', ''));
@@ -387,7 +331,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       overallScore,
       overallInstAvg
     };
-  }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData, longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData, portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData, yieldAchievementsData, cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData]);
+  }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData, longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData, portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData, yieldAchievementsData, cashPositionData]);
 
   return (
     <DashboardBase
@@ -422,11 +366,8 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         rollRateControlData={rollRateControlData}
         yieldAchievementsData={yieldAchievementsData}
          cashPositionData={cashPositionData}
-         aboveThresholdRiskData={aboveThresholdRiskData}
-         belowThresholdRiskData={belowThresholdRiskData}
-         approvedExceptionRatioData={approvedExceptionRatioData}
-         isLoading={isLoading || isKpiLoading || isStaffAdequacyLoading || isProductivityLoading || isVacancyLoading || isVolumeLoading || isLoanPortfolioLoading || isCollectionEfficiencyLoading || isEfficiencyRatioLoading || isGrowthTrajectoryLoading || isLongTermDelinquencyLoading || isMonth1DefaultPerformanceLoading || isMonth3RecoveryAchievementsLoading || isPortfolioQualityLoading || isProductDiversificationLoading || isProductRiskScoreLoading || isRollRateControlLoading || isYieldAchievementsLoading || isCashPositionLoading || isAboveThresholdRiskLoading || isBelowThresholdRiskLoading || isApprovedExceptionRatioLoading}
-       />
+         isLoading={isLoading || isKpiLoading || isStaffAdequacyLoading || isProductivityLoading || isVacancyLoading || isVolumeLoading || isLoanPortfolioLoading || isCollectionEfficiencyLoading || isEfficiencyRatioLoading || isGrowthTrajectoryLoading || isLongTermDelinquencyLoading || isMonth1DefaultPerformanceLoading || isMonth3RecoveryAchievementsLoading || isPortfolioQualityLoading || isProductDiversificationLoading || isProductRiskScoreLoading || isRollRateControlLoading || isYieldAchievementsLoading || isCashPositionLoading}
+        />
 
 
       <div className="grid grid-cols-12 gap-4 md:gap-6">

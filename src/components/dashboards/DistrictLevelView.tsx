@@ -22,9 +22,6 @@ import { fetchDistrictEfficiencyRatio } from '@/services/EfficiencyRatioService'
 import { fetchDistrictProfitabilityContribution } from '@/services/ProfitabilityContributionService';
 import { fetchDistrictGrowthTrajectory } from '@/services/GrowthTrajectoryService';
 import { fetchDistrictCashPosition } from '@/services/CashPositionService';
-import { fetchDistrictAboveThresholdRisk } from '@/services/AboveThresholdRiskService';
-import { fetchDistrictBelowThresholdRisk } from '@/services/BelowThresholdRiskService';
-import { fetchDistrictApprovedExceptionRatio } from '@/services/ApprovedExceptionRatioService';
 import { fetchDistrictLoanPortfolioLoad } from '@/services/LoanPortfolioLoadService';
 
 interface DistrictLevelViewProps {
@@ -62,13 +59,20 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
           scoreA = parseFloat(dataA.average_normalized_score || '0');
           scoreB = parseFloat(dataB.average_normalized_score || '0');
           break;
+        case 'Below-Threshold Risk':
+          scoreA = parseFloat(dataA.average_score || '0');
+          scoreB = parseFloat(dataB.average_score || '0');
+          break;
         default:
           scoreA = parseFloat(dataA.average_score || '0');
           scoreB = parseFloat(dataB.average_score || '0');
           break;
       }
 
-      // Sort descending (highest first)
+      // Sort descending (highest first), except Below-Threshold Risk where lowest (worst liquidity) should be first
+      if (selectedKPI === 'Below-Threshold Risk') {
+        return scoreA - scoreB;
+      }
       return scoreB - scoreA;
     });
   }, [districts, districtData, selectedKPI]);
@@ -143,15 +147,6 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                 break;
               case 'Cash Position Score':
                 data = await fetchDistrictCashPosition(district.id);
-                break;
-              case 'Above-Threshold Risk':
-                data = await fetchDistrictAboveThresholdRisk(district.id);
-                break;
-              case 'Below-Threshold Risk':
-                data = await fetchDistrictBelowThresholdRisk(district.id);
-                break;
-              case 'Approved Exception Ratio':
-                data = await fetchDistrictApprovedExceptionRatio(district.id);
                 break;
               case 'Portfolio Load Balance':
                 data = await fetchDistrictLoanPortfolioLoad(district.id);
@@ -228,9 +223,6 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
         return ['District', 'Offices', 'Period', 'Co. Net Contrib', 'Avg Score', 'Weight', 'PP', 'Status'];
       case 'Growth Trajectory':
       case 'Cash Position Score':
-      case 'Above-Threshold Risk':
-      case 'Below-Threshold Risk':
-      case 'Approved Exception Ratio':
         return ['District', 'Offices', 'Avg Score', 'PP', 'Status'];
       default:
         return ['District', 'Score', 'Status'];
@@ -497,21 +489,18 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                     break;
                    }
                     case 'Growth Trajectory':
-                    case 'Cash Position Score':
-                    case 'Above-Threshold Risk':
-                    case 'Below-Threshold Risk':
-                    case 'Approved Exception Ratio': {
-                      const score = parseFloat(data.normalized_score || data.average_score || '0');
-                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                      rowData = [
-                        district.name,
-                        district.offices_count || 0,
-                        `${score.toFixed(2)}%`,
-                        selectedKPI === 'Growth Trajectory' ? data.PP || 0 : data.percentage_point || data.percentage_points || 0
-                      ];
-                     break;
+                   case 'Cash Position Score': {
+                     const score = parseFloat(data.normalized_score || data.average_score || '0');
+                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                     rowData = [
+                       district.name,
+                       district.offices_count || 0,
+                       `${score.toFixed(2)}%`,
+                       selectedKPI === 'Growth Trajectory' ? data.PP || 0 : data.percentage_point || data.percentage_points || 0
+                     ];
+                    break;
                    }
-                  case 'Portfolio Load Balance': {
+                   case 'Portfolio Load Balance': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 90 ? 'good' : score >= 75 ? 'warning' : 'critical';
                      rowData = [

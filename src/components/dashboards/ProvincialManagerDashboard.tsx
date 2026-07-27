@@ -39,9 +39,6 @@ import { useProvincialRevenueAchievements } from '@/hooks/useProvincialRevenueAc
 import { useProvincialProfitabilityContribution } from '@/hooks/useProvincialProfitabilityContribution';
 import { useProvincialRollRateControl } from '@/hooks/useProvincialRollRateControl';
 import { useProvincialCashPosition } from '@/hooks/useProvincialCashPosition';
-import { useProvincialAboveThresholdRisk } from '@/hooks/useProvincialAboveThresholdRisk';
-import { useProvincialBelowThresholdRisk } from '@/hooks/useProvincialBelowThresholdRisk';
-import { useProvincialApprovedExceptionRatio } from '@/hooks/useProvincialApprovedExceptionRatio';
 
 export default function ProvincialManagerDashboard() {
   const { user, positionName, isLoading: isPositionLoading } = useUserPosition();
@@ -320,11 +317,8 @@ export default function ProvincialManagerDashboard() {
   const { data: profitabilityContributionData } = useProvincialProfitabilityContribution(provinceId);
   const { data: rollRateControlData } = useProvincialRollRateControl(provinceId);
   const { data: cashPositionData } = useProvincialCashPosition(provinceId);
-  const { data: aboveThresholdRiskData } = useProvincialAboveThresholdRisk(provinceId);
-  const { data: belowThresholdRiskData } = useProvincialBelowThresholdRisk(provinceId);
-  const { data: approvedExceptionRatioData } = useProvincialApprovedExceptionRatio(provinceId);
 
-  const summaryData = getInstitutionalSummaryData('province', 'Provincial View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, cashPositionData, aboveThresholdRiskData, belowThresholdRiskData, approvedExceptionRatioData);
+  const summaryData = getInstitutionalSummaryData('province', 'Provincial View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, cashPositionData, undefined, undefined, undefined);
 
   return (
     <DashboardBase
@@ -359,11 +353,8 @@ export default function ProvincialManagerDashboard() {
         profitabilityContributionData={profitabilityContributionData}
          rollRateControlData={rollRateControlData}
          cashPositionData={cashPositionData}
-         aboveThresholdRiskData={aboveThresholdRiskData}
-         belowThresholdRiskData={belowThresholdRiskData}
-         approvedExceptionRatioData={approvedExceptionRatioData}
          isLoading={isLoading || isPositionLoading || isKpiLoading || isStaffAdequacyLoading}
-       />
+        />
 
 
       <div className="grid grid-cols-12 gap-4 md:gap-6 mt-6">
