@@ -18,6 +18,7 @@ interface KPI {
   variance: string;
   trend: '↑' | '↓' | '→';
   status: 'good' | 'warning' | 'critical';
+  contribution?: string;
 }
 
 interface ParameterKPIs {
@@ -64,6 +65,7 @@ interface ParameterSummary {
   varianceAbs: string;
   trend: '↑' | '↓' | '→';
   status: 'good' | 'warning' | 'critical';
+  contribution?: string;
 }
 
 interface KeyMetric {
@@ -93,6 +95,87 @@ export interface InstitutionalSummaryData {
   overallTarget: number;
 }
 
+function getAggregateScore(data: any, paramName: string, kpiName: string): number {
+  if (!data) return 0;
+
+  switch (paramName) {
+    case 'Branch Structure & Staffing':
+      switch (kpiName) {
+        case 'Staff Adequacy Score':
+        case 'Productivity Achievement':
+          return parseFloat(data.normalized_score || data.average_normalized_score || '0');
+        case 'Vacancy Impact':
+          return parseFloat(data.normalized_score || data.average_normalized_score || '0') * 100;
+        case 'Portfolio Load Balance':
+          return parseFloat(data.score || data.average_score || '0');
+      }
+      break;
+    case 'Loan Consultant Performance':
+      switch (kpiName) {
+        case 'Volume Achievement':
+          return parseFloat(data.average_normalized_score || '0');
+        case 'Portfolio quality':
+        case 'Default contribution':
+        case 'Collections efficiency':
+          return parseFloat(data.average_score || '0');
+        case 'Vetting compliance':
+          return parseFloat(data.average_score || '0') * 100;
+      }
+      break;
+    case 'Loan Products & Interest Rates':
+      switch (kpiName) {
+        case 'Product distribution mix':
+          return (1 - parseFloat(data.average_HHI || '0')) * 100;
+        case 'Revenue yield per product':
+          return parseFloat(data.average_score || '0');
+        case 'Product risk contribution':
+          return (1 - parseFloat(data.average_score || '0')) * 100;
+        case 'Margin alignment with strategy':
+          return parseFloat(data.average_score || '0');
+      }
+      break;
+    case 'Risk Management & Defaults':
+      switch (kpiName) {
+        case 'Default rate (branch, province, institutional)':
+        case 'Default aging analysis':
+        case 'Recovery rate within 3 months':
+        case 'Risk migration trends':
+          return parseFloat(data.average_score || '0');
+      }
+      break;
+    case 'Revenue & Performance':
+      switch (kpiName) {
+        case 'Efficiency Ratio (CIR)':
+        case 'Growth trajectory alignment':
+        case 'Revenue achievement':
+        case 'Profitability contribution':
+          return parseFloat(data.average_score || '0');
+      }
+      break;
+    case 'Cash & Liquidity Management':
+      switch (kpiName) {
+        case 'Cash Position Score':
+          return parseFloat(String(data.cash_position_score ?? data.average_score ?? 0));
+        case 'Above-Threshold Risk':
+        case 'Below-Threshold Risk':
+          return parseFloat(data.average_score || '0');
+        case 'Approved Exception Ratio':
+          return parseFloat(String(data.average_score ?? 0));
+      }
+      break;
+  }
+  return 0;
+}
+
+function getAggregateWeight(data: any, paramName: string, kpiName: string): number {
+  if (!data) return 0;
+  const raw = data.weight;
+  if (raw === undefined || raw === null) return 0;
+  const weight = typeof raw === 'string' ? parseFloat(raw) : raw;
+  if (!isFinite(weight)) return 0;
+  return weight / 100;
+}
+
 export function getInstitutionalSummaryData(userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant', userLevelLabel: string,
   staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, loanPortfolioLoadData?: any,
   volumeAchievementData?: any, collectionEfficiencyData?: any, efficiencyRatioData?: any, growthTrajectoryData?: any,
@@ -120,7 +203,8 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       variance: branchStructureAggregated.variance || '--',
       varianceAbs: branchStructureAggregated.varianceAbs || '--',
       trend: branchStructureAggregated.trend || '→',
-      status: branchStructureAggregated.status || 'warning'
+      status: branchStructureAggregated.status || 'warning',
+      contribution: branchStructureAggregated.contribution || '--'
     },
     {
       name: 'Loan Consultant Performance',
@@ -131,7 +215,8 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       variance: lcPerformanceAggregated.variance || '--',
       varianceAbs: lcPerformanceAggregated.varianceAbs || '--',
       trend: lcPerformanceAggregated.trend || '→',
-      status: lcPerformanceAggregated.status || 'warning'
+      status: lcPerformanceAggregated.status || 'warning',
+      contribution: lcPerformanceAggregated.contribution || '--'
     },
     {
       name: 'Loan Products & Interest Rates',
@@ -142,7 +227,8 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       variance: loanProductsAggregated.variance || '--',
       varianceAbs: loanProductsAggregated.varianceAbs || '--',
       trend: loanProductsAggregated.trend || '→',
-      status: loanProductsAggregated.status || 'warning'
+      status: loanProductsAggregated.status || 'warning',
+      contribution: loanProductsAggregated.contribution || '--'
     },
     {
       name: 'Risk Management & Defaults',
@@ -153,7 +239,8 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       variance: riskManagementAggregated.variance || '--',
       varianceAbs: riskManagementAggregated.varianceAbs || '--',
       trend: riskManagementAggregated.trend || '→',
-      status: riskManagementAggregated.status || 'warning'
+      status: riskManagementAggregated.status || 'warning',
+      contribution: riskManagementAggregated.contribution || '--'
     },
     {
       name: 'Revenue & Performance',
@@ -164,7 +251,8 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       variance: revenuePerformanceAggregated.variance || '--',
       varianceAbs: revenuePerformanceAggregated.varianceAbs || '--',
       trend: revenuePerformanceAggregated.trend || '→',
-      status: revenuePerformanceAggregated.status || 'warning'
+      status: revenuePerformanceAggregated.status || 'warning',
+      contribution: revenuePerformanceAggregated.contribution || '--'
     },
     {
       name: 'Cash & Liquidity Management',
@@ -175,7 +263,8 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       variance: cashLiquidityAggregated.variance || '--',
       varianceAbs: cashLiquidityAggregated.varianceAbs || '--',
       trend: cashLiquidityAggregated.trend || '→',
-      status: cashLiquidityAggregated.status || 'warning'
+      status: cashLiquidityAggregated.status || 'warning',
+      contribution: cashLiquidityAggregated.contribution || '--'
     }
   ];
 
@@ -407,7 +496,8 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
       variance: varianceStr,
       varianceAbs,
       trend,
-      status
+      status,
+      contribution: `${overallScore.toFixed(2)} of 100pp`
     };
   }
 
@@ -415,23 +505,23 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
   const kpis = [
     {
       data: staffAdequacyData,
-      getScore: (d: any) => parseFloat(d?.normalized_score || '0'),
-      weight: parseFloat(staffAdequacyData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Branch Structure & Staffing', 'Staff Adequacy Score'),
+      weight: getAggregateWeight(staffAdequacyData, 'Branch Structure & Staffing', 'Staff Adequacy Score')
     },
     {
       data: productivityAchievementData,
-      getScore: (d: any) => parseFloat(d?.normalized_score || '0'),
-      weight: parseFloat(productivityAchievementData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Branch Structure & Staffing', 'Productivity Achievement'),
+      weight: getAggregateWeight(productivityAchievementData, 'Branch Structure & Staffing', 'Productivity Achievement')
     },
     {
       data: vacancyImpactData,
-      getScore: (d: any) => parseFloat(d?.normalized_score || '0') * 100,
-      weight: parseFloat(vacancyImpactData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Branch Structure & Staffing', 'Vacancy Impact'),
+      weight: getAggregateWeight(vacancyImpactData, 'Branch Structure & Staffing', 'Vacancy Impact')
     },
     {
       data: loanPortfolioLoadData,
-      getScore: (d: any) => parseFloat(d?.score || '0'),
-      weight: parseFloat(loanPortfolioLoadData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Branch Structure & Staffing', 'Portfolio Load Balance'),
+      weight: getAggregateWeight(loanPortfolioLoadData, 'Branch Structure & Staffing', 'Portfolio Load Balance')
     }
   ].filter(kpi => kpi.data);
 
@@ -444,12 +534,14 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
       variance: '--',
       varianceAbs: '--',
       trend: '→',
-      status: 'warning'
+      status: 'warning',
+      contribution: '--'
     };
   }
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
+  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
 
   const target = 100;
   const variance = overallScore - target;
@@ -466,7 +558,8 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     variance: varianceStr,
     varianceAbs,
     trend,
-    status
+    status,
+    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
   };
 }
 
@@ -480,28 +573,28 @@ function aggregateLoanConsultantPerformanceKPIs(
   const kpis = [
     {
       data: volumeAchievementData,
-      getScore: (d: any) => parseFloat(d?.average_normalized_score || '0'),
-      weight: parseFloat(volumeAchievementData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Loan Consultant Performance', 'Volume Achievement'),
+      weight: getAggregateWeight(volumeAchievementData, 'Loan Consultant Performance', 'Volume Achievement')
     },
     {
       data: collectionEfficiencyData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(collectionEfficiencyData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Loan Consultant Performance', 'Collections efficiency'),
+      weight: getAggregateWeight(collectionEfficiencyData, 'Loan Consultant Performance', 'Collections efficiency')
     },
     {
       data: portfolioQualityData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(portfolioQualityData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Loan Consultant Performance', 'Portfolio quality'),
+      weight: getAggregateWeight(portfolioQualityData, 'Loan Consultant Performance', 'Portfolio quality')
     },
     {
       data: month1DefaultPerformanceData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(month1DefaultPerformanceData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Loan Consultant Performance', 'Default contribution'),
+      weight: getAggregateWeight(month1DefaultPerformanceData, 'Loan Consultant Performance', 'Default contribution')
     },
     {
       data: productRiskScoreData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0') * 100,
-      weight: parseFloat(productRiskScoreData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Loan Consultant Performance', 'Vetting compliance'),
+      weight: getAggregateWeight(productRiskScoreData, 'Loan Consultant Performance', 'Vetting compliance')
     }
   ].filter(kpi => kpi.data);
 
@@ -514,12 +607,14 @@ function aggregateLoanConsultantPerformanceKPIs(
       variance: '-18%',
       varianceAbs: '18pp',
       trend: '→',
-      status: 'warning'
+      status: 'warning',
+      contribution: '--'
     };
   }
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
+  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
 
   const target = 80;
   const variance = overallScore - target;
@@ -536,7 +631,8 @@ function aggregateLoanConsultantPerformanceKPIs(
     variance: varianceStr,
     varianceAbs,
     trend,
-    status
+    status,
+    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
   };
 }
 
@@ -549,23 +645,23 @@ function aggregateLoanProductsKPIs(
   const kpis = [
     {
       data: productDiversificationData,
-      getScore: (d: any) => (1 - parseFloat(d?.average_HHI || '0')) * 100, // HHI inverse for better score
-      weight: parseFloat(productDiversificationData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Loan Products & Interest Rates', 'Product distribution mix'),
+      weight: getAggregateWeight(productDiversificationData, 'Loan Products & Interest Rates', 'Product distribution mix')
     },
     {
       data: yieldAchievementsData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(yieldAchievementsData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Loan Products & Interest Rates', 'Revenue yield per product'),
+      weight: getAggregateWeight(yieldAchievementsData, 'Loan Products & Interest Rates', 'Revenue yield per product')
     },
     {
       data: productRiskScoreData,
-      getScore: (d: any) => (1 - parseFloat(d?.average_score || '0')) * 100, // Inverse risk score
-      weight: parseFloat(productRiskScoreData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Loan Products & Interest Rates', 'Product risk contribution'),
+      weight: getAggregateWeight(productRiskScoreData, 'Loan Products & Interest Rates', 'Product risk contribution')
     },
     {
       data: efficiencyRatioData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(efficiencyRatioData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Loan Products & Interest Rates', 'Margin alignment with strategy'),
+      weight: getAggregateWeight(efficiencyRatioData, 'Loan Products & Interest Rates', 'Margin alignment with strategy')
     }
   ].filter(kpi => kpi.data);
 
@@ -578,12 +674,14 @@ function aggregateLoanProductsKPIs(
       variance: '-6%',
       varianceAbs: '6pp',
       trend: '→',
-      status: 'warning'
+      status: 'warning',
+      contribution: '--'
     };
   }
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
+  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
 
   const target = 80;
   const variance = overallScore - target;
@@ -600,7 +698,8 @@ function aggregateLoanProductsKPIs(
     variance: varianceStr,
     varianceAbs,
     trend,
-    status
+    status,
+    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
   };
 }
 
@@ -613,23 +712,23 @@ function aggregateRiskManagementKPIs(
   const kpis = [
     {
       data: month1DefaultPerformanceData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(month1DefaultPerformanceData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Risk Management & Defaults', 'Default rate (branch, province, institutional)'),
+      weight: getAggregateWeight(month1DefaultPerformanceData, 'Risk Management & Defaults', 'Default rate (branch, province, institutional)')
     },
     {
       data: longTermDelinquencyData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(longTermDelinquencyData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Risk Management & Defaults', 'Default aging analysis'),
+      weight: getAggregateWeight(longTermDelinquencyData, 'Risk Management & Defaults', 'Default aging analysis')
     },
     {
       data: month3RecoveryAchievementsData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(month3RecoveryAchievementsData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Risk Management & Defaults', 'Recovery rate within 3 months'),
+      weight: getAggregateWeight(month3RecoveryAchievementsData, 'Risk Management & Defaults', 'Recovery rate within 3 months')
     },
     {
       data: rollRateControlData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(rollRateControlData?.weight || '25') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Risk Management & Defaults', 'Risk migration trends'),
+      weight: getAggregateWeight(rollRateControlData, 'Risk Management & Defaults', 'Risk migration trends')
     }
   ].filter(kpi => kpi.data);
 
@@ -642,12 +741,14 @@ function aggregateRiskManagementKPIs(
       variance: '-23%',
       varianceAbs: '23pp',
       trend: '→',
-      status: 'warning'
+      status: 'warning',
+      contribution: '--'
     };
   }
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
+  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
 
   const target = 75;
   const variance = overallScore - target;
@@ -664,7 +765,8 @@ function aggregateRiskManagementKPIs(
     variance: varianceStr,
     varianceAbs,
     trend,
-    status
+    status,
+    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
   };
 }
 
@@ -691,35 +793,37 @@ function aggregateCashLiquidityManagementKPIs(
       variance: varianceStr,
       varianceAbs,
       trend,
-      status
+      status,
+      contribution: `${score.toFixed(2)} of 100pp`
     };
   }
 
   const kpis = [
     {
       data: cashPositionData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(cashPositionData?.weight || '40') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Cash & Liquidity Management', 'Cash Position Score'),
+      weight: getAggregateWeight(cashPositionData, 'Cash & Liquidity Management', 'Cash Position Score')
     },
     {
       data: aboveThresholdRiskData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(aboveThresholdRiskData?.weight || '30') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Cash & Liquidity Management', 'Above-Threshold Risk'),
+      weight: getAggregateWeight(aboveThresholdRiskData, 'Cash & Liquidity Management', 'Above-Threshold Risk')
     },
     {
       data: belowThresholdRiskData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(belowThresholdRiskData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Cash & Liquidity Management', 'Below-Threshold Risk'),
+      weight: getAggregateWeight(belowThresholdRiskData, 'Cash & Liquidity Management', 'Below-Threshold Risk')
     },
     {
       data: approvedExceptionRatioData,
-      getScore: (d: any) => parseFloat(String(d?.average_score ?? 0)),
-      weight: parseFloat(approvedExceptionRatioData?.weight || '10') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Cash & Liquidity Management', 'Approved Exception Ratio'),
+      weight: getAggregateWeight(approvedExceptionRatioData, 'Cash & Liquidity Management', 'Approved Exception Ratio')
     }
   ].filter(kpi => kpi.data);
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
+  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
 
   const target = 100;
   const variance = overallScore - target;
@@ -739,7 +843,8 @@ function aggregateCashLiquidityManagementKPIs(
     variance: varianceStr,
     varianceAbs,
     trend,
-    status
+    status,
+    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
   };
 }
 
@@ -753,28 +858,28 @@ function aggregateRevenuePerformanceKPIs(
   const kpis = [
     {
       data: growthTrajectoryData,
-      getScore: (d: any) => Math.max(0, Math.min(100, parseFloat(d?.average_score || '0'))),
-      weight: parseFloat(growthTrajectoryData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Revenue & Performance', 'Growth trajectory alignment'),
+      weight: getAggregateWeight(growthTrajectoryData, 'Revenue & Performance', 'Growth trajectory alignment')
     },
     {
       data: efficiencyRatioData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(efficiencyRatioData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Revenue & Performance', 'Efficiency Ratio (CIR)'),
+      weight: getAggregateWeight(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)')
     },
     {
       data: productivityAchievementData,
-      getScore: (d: any) => parseFloat(d?.average_normalized_score || '0'),
-      weight: parseFloat(productivityAchievementData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Revenue & Performance', 'Institutional average performance'),
+      weight: getAggregateWeight(productivityAchievementData, 'Revenue & Performance', 'Institutional average performance')
     },
     {
       data: revenueAchievementsData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(revenueAchievementsData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Revenue & Performance', 'Revenue achievement'),
+      weight: getAggregateWeight(revenueAchievementsData, 'Revenue & Performance', 'Revenue achievement')
     },
     {
       data: profitabilityContributionData,
-      getScore: (d: any) => parseFloat(d?.average_score || '0'),
-      weight: parseFloat(profitabilityContributionData?.weight || '20') / 100
+      getScore: (d: any) => getAggregateScore(d, 'Revenue & Performance', 'Profitability contribution'),
+      weight: getAggregateWeight(profitabilityContributionData, 'Revenue & Performance', 'Profitability contribution')
     }
   ].filter(kpi => kpi.data);
 
@@ -787,12 +892,14 @@ function aggregateRevenuePerformanceKPIs(
       variance: '-10%',
       varianceAbs: '10pp',
       trend: '→',
-      status: 'warning'
+      status: 'warning',
+      contribution: '--'
     };
   }
 
   const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
   const overallScore = Math.round(weightedScore);
+  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
 
   const target = 75;
   const variance = overallScore - target;
@@ -809,7 +916,8 @@ function aggregateRevenuePerformanceKPIs(
     variance: varianceStr,
     varianceAbs,
     trend,
-    status
+    status,
+    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
   };
 }
 
@@ -858,7 +966,8 @@ function getParameterKPIs(paramName: string,
         target: staffAdequacyData?.target || 100,
         variance: staffAdequacyData ? `${(getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') - (staffAdequacyData.target || 100)).toFixed(2)}%` : '--',
         trend: getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= (staffAdequacyData?.target || 100) ? '↑' : '↓',
-        status: getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical'
+        status: getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical',
+        contribution: staffAdequacyData ? `${(getAggregateScore(staffAdequacyData, 'Branch Structure & Staffing', 'Staff Adequacy Score') * getAggregateWeight(staffAdequacyData, 'Branch Structure & Staffing', 'Staff Adequacy Score')).toFixed(2)} of ${(getAggregateWeight(staffAdequacyData, 'Branch Structure & Staffing', 'Staff Adequacy Score') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Productivity Achievement',
@@ -872,7 +981,8 @@ function getParameterKPIs(paramName: string,
           return isNaN(v) ? '--' : `${v.toFixed(2)}%`;
         })(getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score'))}` : '--',
         trend: productivityAchievementData ? (getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= productivityAchievementData.target ? '↑' : '↓') : '↓',
-        status: productivityAchievementData ? (getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical') : 'warning'
+        status: productivityAchievementData ? (getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical') : 'warning',
+        contribution: productivityAchievementData ? `${(getAggregateScore(productivityAchievementData, 'Branch Structure & Staffing', 'Productivity Achievement') * getAggregateWeight(productivityAchievementData, 'Branch Structure & Staffing', 'Productivity Achievement')).toFixed(2)} of ${(getAggregateWeight(productivityAchievementData, 'Branch Structure & Staffing', 'Productivity Achievement') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Vacancy Impact',
@@ -886,7 +996,8 @@ function getParameterKPIs(paramName: string,
           return isNaN(v) ? '--' : `${v.toFixed(2)}`;
         })(getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score'))}` : '--',
         trend: vacancyImpactData ? ((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= vacancyImpactData.target ? '↑' : '↓') : '↑',
-        status: vacancyImpactData ? ((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= 90 ? 'good' : (getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= 70 ? 'warning' : 'critical') : 'warning'
+        status: vacancyImpactData ? ((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= 90 ? 'good' : (getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= 70 ? 'warning' : 'critical') : 'warning',
+        contribution: vacancyImpactData ? `${(getAggregateScore(vacancyImpactData, 'Branch Structure & Staffing', 'Vacancy Impact') * getAggregateWeight(vacancyImpactData, 'Branch Structure & Staffing', 'Vacancy Impact')).toFixed(2)} of ${(getAggregateWeight(vacancyImpactData, 'Branch Structure & Staffing', 'Vacancy Impact') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Portfolio Load Balance',
@@ -900,7 +1011,8 @@ function getParameterKPIs(paramName: string,
           return isNaN(v) ? '--' : `${v.toFixed(2)}%`;
         })(getScore(loanPortfolioLoadData, 'score', 'average_score'))}` : '--',
         trend: loanPortfolioLoadData ? (getScore(loanPortfolioLoadData, 'score', 'average_score') >= loanPortfolioLoadData.target ? '↑' : '↓') : '↓',
-        status: loanPortfolioLoadData ? (getScore(loanPortfolioLoadData, 'score', 'average_score') >= 90 ? 'good' : getScore(loanPortfolioLoadData, 'score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning'
+        status: loanPortfolioLoadData ? (getScore(loanPortfolioLoadData, 'score', 'average_score') >= 90 ? 'good' : getScore(loanPortfolioLoadData, 'score', 'average_score') >= 70 ? 'warning' : 'critical') : 'warning',
+        contribution: loanPortfolioLoadData ? `${(getAggregateScore(loanPortfolioLoadData, 'Branch Structure & Staffing', 'Portfolio Load Balance') * getAggregateWeight(loanPortfolioLoadData, 'Branch Structure & Staffing', 'Portfolio Load Balance')).toFixed(2)} of ${(getAggregateWeight(loanPortfolioLoadData, 'Branch Structure & Staffing', 'Portfolio Load Balance') * 100).toFixed(0)}pp` : '--'
       }
     ],
     'Loan Consultant Performance': [
@@ -911,7 +1023,8 @@ function getParameterKPIs(paramName: string,
         target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target || '0').toLocaleString()}` : '100',
         variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement || '0') - parseFloat(volumeAchievementData.branch_target || '0')).toLocaleString()}` : '--',
         trend: volumeAchievementData ? (parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') ? '↑' : '↓') : '↓',
-        status: volumeAchievementData ? (getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical') : 'warning'
+        status: volumeAchievementData ? (getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical') : 'warning',
+        contribution: volumeAchievementData ? `${(getAggregateScore(volumeAchievementData, 'Loan Consultant Performance', 'Volume Achievement') * getAggregateWeight(volumeAchievementData, 'Loan Consultant Performance', 'Volume Achievement')).toFixed(2)} of ${(getAggregateWeight(volumeAchievementData, 'Loan Consultant Performance', 'Volume Achievement') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Portfolio quality',
@@ -920,7 +1033,8 @@ function getParameterKPIs(paramName: string,
         target: '≤5%',
         variance: portfolioQualityData ? `${(getScore(portfolioQualityData, 'PAR', 'average_score') - 5).toFixed(2)}` : '--',
         trend: portfolioQualityData ? (getScore(portfolioQualityData, 'PAR', 'average_score') <= 5 ? '↑' : '↓') : '↓',
-        status: portfolioQualityData ? (getScore(portfolioQualityData, 'PAR', 'average_score') <= 5 ? 'good' : getScore(portfolioQualityData, 'PAR', 'average_score') <= 10 ? 'warning' : 'critical') : 'warning'
+        status: portfolioQualityData ? (getScore(portfolioQualityData, 'PAR', 'average_score') <= 5 ? 'good' : getScore(portfolioQualityData, 'PAR', 'average_score') <= 10 ? 'warning' : 'critical') : 'warning',
+        contribution: portfolioQualityData ? `${(getAggregateScore(portfolioQualityData, 'Loan Consultant Performance', 'Portfolio quality') * getAggregateWeight(portfolioQualityData, 'Loan Consultant Performance', 'Portfolio quality')).toFixed(2)} of ${(getAggregateWeight(portfolioQualityData, 'Loan Consultant Performance', 'Portfolio quality') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Default contribution',
@@ -929,7 +1043,8 @@ function getParameterKPIs(paramName: string,
         target: '≤15%',
         variance: month1DefaultPerformanceData ? `${(parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') - 15).toFixed(2)}` : '--',
         trend: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') <= 15 ? '↑' : '↓') : '↑',
-        status: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') <= 15 ? 'good' : parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') <= 20 ? 'warning' : 'critical') : 'critical'
+        status: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') <= 15 ? 'good' : parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') <= 20 ? 'warning' : 'critical') : 'critical',
+        contribution: month1DefaultPerformanceData ? `${(getAggregateScore(month1DefaultPerformanceData, 'Loan Consultant Performance', 'Default contribution') * getAggregateWeight(month1DefaultPerformanceData, 'Loan Consultant Performance', 'Default contribution')).toFixed(2)} of ${(getAggregateWeight(month1DefaultPerformanceData, 'Loan Consultant Performance', 'Default contribution') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Collections efficiency',
@@ -938,7 +1053,8 @@ function getParameterKPIs(paramName: string,
         target: '≥75%',
         variance: collectionEfficiencyData ? `${(getScore(collectionEfficiencyData, 'benchmark', 'average_score') - 75).toFixed(2)}` : '--',
         trend: collectionEfficiencyData ? (getScore(collectionEfficiencyData, 'benchmark', 'average_score') >= 75 ? '↑' : '↓') : '↓',
-        status: collectionEfficiencyData ? (getScore(collectionEfficiencyData, 'benchmark', 'average_score') >= 75 ? 'good' : getScore(collectionEfficiencyData, 'benchmark', 'average_score') >= 65 ? 'warning' : 'critical') : 'warning'
+        status: collectionEfficiencyData ? (getScore(collectionEfficiencyData, 'benchmark', 'average_score') >= 75 ? 'good' : getScore(collectionEfficiencyData, 'benchmark', 'average_score') >= 65 ? 'warning' : 'critical') : 'warning',
+        contribution: collectionEfficiencyData ? `${(getAggregateScore(collectionEfficiencyData, 'Loan Consultant Performance', 'Collections efficiency') * getAggregateWeight(collectionEfficiencyData, 'Loan Consultant Performance', 'Collections efficiency')).toFixed(2)} of ${(getAggregateWeight(collectionEfficiencyData, 'Loan Consultant Performance', 'Collections efficiency') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Vetting compliance',
@@ -947,7 +1063,8 @@ function getParameterKPIs(paramName: string,
         target: '≤1.0',
         variance: productRiskScoreData ? `${(getScore(productRiskScoreData, 'defaulted_rate', 'average_score') - 1.0).toFixed(2)}` : '--',
         trend: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? '↑' : '↓') : '↓',
-        status: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? 'good' : getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.5 ? 'warning' : 'critical') : 'critical'
+        status: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? 'good' : getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.5 ? 'warning' : 'critical') : 'critical',
+        contribution: productRiskScoreData ? `${(getAggregateScore(productRiskScoreData, 'Loan Consultant Performance', 'Vetting compliance') * getAggregateWeight(productRiskScoreData, 'Loan Consultant Performance', 'Vetting compliance')).toFixed(2)} of ${(getAggregateWeight(productRiskScoreData, 'Loan Consultant Performance', 'Vetting compliance') * 100).toFixed(0)}pp` : '--'
       }
     ],
     'Loan Products & Interest Rates': [
@@ -958,7 +1075,8 @@ function getParameterKPIs(paramName: string,
         target: 'HHI < 0.3',
         variance: productDiversificationData ? `${(getScore(productDiversificationData, 'HHI', 'average_HHI') - 0.3).toFixed(3)}` : '--',
         trend: productDiversificationData ? (getScore(productDiversificationData, 'HHI', 'average_HHI') < 0.3 ? '↑' : '↓') : '↓',
-        status: productDiversificationData ? (getScore(productDiversificationData, 'HHI', 'average_HHI') < 0.3 ? 'good' : getScore(productDiversificationData, 'HHI', 'average_HHI') < 0.4 ? 'warning' : 'critical') : 'warning'
+        status: productDiversificationData ? (getScore(productDiversificationData, 'HHI', 'average_HHI') < 0.3 ? 'good' : getScore(productDiversificationData, 'HHI', 'average_HHI') < 0.4 ? 'warning' : 'critical') : 'warning',
+        contribution: productDiversificationData ? `${(getAggregateScore(productDiversificationData, 'Loan Products & Interest Rates', 'Product distribution mix') * getAggregateWeight(productDiversificationData, 'Loan Products & Interest Rates', 'Product distribution mix')).toFixed(2)} of ${(getAggregateWeight(productDiversificationData, 'Loan Products & Interest Rates', 'Product distribution mix') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Revenue yield per product',
@@ -967,7 +1085,8 @@ function getParameterKPIs(paramName: string,
         target: yieldAchievementsData ? yieldAchievementsData.target : '≥38.2%',
         variance: yieldAchievementsData ? `${(getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') - parseFloat(yieldAchievementsData.target || '0')).toFixed(2)}` : '--',
         trend: yieldAchievementsData ? (getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') >= parseFloat(yieldAchievementsData.target || '0') ? '↑' : '↓') : '↓',
-        status: yieldAchievementsData ? (getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') >= parseFloat(yieldAchievementsData.target || '0') ? 'good' : getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') >= parseFloat(yieldAchievementsData.target || '0') * 0.9 ? 'warning' : 'critical') : 'warning'
+        status: yieldAchievementsData ? (getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') >= parseFloat(yieldAchievementsData.target || '0') ? 'good' : getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') >= parseFloat(yieldAchievementsData.target || '0') * 0.9 ? 'warning' : 'critical') : 'warning',
+        contribution: yieldAchievementsData ? `${(getAggregateScore(yieldAchievementsData, 'Loan Products & Interest Rates', 'Revenue yield per product') * getAggregateWeight(yieldAchievementsData, 'Loan Products & Interest Rates', 'Revenue yield per product')).toFixed(2)} of ${(getAggregateWeight(yieldAchievementsData, 'Loan Products & Interest Rates', 'Revenue yield per product') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Product risk contribution',
@@ -976,7 +1095,8 @@ function getParameterKPIs(paramName: string,
         target: '≤1.0',
         variance: productRiskScoreData ? `${(getScore(productRiskScoreData, 'defaulted_rate', 'average_score') - 1.0).toFixed(2)}` : '--',
         trend: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? '↑' : '↓') : '↑',
-        status: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? 'good' : getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.5 ? 'warning' : 'critical') : 'critical'
+        status: productRiskScoreData ? (getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.0 ? 'good' : getScore(productRiskScoreData, 'defaulted_rate', 'average_score') <= 1.5 ? 'warning' : 'critical') : 'critical',
+        contribution: productRiskScoreData ? `${(getAggregateScore(productRiskScoreData, 'Loan Products & Interest Rates', 'Product risk contribution') * getAggregateWeight(productRiskScoreData, 'Loan Products & Interest Rates', 'Product risk contribution')).toFixed(2)} of ${(getAggregateWeight(productRiskScoreData, 'Loan Products & Interest Rates', 'Product risk contribution') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Margin alignment with strategy',
@@ -985,7 +1105,8 @@ function getParameterKPIs(paramName: string,
         target: efficiencyRatioData ? efficiencyRatioData.target : '≤55%',
         variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.CIR || '0') - parseFloat(efficiencyRatioData.target || '0')).toFixed(2)}` : '--',
         trend: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR || '0') <= parseFloat(efficiencyRatioData.target || '0') ? '↑' : '↓') : '↓',
-        status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR || '0') <= parseFloat(efficiencyRatioData.target || '0') ? 'good' : parseFloat(efficiencyRatioData.CIR || '0') <= parseFloat(efficiencyRatioData.target || '0') * 1.1 ? 'warning' : 'critical') : 'warning'
+        status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR || '0') <= parseFloat(efficiencyRatioData.target || '0') ? 'good' : parseFloat(efficiencyRatioData.CIR || '0') <= parseFloat(efficiencyRatioData.target || '0') * 1.1 ? 'warning' : 'critical') : 'warning',
+        contribution: efficiencyRatioData ? `${(getAggregateScore(efficiencyRatioData, 'Loan Products & Interest Rates', 'Margin alignment with strategy') * getAggregateWeight(efficiencyRatioData, 'Loan Products & Interest Rates', 'Margin alignment with strategy')).toFixed(2)} of ${(getAggregateWeight(efficiencyRatioData, 'Loan Products & Interest Rates', 'Margin alignment with strategy') * 100).toFixed(0)}pp` : '--'
       }
     ],
     'Risk Management & Defaults': [
@@ -996,7 +1117,8 @@ function getParameterKPIs(paramName: string,
         target: '≤15%',
         variance: month1DefaultPerformanceData ? `${(parseFloat(month1DefaultPerformanceData.average_score || '0') - 15).toFixed(2)}` : '--',
         trend: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.average_score || '0') <= 15 ? '↑' : '↓') : '↑',
-        status: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.average_score || '0') <= 15 ? 'good' : parseFloat(month1DefaultPerformanceData.average_score || '0') <= 20 ? 'warning' : 'critical') : 'critical'
+        status: month1DefaultPerformanceData ? (parseFloat(month1DefaultPerformanceData.average_score || '0') <= 15 ? 'good' : parseFloat(month1DefaultPerformanceData.average_score || '0') <= 20 ? 'warning' : 'critical') : 'critical',
+        contribution: month1DefaultPerformanceData ? `${(getAggregateScore(month1DefaultPerformanceData, 'Risk Management & Defaults', 'Default rate (branch, province, institutional)') * getAggregateWeight(month1DefaultPerformanceData, 'Risk Management & Defaults', 'Default rate (branch, province, institutional)')).toFixed(2)} of ${(getAggregateWeight(month1DefaultPerformanceData, 'Risk Management & Defaults', 'Default rate (branch, province, institutional)') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Default aging analysis',
@@ -1005,7 +1127,8 @@ function getParameterKPIs(paramName: string,
         target: longTermDelinquencyData ? longTermDelinquencyData.target : '≤43.95%',
         variance: longTermDelinquencyData ? `${(parseFloat(longTermDelinquencyData.average_score || '0') - parseFloat(longTermDelinquencyData.target || '0')).toFixed(2)}%` : '--',
         trend: longTermDelinquencyData ? (parseFloat(longTermDelinquencyData.average_score || '0') <= parseFloat(longTermDelinquencyData.target || '0') ? '↑' : '↓') : '↑',
-        status: longTermDelinquencyData ? (parseFloat(longTermDelinquencyData.average_score || '0') <= parseFloat(longTermDelinquencyData.target || '0') ? 'good' : parseFloat(longTermDelinquencyData.average_score || '0') <= parseFloat(longTermDelinquencyData.target || '0') * 1.1 ? 'warning' : 'critical') : 'critical'
+        status: longTermDelinquencyData ? (parseFloat(longTermDelinquencyData.average_score || '0') <= parseFloat(longTermDelinquencyData.target || '0') ? 'good' : parseFloat(longTermDelinquencyData.average_score || '0') <= parseFloat(longTermDelinquencyData.target || '0') * 1.1 ? 'warning' : 'critical') : 'critical',
+        contribution: longTermDelinquencyData ? `${(getAggregateScore(longTermDelinquencyData, 'Risk Management & Defaults', 'Default aging analysis') * getAggregateWeight(longTermDelinquencyData, 'Risk Management & Defaults', 'Default aging analysis')).toFixed(2)} of ${(getAggregateWeight(longTermDelinquencyData, 'Risk Management & Defaults', 'Default aging analysis') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Recovery rate within 3 months',
@@ -1014,7 +1137,8 @@ function getParameterKPIs(paramName: string,
         target: '≥100%',
         variance: month3RecoveryAchievementsData ? `${(parseFloat(month3RecoveryAchievementsData.average_score || '0') - 100).toFixed(2)}` : '--',
         trend: month3RecoveryAchievementsData ? (parseFloat(month3RecoveryAchievementsData.average_score || '0') >= 100 ? '↑' : '↓') : '↓',
-        status: month3RecoveryAchievementsData ? (parseFloat(month3RecoveryAchievementsData.average_score || '0') >= 100 ? 'good' : parseFloat(month3RecoveryAchievementsData.average_score || '0') >= 90 ? 'warning' : 'critical') : 'critical'
+        status: month3RecoveryAchievementsData ? (parseFloat(month3RecoveryAchievementsData.average_score || '0') >= 100 ? 'good' : parseFloat(month3RecoveryAchievementsData.average_score || '0') >= 90 ? 'warning' : 'critical') : 'critical',
+        contribution: month3RecoveryAchievementsData ? `${(getAggregateScore(month3RecoveryAchievementsData, 'Risk Management & Defaults', 'Recovery rate within 3 months') * getAggregateWeight(month3RecoveryAchievementsData, 'Risk Management & Defaults', 'Recovery rate within 3 months')).toFixed(2)} of ${(getAggregateWeight(month3RecoveryAchievementsData, 'Risk Management & Defaults', 'Recovery rate within 3 months') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Risk migration trends',
@@ -1023,7 +1147,8 @@ function getParameterKPIs(paramName: string,
         target: '≤20%',
         variance: rollRateControlData ? `${(parseFloat(rollRateControlData.average_score || '0') - 20).toFixed(2)}` : '--',
         trend: rollRateControlData ? (parseFloat(rollRateControlData.average_score || '0') <= 20 ? '↑' : '↓') : '↑',
-        status: rollRateControlData ? (parseFloat(rollRateControlData.average_score || '0') <= 20 ? 'good' : parseFloat(rollRateControlData.average_score || '0') <= 30 ? 'warning' : 'critical') : 'warning'
+        status: rollRateControlData ? (parseFloat(rollRateControlData.average_score || '0') <= 20 ? 'good' : parseFloat(rollRateControlData.average_score || '0') <= 30 ? 'warning' : 'critical') : 'warning',
+        contribution: rollRateControlData ? `${(getAggregateScore(rollRateControlData, 'Risk Management & Defaults', 'Risk migration trends') * getAggregateWeight(rollRateControlData, 'Risk Management & Defaults', 'Risk migration trends')).toFixed(2)} of ${(getAggregateWeight(rollRateControlData, 'Risk Management & Defaults', 'Risk migration trends') * 100).toFixed(0)}pp` : '--'
       }
     ],
     'Revenue & Performance': [
@@ -1034,7 +1159,8 @@ function getParameterKPIs(paramName: string,
         target: efficiencyRatioData ? efficiencyRatioData.target : '≤55%',
         variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.average_score || '0') - parseFloat(efficiencyRatioData.target || '0')).toFixed(2)}` : '--',
         trend: efficiencyRatioData ? (parseFloat(efficiencyRatioData.average_score || '0') <= parseFloat(efficiencyRatioData.target || '0') ? '↑' : '↓') : '↑',
-        status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.average_score || '0') <= parseFloat(efficiencyRatioData.target || '0') ? 'good' : parseFloat(efficiencyRatioData.average_score || '0') <= parseFloat(efficiencyRatioData.target || '0') * 1.1 ? 'warning' : 'critical') : 'critical'
+        status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.average_score || '0') <= parseFloat(efficiencyRatioData.target || '0') ? 'good' : parseFloat(efficiencyRatioData.average_score || '0') <= parseFloat(efficiencyRatioData.target || '0') * 1.1 ? 'warning' : 'critical') : 'critical',
+        contribution: efficiencyRatioData ? `${(getAggregateScore(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)') * getAggregateWeight(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)')).toFixed(2)} of ${(getAggregateWeight(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Growth trajectory alignment',
@@ -1043,7 +1169,8 @@ function getParameterKPIs(paramName: string,
         target: '≥2.5%',
         variance: growthTrajectoryData ? `${(parseFloat(growthTrajectoryData.average_score || '0') * 100 - 2.5).toFixed(2)}` : '--',
         trend: growthTrajectoryData ? (growthTrajectoryData.average_score >= 0.025 ? '↑' : '↓') : '↓',
-        status: growthTrajectoryData ? (growthTrajectoryData.average_score >= 0.025 ? 'good' : growthTrajectoryData.average_score >= 0 ? 'warning' : 'critical') : 'warning'
+        status: growthTrajectoryData ? (growthTrajectoryData.average_score >= 0.025 ? 'good' : growthTrajectoryData.average_score >= 0 ? 'warning' : 'critical') : 'warning',
+        contribution: growthTrajectoryData ? `${(getAggregateScore(growthTrajectoryData, 'Revenue & Performance', 'Growth trajectory alignment') * getAggregateWeight(growthTrajectoryData, 'Revenue & Performance', 'Growth trajectory alignment')).toFixed(2)} of ${(getAggregateWeight(growthTrajectoryData, 'Revenue & Performance', 'Growth trajectory alignment') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Revenue achievement',
@@ -1052,7 +1179,8 @@ function getParameterKPIs(paramName: string,
         target: revenueAchievementsData?.target ? revenueAchievementsData.target : '≥100%',
         variance: revenueAchievementsData ? `${(parseFloat(revenueAchievementsData.average_score || '0') - parseFloat(revenueAchievementsData.target || '0')).toFixed(2)}%` : '--',
         trend: revenueAchievementsData ? (parseFloat(revenueAchievementsData.average_score || '0') >= parseFloat(revenueAchievementsData.target || '0') ? '↑' : '↓') : '↓',
-        status: revenueAchievementsData ? (parseFloat(revenueAchievementsData.average_score || '0') >= 90 ? 'good' : parseFloat(revenueAchievementsData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
+        status: revenueAchievementsData ? (parseFloat(revenueAchievementsData.average_score || '0') >= 90 ? 'good' : parseFloat(revenueAchievementsData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning',
+        contribution: revenueAchievementsData ? `${(getAggregateScore(revenueAchievementsData, 'Revenue & Performance', 'Revenue achievement') * getAggregateWeight(revenueAchievementsData, 'Revenue & Performance', 'Revenue achievement')).toFixed(2)} of ${(getAggregateWeight(revenueAchievementsData, 'Revenue & Performance', 'Revenue achievement') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Profitability contribution',
@@ -1061,7 +1189,8 @@ function getParameterKPIs(paramName: string,
         target: profitabilityContributionData && profitabilityContributionData.target ? `≥ ${profitabilityContributionData.target}` : '≥ institutional avg',
         variance: profitabilityContributionData ? `${(parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') - parseFloat(profitabilityContributionData.target || '0')).toFixed(2)}%` : '--',
         trend: profitabilityContributionData ? (parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') >= parseFloat(profitabilityContributionData.target || '0') ? '↑' : '↓') : '↓',
-        status: profitabilityContributionData ? (parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') >= 90 ? 'good' : parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') >= 70 ? 'warning' : 'critical') : 'warning'
+        status: profitabilityContributionData ? (parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') >= 90 ? 'good' : parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') >= 70 ? 'warning' : 'critical') : 'warning',
+        contribution: profitabilityContributionData ? `${(getAggregateScore(profitabilityContributionData, 'Revenue & Performance', 'Profitability contribution') * getAggregateWeight(profitabilityContributionData, 'Revenue & Performance', 'Profitability contribution')).toFixed(2)} of ${(getAggregateWeight(profitabilityContributionData, 'Revenue & Performance', 'Profitability contribution') * 100).toFixed(0)}pp` : '--'
       }
     ],
     'Cash & Liquidity Management': [
@@ -1092,7 +1221,8 @@ function getParameterKPIs(paramName: string,
           if (!cashPositionData) return 'warning';
           const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
           return score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-        })()
+        })(),
+        contribution: cashPositionData ? `${(getAggregateScore(cashPositionData, 'Cash & Liquidity Management', 'Cash Position Score') * getAggregateWeight(cashPositionData, 'Cash & Liquidity Management', 'Cash Position Score')).toFixed(2)} of ${(getAggregateWeight(cashPositionData, 'Cash & Liquidity Management', 'Cash Position Score') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Above-Threshold Risk',
@@ -1101,7 +1231,8 @@ function getParameterKPIs(paramName: string,
         target: 100,
         variance: aboveThresholdRiskData ? `${(parseFloat(aboveThresholdRiskData.average_score || '0') - 100).toFixed(2)}%` : '--',
         trend: aboveThresholdRiskData ? (parseFloat(aboveThresholdRiskData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
-        status: aboveThresholdRiskData ? (parseFloat(aboveThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(aboveThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
+        status: aboveThresholdRiskData ? (parseFloat(aboveThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(aboveThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning',
+        contribution: aboveThresholdRiskData ? `${(getAggregateScore(aboveThresholdRiskData, 'Cash & Liquidity Management', 'Above-Threshold Risk') * getAggregateWeight(aboveThresholdRiskData, 'Cash & Liquidity Management', 'Above-Threshold Risk')).toFixed(2)} of ${(getAggregateWeight(aboveThresholdRiskData, 'Cash & Liquidity Management', 'Above-Threshold Risk') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Below-Threshold Risk',
@@ -1110,7 +1241,8 @@ function getParameterKPIs(paramName: string,
         target: 100,
         variance: belowThresholdRiskData ? `${(parseFloat(belowThresholdRiskData.average_score || '0') - 100).toFixed(2)}%` : '--',
         trend: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.average_score || '0') >= 90 ? '↑' : '↓') : '→',
-        status: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(belowThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning'
+        status: belowThresholdRiskData ? (parseFloat(belowThresholdRiskData.average_score || '0') >= 90 ? 'good' : parseFloat(belowThresholdRiskData.average_score || '0') >= 70 ? 'warning' : 'critical') : 'warning',
+        contribution: belowThresholdRiskData ? `${(getAggregateScore(belowThresholdRiskData, 'Cash & Liquidity Management', 'Below-Threshold Risk') * getAggregateWeight(belowThresholdRiskData, 'Cash & Liquidity Management', 'Below-Threshold Risk')).toFixed(2)} of ${(getAggregateWeight(belowThresholdRiskData, 'Cash & Liquidity Management', 'Below-Threshold Risk') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Approved Exception Ratio',
@@ -1119,7 +1251,8 @@ function getParameterKPIs(paramName: string,
         target: 100,
         variance: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? `${(parseFloat(String(approvedExceptionRatioData.average_score ?? 0)) - 100).toFixed(2)}%` : '0',
         trend: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? (parseFloat(String(approvedExceptionRatioData.average_score ?? 0)) >= 90 ? '↑' : '↓') : '→',
-        status: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? (parseFloat(String(approvedExceptionRatioData.average_score ?? 0)) >= 90 ? 'good' : parseFloat(String(approvedExceptionRatioData.average_score ?? 0)) >= 70 ? 'warning' : 'critical') : 'warning'
+        status: approvedExceptionRatioData && approvedExceptionRatioData.totalExcess !== undefined && approvedExceptionRatioData.approvedExcess !== undefined ? (parseFloat(String(approvedExceptionRatioData.average_score ?? 0)) >= 90 ? 'good' : parseFloat(String(approvedExceptionRatioData.average_score ?? 0)) >= 70 ? 'warning' : 'critical') : 'warning',
+        contribution: approvedExceptionRatioData ? `${(getAggregateScore(approvedExceptionRatioData, 'Cash & Liquidity Management', 'Approved Exception Ratio') * getAggregateWeight(approvedExceptionRatioData, 'Cash & Liquidity Management', 'Approved Exception Ratio')).toFixed(2)} of ${(getAggregateWeight(approvedExceptionRatioData, 'Cash & Liquidity Management', 'Approved Exception Ratio') * 100).toFixed(0)}pp` : '--'
       }
     ]
   };
@@ -1268,7 +1401,7 @@ export function InstitutionalHealthSummary({
               >
                 📋 Table
               </button>
-              <button
+              {/* <button
                 onClick={() => setViewMode('cards')}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'cards'
                   ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
@@ -1276,7 +1409,7 @@ export function InstitutionalHealthSummary({
                   }`}
               >
                 🗂️ Cards
-              </button>
+              </button> */}
             </div>
           </div>
 

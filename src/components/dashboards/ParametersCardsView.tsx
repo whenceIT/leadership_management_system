@@ -13,6 +13,7 @@ interface KPI {
   variance: string;
   trend: '↑' | '↓' | '→';
   status: 'good' | 'warning' | 'critical';
+  contribution?: string;
 }
 
 interface ParameterSummary {
@@ -25,6 +26,7 @@ interface ParameterSummary {
   varianceAbs: string;
   trend: '↑' | '↓' | '→';
   status: 'good' | 'warning' | 'critical';
+  contribution?: string;
 }
 
 interface ParametersCardsViewProps {
@@ -262,7 +264,7 @@ export function ParametersCardsView({
 
             {/* Card Stats Row */}
             <div className="px-4 pb-3 border-t border-gray-100 dark:border-gray-700">
-              <div className="grid grid-cols-2 gap-2 mt-3">
+              <div className="grid grid-cols-3 gap-2 mt-3">
                 <div className="text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Current</p>
                   <p className="text-lg font-bold text-gray-900 dark:text-white">{param.userLevelAvg}</p>
@@ -270,6 +272,10 @@ export function ParametersCardsView({
                 <div className="text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Target</p>
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{param.target}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Contribution</p>
+                  <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">{param.contribution || '--'}</p>
                 </div>
               </div>
               
@@ -317,7 +323,7 @@ export function ParametersCardsView({
                           {kpi.status}
                         </span>
                       </div>
-                      <div className="grid grid-cols-5 gap-2 text-xs">
+                      <div className="grid grid-cols-6 gap-2 text-xs">
                         <div>
                           <p className="text-gray-500 dark:text-gray-400">Current</p>
                           <p className="font-semibold text-gray-900 dark:text-white">{kpi.currentPeriod}%</p>
@@ -336,6 +342,10 @@ export function ParametersCardsView({
                             <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
                             <span className={`font-semibold ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
                           </div>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 dark:text-gray-400">Contribution</p>
+                          <p className="font-semibold text-purple-600 dark:text-purple-400">{kpi.contribution || '--'}</p>
                         </div>
                         <div>
                           <p className="text-gray-500 dark:text-gray-400">Cash Balance</p>

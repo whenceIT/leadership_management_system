@@ -13,6 +13,7 @@ interface KPI {
   variance: string;
   trend: '↑' | '↓' | '→';
   status: 'good' | 'warning' | 'critical';
+  contribution?: string;
 }
 
 interface ParameterSummary {
@@ -25,6 +26,7 @@ interface ParameterSummary {
   varianceAbs: string;
   trend: '↑' | '↓' | '→';
   status: 'good' | 'warning' | 'critical';
+  contribution?: string;
 }
 
 interface ParametersTableViewProps {
@@ -245,8 +247,7 @@ export function ParametersTableView({
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                          {param.institutionalAvg !== '--' ? param.institutionalAvg :
-                            param.name === 'Branch Structure & Staffing' ? '78%' :
+                          {param.name === 'Branch Structure & Staffing' ? '78%' :
                               param.name === 'Loan Consultant Performance' ? '62%' :
                                 param.name === 'Loan Products & Interest Rates' ? '74%' :
                                   param.name === 'Risk Management & Defaults' ? '52%' :
@@ -387,35 +388,9 @@ export function ParametersTableView({
                                               <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
                                             </div>
                                           </td>
-                                          <td className="px-4 py-2 text-center text-sm">
-                                            {kpi.name === 'Staff Adequacy Score' && staffAdequacyData ? `${parseFloat(staffAdequacyData.percentage_point).toFixed(2)} of ${staffAdequacyData.weight.replace('%', '')}pp` :
-                                              kpi.name === 'Productivity Achievement' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%', '')}pp` :
-                                                kpi.name === 'Vacancy Impact' && vacancyImpactData ? `${parseFloat(vacancyImpactData.percentage_point).toFixed(2)} of ${vacancyImpactData.weight.replace('%', '')}pp` :
-                                                  kpi.name === 'Volume Achievement' && volumeAchievementData ? `${parseFloat(volumeAchievementData.percentage_point).toFixed(2)} of ${volumeAchievementData.weight.replace('%', '')}pp` :
-                                                    kpi.name === 'Portfolio Load Balance' && loanPortfolioLoadData ? `${parseFloat(loanPortfolioLoadData.percentage_point).toFixed(2)} of ${loanPortfolioLoadData.weight.replace('%', '')}pp` :
-                                                      kpi.name === 'Portfolio quality' && portfolioQualityData ? `${parseFloat(portfolioQualityData.percentage_point).toFixed(2)} of ${portfolioQualityData.weight.replace('%', '')}pp` :
-                                                        kpi.name === 'Default contribution' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point).toFixed(2)} of ${month1DefaultPerformanceData.weight.replace('%', '')}pp` :
-                                                          kpi.name === 'Collections efficiency' && collectionEfficiencyData ? `${parseFloat(collectionEfficiencyData.percentage_point).toFixed(2)} of ${collectionEfficiencyData.weight.replace('%', '')}pp` :
-                                                            kpi.name === 'Vetting compliance' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point).toFixed(2)} of ${productRiskScoreData.weight.replace('%', '')}pp` :
-                                                              kpi.name === 'Product distribution mix' && productDiversificationData ? `${parseFloat(productDiversificationData.percentage_point).toFixed(2)} of ${productDiversificationData.weight.replace('%', '')}pp` :
-                                                                kpi.name === 'Revenue yield per product' && yieldAchievementsData ? `${parseFloat(yieldAchievementsData.percentage_point).toFixed(2)} of ${yieldAchievementsData.weight.replace('%', '')}pp` :
-                                                                  kpi.name === 'Product risk contribution' && productRiskScoreData ? `${parseFloat(productRiskScoreData.percentage_point).toFixed(2)} of ${productRiskScoreData.weight.replace('%', '')}pp` :
-                                                                    kpi.name === 'Margin alignment with strategy' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%', '')}pp` :
-                                                                      kpi.name === 'Default rate (branch, province, institutional)' && month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.percentage_point).toFixed(2)} of ${month1DefaultPerformanceData.weight.replace('%', '')}pp` :
-                                                                        kpi.name === 'Default aging analysis' && longTermDelinquencyData ? `${parseFloat(longTermDelinquencyData.percentage_point).toFixed(2)} of ${longTermDelinquencyData.weight.replace('%', '')}pp` :
-                                                                          kpi.name === 'Recovery rate within 3 months' && month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.percentage_point).toFixed(2)} of ${month3RecoveryAchievementsData.weight.replace('%', '')}pp` :
-                                                                            kpi.name === 'Risk migration trends' && rollRateControlData ? `${parseFloat(rollRateControlData.percentage_point).toFixed(2)} of ${rollRateControlData.weight.replace('%', '')}pp` :
-                                                                              kpi.name === 'Branch revenue' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` :
-                                                                                kpi.name === 'Cost-to-income ratios' && efficiencyRatioData ? `${parseFloat(efficiencyRatioData.percentage_point).toFixed(2)} of ${efficiencyRatioData.weight.replace('%', '')}pp` :
-                                                                                  kpi.name === 'Institutional average performance' && productivityAchievementData ? `${parseFloat(productivityAchievementData.percentage_point).toFixed(2)} of ${productivityAchievementData.weight.replace('%', '')}pp` :
-                                                                                    kpi.name === 'Growth trajectory alignment' && growthTrajectoryData ? `${parseFloat(growthTrajectoryData.PP).toFixed(2)} of 10pp` :
-                                                                                      kpi.name === 'Revenue achievement' && revenueAchievementsData ? `${parseFloat(revenueAchievementsData.percentage_point).toFixed(2)} of ${revenueAchievementsData.weight.replace('%', '')}pp` :
-                                                                                        kpi.name === 'Profitability contribution' && profitabilityContributionData ? `${parseFloat(profitabilityContributionData.percentage_point).toFixed(2)} of ${profitabilityContributionData.weight.replace('%', '')}pp` :
-                                                                                          kpi.name === 'Cash Position Score' && cashPositionData ? `${parseFloat(cashPositionData.percentage_points || cashPositionData.percentage_point || '0').toFixed(2)} of 40pp` :
-                                                                                            kpi.name === 'Above-Threshold Risk' && aboveThresholdRiskData ? `${parseFloat(aboveThresholdRiskData.percentage_points || aboveThresholdRiskData.percentage_point || '0').toFixed(2)} of 30pp` :
-                                                                                              kpi.name === 'Below-Threshold Risk' && belowThresholdRiskData ? `${parseFloat(belowThresholdRiskData.percentage_points || belowThresholdRiskData.percentage_point || '0').toFixed(2)} of 20pp` :
-                                                                                                '0'}
-                                          </td>
+                                           <td className="px-4 py-2 text-center text-sm">
+                                             {kpi.contribution || '--'}
+                                           </td>
                                           <td className="px-4 py-2 text-center">
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>
                                               {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : 'CRITICAL'}
