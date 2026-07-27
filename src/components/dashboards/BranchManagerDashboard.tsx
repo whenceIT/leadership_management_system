@@ -135,10 +135,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       yieldAchievementsData,
       undefined, // revenueAchievementsData - not available
       undefined, // profitabilityContributionData - not available
-      cashPositionData,
-      undefined, // aboveThresholdRiskData - retired
-      undefined, // belowThresholdRiskData - retired
-      undefined  // approvedExceptionRatioData - retired
+      cashPositionData
     );
     let updatedData = { ...baseData };
 

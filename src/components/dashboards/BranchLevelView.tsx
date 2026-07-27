@@ -389,13 +389,13 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
       }
     } else if (selectedKPI === 'Cash Position Score') {
-      current = data.score ? `${parseFloat(data.score).toFixed(2)}%` : '--';
-      target = 'Within range';
-      if (data.score) {
-        const score = parseFloat(data.score);
-        variance = `${(score - 100).toFixed(2)}%`;
-        trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-        status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+      const cashBalance = data.totalCashBalance || data.cashBalance || 0;
+      current = `K${cashBalance.toLocaleString()}`;
+      target = '< K20,000';
+      if (cashBalance > 0) {
+        variance = `K${(20000 - cashBalance).toLocaleString()}`;
+        trend = cashBalance >= 20000 ? '↑' : cashBalance >= 15000 ? '→' : cashBalance >= 10000 ? '→' : '↓';
+        status = cashBalance >= 20000 ? 'good' : cashBalance >= 15000 ? 'warning' : cashBalance >= 10000 ? 'warning' : 'critical';
       }
     }
     return { current, target, variance, trend, status, contribution, actualLcs };
@@ -472,6 +472,11 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
 
   // Sort branches by Branch Avg (descending)
   const sortedBranches = [...branches].sort((a, b) => {
+    if (selectedKPI === 'Cash Position Score') {
+      const cashA = branchData[a.id]?.totalCashBalance || 0;
+      const cashB = branchData[b.id]?.totalCashBalance || 0;
+      return cashB - cashA;
+    }
     const dataA = branchData[a.id];
     const dataB = branchData[b.id];
     
@@ -550,19 +555,35 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-            {sortedBranches.map((branch) => {
-              const data = branchData[branch.id];
-              const kpiValue = getKPIValue(data, selectedKPI);
+             {sortedBranches.map((branch) => {
+               const data = branchData[branch.id];
+               const kpiValue = getKPIValue(data, selectedKPI);
+               
+               let rowBg = '';
+               if (selectedKPI === 'Cash Position Score') {
+                 const cashBalance = data?.totalCashBalance || 0;
+                 if (cashBalance >= 20000) {
+                   rowBg = 'bg-green-50 dark:bg-green-900/20';
+                 } else if (cashBalance >= 15000) {
+                   rowBg = 'bg-green-50 dark:bg-green-900/20';
+                 } else if (cashBalance >= 10000) {
+                   rowBg = 'bg-yellow-50 dark:bg-yellow-900/20';
+                 } else if (cashBalance >= 5000) {
+                   rowBg = 'bg-orange-50 dark:bg-orange-900/20';
+                 } else {
+                   rowBg = 'bg-red-50 dark:bg-red-900/20';
+                 }
+               }
 
-              return (
-                <tr 
-                  key={branch.id} 
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                  onClick={() => {
-                    onBranchClick(Number(branch.id));
-                    setSelectedBranchForDrill(Number(branch.id));
-                  }}
-                >
+               return (
+                 <tr 
+                   key={branch.id} 
+                   className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${rowBg}`}
+                   onClick={() => {
+                     onBranchClick(Number(branch.id));
+                     setSelectedBranchForDrill(Number(branch.id));
+                   }}
+                 >
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
                   <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{kpiValue.current}</td>
                   <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{kpiValue.actualLcs > 0 ? kpiValue.actualLcs : '--'}</td>

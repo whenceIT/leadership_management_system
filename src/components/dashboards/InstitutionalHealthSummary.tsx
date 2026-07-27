@@ -178,9 +178,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
   longTermDelinquencyData?: any, month1DefaultPerformanceData?: any, month3RecoveryAchievementsData?: any,
   portfolioQualityData?: any, productDiversificationData?: any, productRiskScoreData?: any, rollRateControlData?: any,
   yieldAchievementsData?: any, revenueAchievementsData?: any, profitabilityContributionData?: any,
-  cashPositionData?: any, aboveThresholdRiskData?: any, belowThresholdRiskData?: any, approvedExceptionRatioData?: any): InstitutionalSummaryData {
-
-  // Calculate aggregated scores for each parameter
+  cashPositionData?: any): InstitutionalSummaryData {
   const branchStructureAggregated = aggregateBranchStructureKPIs(staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData);
   const lcPerformanceAggregated = aggregateLoanConsultantPerformanceKPIs(volumeAchievementData, collectionEfficiencyData, portfolioQualityData, month1DefaultPerformanceData, productRiskScoreData);
   const loanProductsAggregated = aggregateLoanProductsKPIs(productDiversificationData, yieldAchievementsData, productRiskScoreData, efficiencyRatioData);
@@ -372,13 +370,8 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
     }, 0) / baseParameters.length
   );
 
-  // Calculate overall institutional average by averaging the institutional averages of the five parameters
-  const overallInstAvg = Math.round(
-    baseParameters.reduce((sum, param) => {
-      const score = parseFloat(param.institutionalAvg.replace('%', ''));
-      return sum + (isNaN(score) ? 0 : score);
-    }, 0) / baseParameters.length
-  );
+  // Calculate overall institutional average from fixed benchmarks: 78, 62, 74, 52, 65, 70
+  const overallInstAvg = Math.round((78 + 62 + 74 + 52 + 65 + 70) / 6);
 
   // Calculate overall target (assuming target is ≥90% for all parameters)
   const overallTarget = 90;
@@ -422,9 +415,6 @@ interface InstitutionalHealthSummaryProps {
   revenueAchievementsData?: any;
   profitabilityContributionData?: any;
   cashPositionData?: any;
-  aboveThresholdRiskData?: any;
-  belowThresholdRiskData?: any;
-  approvedExceptionRatioData?: any;
   isLoading?: boolean;
 }
 
@@ -796,7 +786,7 @@ function aggregateCashLiquidityManagementKPIs(
   const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
 
   return {
-    institutionalAvg: `${overallScore}%`,
+    institutionalAvg: '70%', // Hardcoded from Five Parameters.md
     userLevelAvg: `${overallScore}%`,
     target: '100%',
     variance: varianceStr,
@@ -899,10 +889,7 @@ function getParameterKPIs(paramName: string,
   yieldAchievementsData?: any,
   revenueAchievementsData?: any,
   profitabilityContributionData?: any,
-  cashPositionData?: any,
-  aboveThresholdRiskData?: any,
-  belowThresholdRiskData?: any,
-  approvedExceptionRatioData?: any): KPI[] {
+   cashPositionData?: any): KPI[] {
   // Helper function to get score from data (handles both branch and institutional formats)
   const getScore = (data: any, field1: string, field2?: string): number => {
     if (!data) return 0;
@@ -1165,7 +1152,7 @@ function getParameterKPIs(paramName: string,
           const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
           return `${score.toFixed(2)}`;
         })(),
-        target: { min: 20000, max: 30000 },
+        target: 1830078000,
         variance: (() => {
           if (!cashPositionData) return '--';
           const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
@@ -1223,13 +1210,10 @@ export function InstitutionalHealthSummary({
   rollRateControlData,
   yieldAchievementsData,
   revenueAchievementsData,
-  profitabilityContributionData,
-  cashPositionData,
-  aboveThresholdRiskData,
-  belowThresholdRiskData,
-  approvedExceptionRatioData,
-  isLoading = false
-}: InstitutionalHealthSummaryProps) {
+   profitabilityContributionData,
+   cashPositionData,
+   isLoading = false
+ }: InstitutionalHealthSummaryProps) {
   const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
@@ -1283,7 +1267,7 @@ export function InstitutionalHealthSummary({
                 </div>
               </div>
               <div>
-                <p className="text-gray-400 text-xs">Institutional Operating Average</p>
+                <p className="text-gray-400 text-xs">Institutional Operating Average<br/>(Benchmark)</p>
                 <p className={`font-bold ${overallScore >= overallInstAvg ? 'text-green-400' : 'text-red-400'}`}>{overallInstAvg}%</p>
                 {/* Show variance */}
                 <p className="text-xs text-gray-500 mt-1">
@@ -1379,9 +1363,6 @@ export function InstitutionalHealthSummary({
               revenueAchievementsData={revenueAchievementsData}
               profitabilityContributionData={profitabilityContributionData}
               cashPositionData={cashPositionData}
-              aboveThresholdRiskData={aboveThresholdRiskData}
-              belowThresholdRiskData={belowThresholdRiskData}
-              approvedExceptionRatioData={approvedExceptionRatioData}
               onKpiClick={(kpiName) => {
                 if (selectedKPI === kpiName) {
                   setSelectedKPI(null);
@@ -1447,16 +1428,13 @@ export function InstitutionalHealthSummary({
               month3RecoveryAchievementsData={month3RecoveryAchievementsData}
               portfolioQualityData={portfolioQualityData}
               productDiversificationData={productDiversificationData}
-              productRiskScoreData={productRiskScoreData}
-              rollRateControlData={rollRateControlData}
-              yieldAchievementsData={yieldAchievementsData}
-              revenueAchievementsData={revenueAchievementsData}
-              profitabilityContributionData={profitabilityContributionData}
-              cashPositionData={cashPositionData}
-              aboveThresholdRiskData={aboveThresholdRiskData}
-              belowThresholdRiskData={belowThresholdRiskData}
-              approvedExceptionRatioData={approvedExceptionRatioData}
-              onKpiClick={(kpiName) => {
+               productRiskScoreData={productRiskScoreData}
+               rollRateControlData={rollRateControlData}
+               yieldAchievementsData={yieldAchievementsData}
+               revenueAchievementsData={revenueAchievementsData}
+               profitabilityContributionData={profitabilityContributionData}
+               cashPositionData={cashPositionData}
+               onKpiClick={(kpiName) => {
                 if (selectedKPI === kpiName) {
                   setSelectedKPI(null);
                   setDrillDownKPI(null);
@@ -1515,14 +1493,11 @@ export function InstitutionalHealthSummary({
             productDiversificationData={productDiversificationData}
             productRiskScoreData={productRiskScoreData}
             rollRateControlData={rollRateControlData}
-            yieldAchievementsData={yieldAchievementsData}
-            revenueAchievementsData={revenueAchievementsData}
-            profitabilityContributionData={profitabilityContributionData}
-            cashPositionData={cashPositionData}
-            aboveThresholdRiskData={aboveThresholdRiskData}
-            belowThresholdRiskData={belowThresholdRiskData}
-            approvedExceptionRatioData={approvedExceptionRatioData}
-          />
+             yieldAchievementsData={yieldAchievementsData}
+             revenueAchievementsData={revenueAchievementsData}
+             profitabilityContributionData={profitabilityContributionData}
+             cashPositionData={cashPositionData}
+           />
         </>
       )}
     </div>

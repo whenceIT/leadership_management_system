@@ -316,10 +316,7 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
     yieldAchievementData,
     revenueAchievementsData,
     profitabilityContributionData,
-    cashPositionData,
-    undefined, // aboveThresholdRiskData - retired
-    undefined, // belowThresholdRiskData - retired
-    undefined  // approvedExceptionRatioData - retired
+    cashPositionData
   );
 
   // Institution metrics

@@ -286,27 +286,16 @@ const kpiConfigs: Record<string, KPIConfig> = {
     displayTarget: () => '≥ institutional avg'
   },
   'Cash Position Score': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    getValue: (data) => parseFloat(data.totalCashBalance || data.average_score || '0'),
+    getTarget: () => 186877000,
+    formatValue: (v) => `K${v.toLocaleString()}`,
+    formatVariance: (v) => `K${v.toLocaleString()}`,
+    formatInstitutionAvg: (v) => `K${v.toLocaleString()}`,
     isLowerBetter: false,
-    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
-    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
-    displayTarget: () => 'Within range (K20k-K30k)'
+    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
+    displayTarget: () => 'K186,877,000'
   },
-  'Approved Exception Ratio': {
-    getValue: (data) => parseFloat(data.approved_exception_ratio || data.normalized_score || '0'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
-    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
-    displayTarget: () => '100% (All approved)'
-  }
 };
 
 export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLevelViewProps) {
@@ -373,6 +362,9 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
 
   // Sort provinces by current period value in descending order
   const sortedProvinces = [...provinces].sort((a, b) => {
+    if (selectedKPI === 'Cash Position Score') {
+      return (b.totalCashBalance || 0) - (a.totalCashBalance || 0);
+    }
     const valueA = getCurrentPeriodValue(a);
     const valueB = getCurrentPeriodValue(b);
     return valueB - valueA;
@@ -478,14 +470,29 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                    }
                  }
 
-                // Determine background color based on ranking
+                // Determine background color based on threshold bands for Cash Position Score or ranking for others
                 let bgColor = '';
-                if (index < 3) {
-                  // Top 3 performers
-                  bgColor = 'bg-green-50 dark:bg-green-900/20';
-                } else if (index < 7) {
-                  // Next 4 performers (positions 4-7)
-                  bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
+                if (selectedKPI === 'Cash Position Score') {
+                  const cashBalance = province.totalCashBalance || 0;
+                  if (cashBalance >= 149501601 && cashBalance <= 186877000) {
+                    bgColor = 'bg-green-50 dark:bg-green-900/20';
+                  } else if (cashBalance >= 112126201 && cashBalance <= 149501600) {
+                    bgColor = 'bg-green-50 dark:bg-green-900/20';
+                  } else if (cashBalance >= 74750801 && cashBalance <= 112126200) {
+                    bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
+                  } else if (cashBalance >= 37375401 && cashBalance <= 74750800) {
+                    bgColor = 'bg-orange-50 dark:bg-orange-900/20';
+                  } else {
+                    bgColor = 'bg-red-50 dark:bg-red-900/20';
+                  }
+                } else {
+                  if (index < 3) {
+                    // Top 3 performers
+                    bgColor = 'bg-green-50 dark:bg-green-900/20';
+                  } else if (index < 7) {
+                    // Next 4 performers (positions 4-7)
+                    bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
+                  }
                 }
 
                 console.log('Province:', province, 'Data:', data);

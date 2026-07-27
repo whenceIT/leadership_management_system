@@ -132,7 +132,7 @@ export default function LoanConsultantDashboard({ position = 'Loan Consultant', 
     defaultRate: (2 + Math.random() * 5).toFixed(2),
   }));
 
-  const summaryData = getInstitutionalSummaryData('consultant', 'Personal Performance View', undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined);
+  const summaryData = getInstitutionalSummaryData('consultant', 'Personal Performance View', undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined);
 
   return (
     <DashboardBase

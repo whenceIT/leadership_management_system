@@ -139,7 +139,7 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
 
   const summaryData = getInstitutionalSummaryData('district', 'District View',
     undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined,
-    cashPositionData, undefined, undefined, undefined);
+    cashPositionData);
 
   return (
     <DashboardBase

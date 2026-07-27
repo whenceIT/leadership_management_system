@@ -54,10 +54,7 @@ interface ParametersTableViewProps {
     yieldAchievementsData?: any,
     revenueAchievementsData?: any,
     profitabilityContributionData?: any,
-    cashPositionData?: any,
-    aboveThresholdRiskData?: any,
-    belowThresholdRiskData?: any,
-    approvedExceptionRatioData?: any) => KPI[];
+    cashPositionData?: any) => KPI[];
   getVarianceColor: (variance: string) => string;
   getTrendBadge: (trend: '↑' | '↓' | '→') => string;
   getStatusBadge: (status: 'good' | 'warning' | 'critical') => string;
@@ -80,9 +77,6 @@ interface ParametersTableViewProps {
   revenueAchievementsData?: any;
   profitabilityContributionData?: any;
   cashPositionData?: any;
-  aboveThresholdRiskData?: any;
-  belowThresholdRiskData?: any;
-  approvedExceptionRatioData?: any;
   onKpiClick?: (kpiName: string) => void;
   selectedKPI: string | null;
   drillLevel: 'province' | 'district' | 'branch' | 'consultant' | null;
@@ -128,9 +122,6 @@ export function ParametersTableView({
   revenueAchievementsData,
   profitabilityContributionData,
   cashPositionData,
-  aboveThresholdRiskData,
-  belowThresholdRiskData,
-  approvedExceptionRatioData,
   onKpiClick,
   selectedKPI,
   drillLevel,
@@ -169,7 +160,7 @@ export function ParametersTableView({
             <tr>
               <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameter</th>
               <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Institution Avg</th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Institution Avg (Benchmark)</th>
               <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
               <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variance</th>
               <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trend</th>
@@ -197,10 +188,7 @@ export function ParametersTableView({
                 yieldAchievementsData,
                 revenueAchievementsData,
                 profitabilityContributionData,
-                cashPositionData,
-                aboveThresholdRiskData,
-                belowThresholdRiskData,
-                approvedExceptionRatioData);
+                  cashPositionData);
               const isExpanded = expandedParam === param.name;
 
               // Calculate progress percentage
