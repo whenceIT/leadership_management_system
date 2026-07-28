@@ -17,7 +17,7 @@ interface KPI {
   target: string | number | { min: number; max: number };
   variance: string;
   trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical';
+  status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent';
   contribution?: string;
 }
 
@@ -34,7 +34,7 @@ interface DrillDownData {
     target: string;
     variance: string;
     trend: '↑' | '↓' | '→';
-    status: 'good' | 'warning' | 'critical';
+status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent';
   }[];
   trendAnalysis: {
     overallScore: string;
@@ -64,7 +64,7 @@ interface ParameterSummary {
   variance: string;
   varianceAbs: string;
   trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical';
+  status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent';
   contribution?: string;
 }
 
@@ -172,6 +172,28 @@ function getAggregateWeight(data: any, paramName: string, kpiName: string): numb
   return 0;
 }
 
+export function calculateCashPositionScore(cashBalance: number, userLevel: string): number {
+  if (!cashBalance || cashBalance <= 0) return 0;
+
+  let maxBalance: number;
+  switch (userLevel) {
+    case 'institution':
+      maxBalance = 1871964000;
+      break;
+    case 'province':
+      maxBalance = 187196400;
+      break;
+    case 'branch':
+      maxBalance = 100000;
+      break;
+    default:
+      maxBalance = 1871964000;
+  }
+
+  const score = (cashBalance / maxBalance) * 100;
+  return Math.round(Math.min(Math.max(score, 0), 100));
+}
+
 export function getInstitutionalSummaryData(userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant', userLevelLabel: string,
   staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, loanPortfolioLoadData?: any,
   volumeAchievementData?: any, collectionEfficiencyData?: any, efficiencyRatioData?: any, growthTrajectoryData?: any,
@@ -184,7 +206,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
   const loanProductsAggregated = aggregateLoanProductsKPIs(productDiversificationData, yieldAchievementsData, productRiskScoreData, efficiencyRatioData);
   const riskManagementAggregated = aggregateRiskManagementKPIs(month1DefaultPerformanceData, longTermDelinquencyData, month3RecoveryAchievementsData, rollRateControlData);
   const revenuePerformanceAggregated = aggregateRevenuePerformanceKPIs(growthTrajectoryData, efficiencyRatioData, productivityAchievementData, revenueAchievementsData, profitabilityContributionData);
-  const cashLiquidityAggregated = aggregateCashLiquidityManagementKPIs(cashPositionData);
+  const cashLiquidityAggregated = aggregateCashLiquidityManagementKPIs(cashPositionData, userLevel);
 
   // Base data that can be adjusted based on user level
   const baseParameters: ParameterSummary[] = [
@@ -418,24 +440,28 @@ interface InstitutionalHealthSummaryProps {
   isLoading?: boolean;
 }
 
-function getTrendColor(trend: '↑' | '↓' | '→', status: 'good' | 'warning' | 'critical') {
-  if (status === 'critical') return 'text-red-600 dark:text-red-400';
-  if (status === 'warning') return 'text-yellow-600 dark:text-yellow-400';
+function getTrendColor(trend: '↑' | '↓' | '→', status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate') {
+  if (status === 'critical' || status === 'bad') return 'text-red-600 dark:text-red-400';
+  if (status === 'warning' || status === 'moderate') return 'text-yellow-600 dark:text-yellow-400';
   return 'text-green-600 dark:text-green-400';
 }
 
-function getAlertColor(level: 'critical' | 'warning' | 'good') {
+function getAlertColor(level: 'critical' | 'warning' | 'good' | 'bad' | 'moderate') {
   switch (level) {
     case 'critical': return 'text-red-600 dark:text-red-400';
+    case 'bad': return 'text-red-600 dark:text-red-400';
     case 'warning': return 'text-yellow-600 dark:text-yellow-400';
+    case 'moderate': return 'text-orange-600 dark:text-orange-400';
     case 'good': return 'text-green-600 dark:text-green-400';
   }
 }
 
-function getAlertBadge(level: 'critical' | 'warning' | 'good') {
+function getAlertBadge(level: 'critical' | 'warning' | 'good' | 'bad' | 'moderate') {
   switch (level) {
     case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+    case 'bad': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
     case 'warning': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+    case 'moderate': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
     case 'good': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
   }
 }
@@ -446,11 +472,14 @@ function getTrendBadge(trend: '↑' | '↓' | '→') {
   return 'text-orange-500 dark:text-gray-600 text-lg font-bold';
 }
 
-function getStatusBadge(status: 'good' | 'warning' | 'critical') {
+function getStatusBadge(status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent') {
   switch (status) {
     case 'good': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
     case 'warning': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+    case 'moderate': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+    case 'bad': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
     case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+    case 'excellent': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
   }
 }
 
@@ -458,6 +487,20 @@ function getVarianceColor(variance: string) {
   if (variance.startsWith('+')) return 'text-red-600 dark:text-red-400 font-semibold';
   if (variance.startsWith('-')) return 'text-green-600 dark:text-green-400 font-semibold';
   return 'text-gray-600 dark:text-gray-400';
+}
+
+function getCashPositionStatus(score: number): 'good' | 'moderate' | 'bad' | 'critical' | 'excellent' {
+  if (score >= 70) return 'excellent';
+  if (score >= 50) return 'good';
+  if (score >= 30) return 'moderate';
+  if (score >= 20) return 'bad';
+  return 'critical';
+}
+
+function getCashPositionTrend(score: number): '↑' | '↓' | '→' {
+  if (score >= 70) return '↑';
+  if (score >= 50) return '→';
+  return '↓';
 }
 
 function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, loanPortfolioLoadData?: any): Partial<ParameterSummary> {
@@ -757,13 +800,14 @@ function aggregateRiskManagementKPIs(
 }
 
 function aggregateCashLiquidityManagementKPIs(
-  cashPositionData?: any
+  cashPositionData?: any,
+  userLevel: string = 'institution'
 ): Partial<ParameterSummary> {
   if (!cashPositionData) {
     return {
       institutionalAvg: '--',
       userLevelAvg: '--',
-      target: '100%',
+      target: '--',
       variance: '--',
       varianceAbs: '--',
       trend: '→',
@@ -772,28 +816,26 @@ function aggregateCashLiquidityManagementKPIs(
     };
   }
 
-  const score = getAggregateScore(cashPositionData, 'Cash & Liquidity Management', 'Cash Position Score');
-  const weight = getAggregateWeight(cashPositionData, 'Cash & Liquidity Management', 'Cash Position Score');
-  const weightedScore = score * weight;
-  const overallScore = Math.round(weightedScore);
+  const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
+  const score = calculateCashPositionScore(cashBalance, userLevel);
 
   const target = 100;
-  const variance = overallScore - target;
+  const variance = score - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
 
-  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+  const trend = userLevel === 'institution' ? getCashPositionTrend(score) : (score >= 90 ? '↑' : score >= 70 ? '→' : '↓');
+  const status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' = userLevel === 'institution' ? getCashPositionStatus(score) : (score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical');
 
   return {
-    institutionalAvg: '70%', // Hardcoded from Five Parameters.md
-    userLevelAvg: `${overallScore}%`,
-    target: '100%',
+    institutionalAvg: '70%',
+    userLevelAvg: `${score}%`,
+    target: userLevel === 'branch' ? 'K100,000' : userLevel === 'province' ? 'K187,196,400' : 'K1,871,964,000',
     variance: varianceStr,
     varianceAbs,
     trend,
     status,
-    contribution: `${weightedScore.toFixed(2)} of ${(weight * 100).toFixed(0)}pp`
+    contribution: `${score.toFixed(2)} of 100pp`
   };
 }
 
@@ -870,7 +912,7 @@ function aggregateRevenuePerformanceKPIs(
   };
 }
 
-function getParameterKPIs(paramName: string,
+function getParameterKPIs(userLevel: string, paramName: string,
   staffAdequacyData?: any,
   productivityAchievementData?: any,
   vacancyImpactData?: any,
@@ -1144,31 +1186,46 @@ function getParameterKPIs(paramName: string,
         name: 'Cash Position Score',
         institutionalAvg: (() => {
           if (!cashPositionData) return '--';
-          const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
+          const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
+          const score = calculateCashPositionScore(cashBalance, userLevel);
           return `${score.toFixed(2)}`;
         })(),
         currentPeriod: (() => {
           if (!cashPositionData) return '--';
-          const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
+          const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
+          const score = calculateCashPositionScore(cashBalance, userLevel);
           return `${score.toFixed(2)}`;
         })(),
-        target: 1830078000,
+        target: (() => {
+          switch (userLevel) {
+            case 'province': return 'K187,196,400';
+            case 'branch': return 'K100,000';
+            default: return 'K1,871,964,000';
+          }
+        })(),
         variance: (() => {
           if (!cashPositionData) return '--';
-          const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
+          const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
+          const score = calculateCashPositionScore(cashBalance, userLevel);
           return `${(score - 100).toFixed(2)}%`;
         })(),
         trend: (() => {
           if (!cashPositionData) return '→';
-          const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
-          return score >= 90 ? '↑' : '↓';
+          const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
+          const score = calculateCashPositionScore(cashBalance, userLevel);
+          return userLevel === 'institution' ? getCashPositionTrend(score) : (score >= 90 ? '↑' : '↓');
         })(),
         status: (() => {
           if (!cashPositionData) return 'warning';
-          const score = parseFloat(String(cashPositionData.cash_position_score ?? cashPositionData.average_score ?? 0));
-          return score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+          const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
+          const score = calculateCashPositionScore(cashBalance, userLevel);
+          return userLevel === 'institution' ? getCashPositionStatus(score) : (score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical');
         })(),
-        contribution: cashPositionData ? `${(getAggregateScore(cashPositionData, 'Cash & Liquidity Management', 'Cash Position Score') * getAggregateWeight(cashPositionData, 'Cash & Liquidity Management', 'Cash Position Score')).toFixed(2)} of ${(getAggregateWeight(cashPositionData, 'Cash & Liquidity Management', 'Cash Position Score') * 100).toFixed(0)}pp` : '--'
+        contribution: cashPositionData ? (() => {
+          const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
+          const score = calculateCashPositionScore(cashBalance, userLevel);
+          return `${score.toFixed(2)} of 100pp`;
+        })() : '--'
       }
     ]
   };

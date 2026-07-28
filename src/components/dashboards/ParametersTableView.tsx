@@ -35,7 +35,7 @@ interface ParametersTableViewProps {
   userLevelLabel: string;
   expandedParam: string | null;
   onToggleExpand: (paramName: string) => void;
-  getParameterKPIs: (paramName: string,
+  getParameterKPIs: (userLevel: string, paramName: string,
     staffAdequacyData?: any,
     productivityAchievementData?: any,
     vacancyImpactData?: any,
@@ -169,7 +169,7 @@ export function ParametersTableView({
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {parameters.map((param, index) => {
-              const kpis = getParameterKPIs(param.name,
+              const kpis = getParameterKPIs(userLevel, param.name,
                 staffAdequacyData,
                 productivityAchievementData,
                 vacancyImpactData,
@@ -251,7 +251,13 @@ export function ParametersTableView({
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">{param.target}</td>
+                    <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                      {typeof param.target === 'number' ? (
+                        param.name === 'Cash Position Score'
+                          ? new Intl.NumberFormat('en-ZM', { style: 'currency', currency: 'ZMW', maximumFractionDigits: 0 }).format(param.target)
+                          : `K${param.target.toLocaleString()}`
+                      ) : param.target}
+                    </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`text-sm ${getVarianceColor(param.variance)}`}>
                         {param.variance}
@@ -356,10 +362,15 @@ export function ParametersTableView({
                                                  {kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` : '--'}
                                               </td>
                                             )}
-                                            <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">
-                                               {kpi.name === 'Cash Position Score' && typeof kpi.target === 'object' ? `K${kpi.target.min.toLocaleString()} to K${kpi.target.max.toLocaleString()}` :
-                                                 typeof kpi.target === 'object' ? '--' : kpi.target}
-                                            </td>
+                                              <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">
+                                                 {kpi.name === 'Cash Position Score' && (typeof kpi.target === 'number' || /^\d+$/.test(String(kpi.target)))
+                                                   ? new Intl.NumberFormat('en-ZM', { style: 'currency', currency: 'ZMW', maximumFractionDigits: 0 }).format(typeof kpi.target === 'number' ? kpi.target : parseInt(String(kpi.target)))
+                                                   : kpi.name === 'Cash Position Score' && typeof kpi.target === 'object'
+                                                     ? `K${kpi.target.min.toLocaleString()} to K${kpi.target.max.toLocaleString()}`
+                                                     : typeof kpi.target === 'object'
+                                                       ? '--'
+                                                       : kpi.target}
+                                              </td>
                                           <td className="px-4 py-2 text-center">
                                             <div className="flex items-center justify-center gap-1">
                                               <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>

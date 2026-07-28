@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDistrict } from '@/hooks/useDistrict';
 import { useProvince } from '@/hooks/useProvince';
+import { calculateCashPositionScore } from './InstitutionalHealthSummary';
 import { fetchDistrictStaffAdequacyPerformance } from '@/services/StaffAdequacyService';
 import { fetchDistrictProductivityAchievement } from '@/services/ProductivityAchievementService';
 import { fetchDistrictVolumeAchievement } from '@/services/VolumeAchievementService';
@@ -489,17 +490,18 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                     break;
                    }
                     case 'Growth Trajectory':
-                   case 'Cash Position Score': {
-                     const score = parseFloat(data.normalized_score || data.average_score || '0');
-                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                     rowData = [
-                       district.name,
-                       district.offices_count || 0,
-                       `${score.toFixed(2)}%`,
-                       selectedKPI === 'Growth Trajectory' ? data.PP || 0 : data.percentage_point || data.percentage_points || 0
-                     ];
-                    break;
-                   }
+                    case 'Cash Position Score': {
+                      const cashBalance = parseFloat(data.totalCashBalance || data.cashBalance || '0');
+                      const score = calculateCashPositionScore(cashBalance, 'province');
+                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                      rowData = [
+                        district.name,
+                        district.offices_count || 0,
+                        `${score.toFixed(2)}%`,
+                        selectedKPI === 'Growth Trajectory' ? data.PP || 0 : score
+                      ];
+                     break;
+                    }
                    case 'Portfolio Load Balance': {
                     const score = parseFloat(data.average_score || '0');
                     status = score >= 90 ? 'good' : score >= 75 ? 'warning' : 'critical';

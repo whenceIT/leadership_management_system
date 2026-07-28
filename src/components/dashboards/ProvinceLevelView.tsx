@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useProvincialData } from '@/hooks/useProvincialData';
+import { calculateCashPositionScore } from './InstitutionalHealthSummary';
 
 interface ProvinceLevelViewProps {
   selectedKPI: string | null;
@@ -286,15 +287,15 @@ const kpiConfigs: Record<string, KPIConfig> = {
     displayTarget: () => '≥ institutional avg'
   },
   'Cash Position Score': {
-    getValue: (data) => parseFloat(data.totalCashBalance || data.average_score || '0'),
-    getTarget: () => 186877000,
-    formatValue: (v) => `K${v.toLocaleString()}`,
-    formatVariance: (v) => `K${v.toLocaleString()}`,
-    formatInstitutionAvg: (v) => `K${v.toLocaleString()}`,
+    getValue: (data) => calculateCashPositionScore(parseFloat(data.totalCashBalance || data.average_score || '0'), 'province'),
+    getTarget: () => 100,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
     isLowerBetter: false,
     getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
     getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
-    displayTarget: () => 'K186,877,000'
+    displayTarget: () => 'K187,196,400'
   },
 };
 
@@ -474,13 +475,11 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                 let bgColor = '';
                 if (selectedKPI === 'Cash Position Score') {
                   const cashBalance = province.totalCashBalance || 0;
-                  if (cashBalance >= 149501601 && cashBalance <= 186877000) {
+                  if (cashBalance >= 146406.24) {
                     bgColor = 'bg-green-50 dark:bg-green-900/20';
-                  } else if (cashBalance >= 112126201 && cashBalance <= 149501600) {
-                    bgColor = 'bg-green-50 dark:bg-green-900/20';
-                  } else if (cashBalance >= 74750801 && cashBalance <= 112126200) {
+                  } else if (cashBalance >= 109804.68) {
                     bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
-                  } else if (cashBalance >= 37375401 && cashBalance <= 74750800) {
+                  } else if (cashBalance >= 73203.12) {
                     bgColor = 'bg-orange-50 dark:bg-orange-900/20';
                   } else {
                     bgColor = 'bg-red-50 dark:bg-red-900/20';
@@ -523,7 +522,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                     </td>
                     <td className="px-4 py-2">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(status)}`}>
-                        {status === 'good' ? 'GOOD' : status === 'warning' ? 'WARNING' : 'CRITICAL'}
+                        {status === 'good' ? 'GOOD' : status === 'warning' ? 'WARNING' : status === 'moderate' ? 'MODERATE' : status === 'bad' ? 'BAD' : 'CRITICAL'}
                       </span>
                     </td>
                   </tr>

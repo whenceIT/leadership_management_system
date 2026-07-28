@@ -5,6 +5,7 @@ import { useOffice } from '@/hooks/useOffice';
 import { useProvince } from '@/hooks/useProvince';
 import { useDistrict } from '@/hooks/useDistrict';
 import { useUserPosition } from '@/hooks/useUserPosition';
+import { calculateCashPositionScore } from './InstitutionalHealthSummary';
 
 // Import all provincial service functions (we'll reuse them for branch level)
 import { fetchStaffAdequacyPerformance } from '@/services/StaffAdequacyService';
@@ -35,6 +36,7 @@ interface BranchLevelViewProps {
   userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant';
   onBranchClick: (branchId: number) => void;
   onBack: () => void;
+  cashPositionData?: any;
 }
 
 export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistrict, userLevel, onBranchClick, onBack }: BranchLevelViewProps) {
@@ -171,11 +173,14 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
     return 'text-orange-500 dark:text-gray-600 text-lg font-bold';
   };
 
-  const getStatusBadge = (status: 'good' | 'warning' | 'critical') => {
+  const getStatusBadge = (status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent') => {
     switch (status) {
       case 'good': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       case 'warning': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+      case 'moderate': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
+      case 'bad': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
       case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+      case 'excellent': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
     }
   };
 
@@ -186,13 +191,13 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
   };
 
   // Helper function to extract KPI value from data
-  const getKPIValue = (data: any, selectedKPI: string): { current: string; target: string; variance: string; trend: '↑' | '↓' | '→'; status: 'good' | 'warning' | 'critical'; contribution: string; actualLcs: number } => {
+  const getKPIValue = (data: any, selectedKPI: string): { current: string; target: string; variance: string; trend: '↑' | '↓' | '→'; status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate'; contribution: string; actualLcs: number } => {
     // Default values
     let current = '--';
     let target = '100%';
     let variance = '--';
     let trend: '↑' | '↓' | '→' = '→';
-    let status: 'good' | 'warning' | 'critical' = 'warning';
+    let status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' = 'warning';
     let contribution = '--';
     let actualLcs = 0;
 
@@ -390,12 +395,28 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
       }
     } else if (selectedKPI === 'Cash Position Score') {
       const cashBalance = data.totalCashBalance || data.cashBalance || 0;
-      current = `K${cashBalance.toLocaleString()}`;
-      target = '< K20,000';
+      const score = calculateCashPositionScore(cashBalance, 'branch');
+      current = `${score.toFixed(2)}%`;
+      target = 'K100,000';
+      contribution = `${score.toFixed(2)} of 100pp`;
       if (cashBalance > 0) {
-        variance = `K${(20000 - cashBalance).toLocaleString()}`;
-        trend = cashBalance >= 20000 ? '↑' : cashBalance >= 15000 ? '→' : cashBalance >= 10000 ? '→' : '↓';
-        status = cashBalance >= 20000 ? 'good' : cashBalance >= 15000 ? 'warning' : cashBalance >= 10000 ? 'warning' : 'critical';
+        variance = `${(score - 100).toFixed(2)}%`;
+        if (score >= 70) {
+          trend = '↑';
+          status = 'excellent' as 'good' | 'warning' | 'critical' | 'bad' | 'moderate';
+        } else if (score >= 50) {
+          trend = '→';
+          status = 'good';
+        } else if (score >= 30) {
+          trend = '↓';
+          status = 'moderate';
+        } else if (score >= 20) {
+          trend = '↓';
+          status = 'bad';
+        } else {
+          trend = '↓';
+          status = 'critical';
+        }
       }
     }
     return { current, target, variance, trend, status, contribution, actualLcs };
@@ -559,21 +580,19 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                const data = branchData[branch.id];
                const kpiValue = getKPIValue(data, selectedKPI);
                
-               let rowBg = '';
-               if (selectedKPI === 'Cash Position Score') {
-                 const cashBalance = data?.totalCashBalance || 0;
-                 if (cashBalance >= 20000) {
-                   rowBg = 'bg-green-50 dark:bg-green-900/20';
-                 } else if (cashBalance >= 15000) {
-                   rowBg = 'bg-green-50 dark:bg-green-900/20';
-                 } else if (cashBalance >= 10000) {
-                   rowBg = 'bg-yellow-50 dark:bg-yellow-900/20';
-                 } else if (cashBalance >= 5000) {
-                   rowBg = 'bg-orange-50 dark:bg-orange-900/20';
-                 } else {
-                   rowBg = 'bg-red-50 dark:bg-red-900/20';
-                 }
-               }
+                let rowBg = '';
+                if (selectedKPI === 'Cash Position Score') {
+                  const cashBalance = data?.totalCashBalance || 0;
+                  if (cashBalance >= 50000) {
+                    rowBg = 'bg-green-50 dark:bg-green-900/20';
+                  } else if (cashBalance >= 30000) {
+                    rowBg = 'bg-yellow-50 dark:bg-yellow-900/20';
+                  } else if (cashBalance >= 10000) {
+                    rowBg = 'bg-orange-50 dark:bg-orange-900/20';
+                  } else {
+                    rowBg = 'bg-red-50 dark:bg-red-900/20';
+                  }
+                }
 
                return (
                  <tr 
@@ -597,7 +616,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                   </td>
                   <td className="px-4 py-2">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpiValue.status)}`}>
-                      {kpiValue.status === 'good' ? 'GOOD' : kpiValue.status === 'warning' ? 'WARNING' : 'CRITICAL'}
+                      {kpiValue.status === 'good' ? 'GOOD' : kpiValue.status === 'warning' ? 'WARNING' : kpiValue.status === 'excellent' ? 'EXCELLENT' : kpiValue.status === 'moderate' ? 'MODERATE' : kpiValue.status === 'bad' ? 'BAD' : 'CRITICAL'}
                     </span>
                   </td>
                 </tr>

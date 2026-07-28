@@ -35,7 +35,7 @@ interface ParametersCardsViewProps {
   userLevelLabel: string;
   expandedParam: string | null;
   onToggleExpand: (paramName: string) => void;
-  getParameterKPIs: (paramName: string, 
+  getParameterKPIs: (userLevel: string, paramName: string, 
     staffAdequacyData?: any, 
     productivityAchievementData?: any, 
     vacancyImpactData?: any, 
@@ -210,7 +210,7 @@ export function ParametersCardsView({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {parameters.map((param, index) => {
-        const kpis = getParameterKPIs(param.name, 
+        const kpis = getParameterKPIs(userLevel, param.name, 
           staffAdequacyData, 
           productivityAchievementData, 
           vacancyImpactData, 
@@ -334,7 +334,9 @@ export function ParametersCardsView({
                         </div>
                         <div>
                           <p className="text-gray-500 dark:text-gray-400">Target</p>
-                          <p className="font-semibold text-gray-700 dark:text-gray-300">{typeof kpi.target === 'object' && kpi.target ? `K${kpi.target.min.toLocaleString()} - K${kpi.target.max.toLocaleString()}` : kpi.target}</p>
+                          <p className="font-semibold text-gray-700 dark:text-gray-300">{kpi.name === 'Cash Position Score' && typeof kpi.target === 'number'
+                            ? new Intl.NumberFormat('en-ZM', { style: 'currency', currency: 'ZMW', maximumFractionDigits: 0 }).format(kpi.target)
+                            : typeof kpi.target === 'object' && kpi.target ? `K${kpi.target.min.toLocaleString()} - K${kpi.target.max.toLocaleString()}` : kpi.target}</p>
                         </div>
                         <div>
                           <p className="text-gray-500 dark:text-gray-400">Variance</p>
