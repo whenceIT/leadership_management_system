@@ -1,6 +1,8 @@
 "use client";
 
 import { useSidebar } from "@/context/SidebarContext";
+import { useLoading } from "@/context/LoadingContext";
+import ApiLoader from "@/components/ApiLoader/ApiLoader";
 import AppHeader from "@/layout/AppHeader";
 import AppSidebar from "@/layout/AppSidebar";
 import Backdrop from "@/layout/Backdrop";
@@ -12,6 +14,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const { isExpanded, isHovered, isMobileOpen } = useSidebar();
+  const { isLoading } = useLoading();
 
   // Dynamic class for main content margin based on sidebar state
   const mainContentMargin = isMobileOpen
@@ -34,6 +37,7 @@ export default function AdminLayout({
         {/* Page Content */}
         <div className="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">{children}</div>
       </div>
+      <ApiLoader isLoading={isLoading} />
     </div>
   );
 }

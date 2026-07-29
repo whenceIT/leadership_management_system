@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import ApiLoader from '@/components/ApiLoader/ApiLoader';
+import { useLoading } from '@/context/LoadingContext';
 import HealthAnalysisSections from './HealthAnalysisSections';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { BranchLevelView } from './BranchLevelView';
@@ -178,16 +178,16 @@ export function calculateCashPositionScore(cashBalance: number, userLevel: strin
   let maxBalance: number;
   switch (userLevel) {
     case 'institution':
-      maxBalance = 1871964000;
+      maxBalance = 50000000;
       break;
     case 'province':
-      maxBalance = 187196400;
+      maxBalance = 500000;
       break;
     case 'branch':
       maxBalance = 100000;
       break;
     default:
-      maxBalance = 1871964000;
+      maxBalance = 0;
   }
 
   const score = (cashBalance / maxBalance) * 100;
@@ -830,7 +830,7 @@ function aggregateCashLiquidityManagementKPIs(
   return {
     institutionalAvg: '70%',
     userLevelAvg: `${score}%`,
-    target: userLevel === 'branch' ? 'K100,000' : userLevel === 'province' ? 'K187,196,400' : 'K1,871,964,000',
+    target: userLevel === 'branch' ? 'K100,000' : userLevel === 'province' ? 'K500,000' : 'K50,000,000',
     variance: varianceStr,
     varianceAbs,
     trend,
@@ -1198,9 +1198,9 @@ function getParameterKPIs(userLevel: string, paramName: string,
         })(),
         target: (() => {
           switch (userLevel) {
-            case 'province': return 'K187,196,400';
+            case 'province': return 'K500,000';
             case 'branch': return 'K100,000';
-            default: return 'K1,871,964,000';
+            default: return '50000000';
           }
         })(),
         variance: (() => {
@@ -1270,8 +1270,9 @@ export function InstitutionalHealthSummary({
    profitabilityContributionData,
    cashPositionData,
    isLoading = false
- }: InstitutionalHealthSummaryProps) {
-  const [expandedParam, setExpandedParam] = useState<string | null>(null);
+  }: InstitutionalHealthSummaryProps) {
+   const { setIsLoading } = useLoading();
+   const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
   const [drillDownKPI, setDrillDownKPI] = useState<string | null>(null);
@@ -1289,9 +1290,12 @@ export function InstitutionalHealthSummary({
     consultant: 'Personal'
   }[userLevel];
 
+  useEffect(() => {
+    setIsLoading(isLoading);
+  }, [isLoading, setIsLoading]);
+
   return (
     <div className="space-y-4">
-      <ApiLoader isLoading={isLoading} text="Loading institutional health data..." />
       {/* Overall Health Banner */}
       {overallScore !== undefined && (
         <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-5 text-white">
@@ -1558,6 +1562,7 @@ export function InstitutionalHealthSummary({
         </>
       )}
     </div>
+    
   );
 }
 

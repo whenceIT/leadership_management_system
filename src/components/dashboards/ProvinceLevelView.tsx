@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useProvincialData } from '@/hooks/useProvincialData';
 import { calculateCashPositionScore } from './InstitutionalHealthSummary';
 
@@ -295,9 +295,37 @@ const kpiConfigs: Record<string, KPIConfig> = {
     isLowerBetter: false,
     getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
     getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
-    displayTarget: () => 'K187,196,400'
+    displayTarget: () => 'K500,000'
   },
 };
+
+function getBranchKPIValue(branchData: any, kpi: string): number {
+  if (!branchData) return 0;
+  const val = branchData.normalized_score ?? branchData.score ?? branchData.PAR ?? branchData.month_1_default_rate ?? branchData.benchmark ?? branchData.defaulted_rate ?? branchData.HHI ?? branchData.effective_interest_rate ?? branchData.CIR ?? branchData.long_term_default_rate ?? branchData.recovery_rate_3_months ?? branchData.current_month_revenue ?? branchData.average_score ?? branchData.average_normalized_score ?? '0';
+  const num = parseFloat(String(val));
+  return isNaN(num) ? 0 : num;
+}
+
+function calculateBranchSum(data: any, kpi: string): number {
+  if (!data) return 0;
+  let branchArray: any[] = [];
+  if (Array.isArray(data)) {
+    branchArray = data;
+  } else if (data.branches) {
+    branchArray = data.branches;
+  }
+  if (branchArray.length === 0) return 0;
+  return branchArray.reduce((sum: number, branch: any) => {
+    if (kpi === 'Cash Position Score') {
+      return sum + calculateCashPositionScore(parseFloat(branch.totalCashBalance || branch.cashBalance || '0'), 'branch');
+    }
+    if (kpi === 'Vacancy Impact') {
+      return sum + (parseFloat(String(branch.normalized_score || '0')) * 100);
+    }
+    const raw = getBranchKPIValue(branch, kpi);
+    return sum + raw;
+  }, 0);
+}
 
 export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLevelViewProps) {
   const { provincialData, provinces, loading, error } = useProvincialData(selectedKPI);
@@ -372,10 +400,59 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
   });
 
   const institutionAvg = calculateInstitutionAvg();
+  const [showKpiInfo, setShowKpiInfo] = useState<boolean>(false);
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Executive Institution Overview - Country Wide Zambia</h3>
+      <div className="flex items-center mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Executive Institution Overview - Country Wide Zambia</h3>
+        <button
+          onClick={() => setShowKpiInfo(!showKpiInfo)}
+          className="ml-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+          title="KPI Information"
+        >
+          <svg className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15.5A3.5 3.5 0 0115.5 12 3.5 3.5 0 0112 8.5a3.5 3.5 0 01-3.5 3.5 3.5 3.5 0 010 7z" />
+          </svg>
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Key</span>
+        </button>
+        {showKpiInfo && (
+          <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 mt-2 w-80 max-w-sm bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 z-[100] transform transition-all duration-200">
+            <div className="flex items-start">
+              <div className="flex-1">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">{selectedKPI || 'Selected KPI'}</h4>
+                {selectedKPI === 'Cash Position Score' ? (
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                    <p><strong>Target Cash Balance:</strong> K100,000 per branch</p>
+                    <p><strong>Formula:</strong> Score = 100 - (shortfall ÷ 10,000) × 50 for balances K10,000-K20,000</p>
+                    <p><strong>Thresholds:</strong> 
+                      <ul className="list-disc list-inside mt-1 space-y-1 text-xs">
+                        <li>Below K10,000: Critical</li>
+                        <li>K10,000-K20,000: Bad </li>
+                        <li>K20,000-K30,000: Good</li>
+                        <li>K30,000-K50,000: Excellent </li>
+                        <li>Above K50,000: Risky</li>
+                      </ul>
+                    </p>
+                    <p><strong>Sorting:</strong> Sorted by total cash balance descending (highest cash first)</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">KPI information not available for this metric.</p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowKpiInfo(false)}
+                className="ml-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
+                title="Close"
+              >
+                <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
       <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
         Institution Average as at Today: <span className="font-semibold text-blue-600 dark:text-blue-400">{institutionAvg}</span>
       </div>
@@ -393,13 +470,14 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Province</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Offices Count</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Cash Balance</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Provincial Avg</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branches Below Threshold</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
@@ -418,6 +496,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                 let status: 'good' | 'warning' | 'critical' = 'warning';
                 let actualLcs = 0;
                 let contribution = '--';
+                let branchesBelowThreshold = 0;
 
                  if (data) {
                    // Handle both array and object data formats
@@ -430,13 +509,18 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                      branchArray = data.branches;
                    }
 
-                   // Aggregate actual_lcs and percentage_point from all branches
+                   // Count branches below K20,000 threshold
                    if (branchArray.length > 0) {
-                     actualLcs = branchArray.reduce((sum: number, branch: any) => sum + (branch.actual_lcs || 0), 0);
-                     const totalPP = branchArray.reduce((sum: number, branch: any) => sum + (branch.percentage_point || 0), 0);
-                     if (totalPP > 0) {
-                       contribution = `${totalPP.toFixed(2)}pp`;
-                     }
+                     branchesBelowThreshold = branchArray.filter((branch: any) => {
+                       const cashBal = parseFloat(branch.totalCashBalance || branch.cashBalance || '0');
+                       return cashBal < 20000;
+                     }).length;
+                     
+                       actualLcs = branchArray.reduce((sum: number, branch: any) => sum + (branch.actual_lcs || 0), 0);
+                       const totalPP = branchArray.reduce((sum: number, branch: any) => sum + (branch.percentage_point || 0), 0);
+                       if (totalPP > 0) {
+                         contribution = `${totalPP.toFixed(2)}pp`;
+                       }
                    } else if (data.total_actual_lcs) {
                      // Fallback to aggregated values if available
                      actualLcs = data.total_actual_lcs;
@@ -471,63 +555,60 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                    }
                  }
 
-                // Determine background color based on threshold bands for Cash Position Score or ranking for others
-                let bgColor = '';
-                if (selectedKPI === 'Cash Position Score') {
-                  const cashBalance = province.totalCashBalance || 0;
-                  if (cashBalance >= 146406.24) {
-                    bgColor = 'bg-green-50 dark:bg-green-900/20';
-                  } else if (cashBalance >= 109804.68) {
-                    bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
-                  } else if (cashBalance >= 73203.12) {
-                    bgColor = 'bg-orange-50 dark:bg-orange-900/20';
+                  // Determine background color based on threshold bands for Cash Position Score or ranking for others
+                  let bgColor = '';
+                  if (selectedKPI === 'Cash Position Score') {
+                    const cashBalance = province.totalCashBalance || 0;
+                    if (cashBalance >= 146406.24) {
+                      bgColor = 'bg-green-50 dark:bg-green-900/20';
+                    } else if (cashBalance >= 109804.68) {
+                      bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
+                    } else if (cashBalance >= 73203.12) {
+                      bgColor = 'bg-orange-50 dark:bg-orange-900/20';
+                    } else {
+                      bgColor = 'bg-red-50 dark:bg-red-900/20';
+                    }
                   } else {
-                    bgColor = 'bg-red-50 dark:bg-red-900/20';
+                    if (index < 3) {
+                      // Top 3 performers
+                      bgColor = 'bg-green-50 dark:bg-green-900/20';
+                    } else if (index < 7) {
+                      // Next 4 performers (positions 4-7)
+                      bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
+                    }
                   }
-                } else {
-                  if (index < 3) {
-                    // Top 3 performers
-                    bgColor = 'bg-green-50 dark:bg-green-900/20';
-                  } else if (index < 7) {
-                    // Next 4 performers (positions 4-7)
-                    bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
-                  }
-                }
 
-                console.log('Province:', province, 'Data:', data);
-                const officesCount = province.offices_count || 0;
-                const totalCashBalance = province.totalCashBalance || 0;
+                  const officesCount = province.offices_count || 0;
+                  const totalCashBalance = province.totalCashBalance || 0;
+                  const provincialAvgSum = calculateBranchSum(data, selectedKPI || '');
 
-                return (
-                  <tr
-                    key={province.id}
-                    className={`${bgColor} hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer`}
-                    onClick={() => onProvinceClick(province.id)}
-                  >
+                 return (
+                   <tr
+                     key={province.id}
+                     className={`${bgColor} hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer`}
+                     onClick={() => onProvinceClick(province.id)}
+                   >
 
-
-
-                    <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{province.name}</td>
-                    <td className="px-4 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400">{officesCount} </td>
-                    <td className="px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400">K{totalCashBalance > 0 ? totalCashBalance.toLocaleString() : '--'}</td>
-                    <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{currentPeriod}</td>
-                    {/* <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{actualLcs > 0 ? actualLcs : '--'}</td>
-                    <td className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400">{contribution}</td> */}
-                    <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{target}</td>
-                    <td className="px-4 py-2 text-sm">
-                      <span className={`${getVarianceColor(variance)}`}>{variance}</span>
-                    </td>
-                    <td className="px-4 py-2 text-sm">
-                      <span className={getTrendBadge(trend)}>{trend}</span>
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(status)}`}>
-                        {status === 'good' ? 'GOOD' : status === 'warning' ? 'WARNING' : status === 'moderate' ? 'MODERATE' : status === 'bad' ? 'BAD' : 'CRITICAL'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
+                     <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{province.name}</td>
+                     <td className="px-4 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400">{officesCount} </td>
+                     <td className="px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400">K{totalCashBalance > 0 ? totalCashBalance.toLocaleString() : '--'}</td>
+                      <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{provincialAvgSum.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400">{branchesBelowThreshold}</td>
+                     <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{target}</td>
+                     <td className="px-4 py-2 text-sm">
+                       <span className={`${getVarianceColor(variance)}`}>{variance}</span>
+                     </td>
+                     <td className="px-4 py-2 text-sm">
+                       <span className={getTrendBadge(trend)}>{trend}</span>
+                     </td>
+                     <td className="px-4 py-2">
+                       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(status)}`}>
+                         {status === 'good' ? 'GOOD' : status === 'warning' ? 'WARNING' : status === 'moderate' ? 'MODERATE' : status === 'bad' ? 'BAD' : 'CRITICAL'}
+                       </span>
+                     </td>
+                   </tr>
+                 );
+               })}
             </tbody>
           </table>
         </div>
