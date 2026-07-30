@@ -9,7 +9,6 @@ import { BranchLevelView } from './BranchLevelView';
 import { DistrictLevelView } from './DistrictLevelView';
 import { ConsultantLevelView } from './ConsultantLevelView';
 import { ParametersTableView } from './ParametersTableView';
-import { ParametersCardsView } from './ParametersCardsView';
 
 interface KPI {
   name: string;
@@ -1267,10 +1266,9 @@ export function InstitutionalHealthSummary({
   const [drillLevel, setDrillLevel] = useState<'province' | 'district' | 'branch' | 'consultant' | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<number | null>(null);
-  const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
 
-  const levelLabel = {
+   const levelLabel = {
     institution: 'Institutional',
     province: 'Provincial',
     district: 'District',
@@ -1348,35 +1346,7 @@ export function InstitutionalHealthSummary({
 
 
 
-      {/* Five Headline Parameters View */}
-      {(
-        <>
-          {/* View Toggle */}
-          <div className="flex items-center justify-end mb-4">
-            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('table')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'table'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-              >
-                📋 Table
-              </button>
-              {/* <button
-                onClick={() => setViewMode('cards')}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${viewMode === 'cards'
-                  ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-              >
-                🗂️ Cards
-              </button> */}
-            </div>
-          </div>
-
-          {viewMode === 'table' ? (
-            <ParametersTableView
+          <ParametersTableView
               parameters={parameters}
               userLevel={userLevel}
               userLevelLabel={userLevelLabel}
@@ -1444,82 +1414,10 @@ export function InstitutionalHealthSummary({
               setSelectedProvince={setSelectedProvince}
               setSelectedDistrict={setSelectedDistrict}
               setSelectedBranch={setSelectedBranch}
-              userProvinceId={userProvinceId}
+userProvinceId={userProvinceId}
             />
-          ) : (
-            <ParametersCardsView
-              parameters={parameters}
-              userLevel={userLevel}
-              userLevelLabel={userLevelLabel}
-              expandedParam={expandedParam}
-              onToggleExpand={(paramName) => {
-                setExpandedParam(expandedParam === paramName ? null : paramName);
-                if (expandedParam !== paramName) {
-                  setSelectedKPI(null);
-                  setDrillDownKPI(null);
-                  setDrillLevel(null);
-                }
-              }}
-              getParameterKPIs={getParameterKPIs}
-              getVarianceColor={getVarianceColor}
-              getTrendBadge={getTrendBadge}
-              getStatusBadge={getStatusBadge}
-              staffAdequacyData={staffAdequacyData}
-              productivityAchievementData={productivityAchievementData}
-              vacancyImpactData={vacancyImpactData}
-              volumeAchievementData={volumeAchievementData}
-              loanPortfolioLoadData={loanPortfolioLoadData}
-              collectionEfficiencyData={collectionEfficiencyData}
-              efficiencyRatioData={efficiencyRatioData}
-              growthTrajectoryData={growthTrajectoryData}
-              longTermDelinquencyData={longTermDelinquencyData}
-              month1DefaultPerformanceData={month1DefaultPerformanceData}
-              month3RecoveryAchievementsData={month3RecoveryAchievementsData}
-              portfolioQualityData={portfolioQualityData}
-              productDiversificationData={productDiversificationData}
-               productRiskScoreData={productRiskScoreData}
-               rollRateControlData={rollRateControlData}
-               yieldAchievementsData={yieldAchievementsData}
-               revenueAchievementsData={revenueAchievementsData}
-               profitabilityContributionData={profitabilityContributionData}
-               cashPositionData={cashPositionData}
-               onKpiClick={(kpiName) => {
-                if (selectedKPI === kpiName) {
-                  setSelectedKPI(null);
-                  setDrillDownKPI(null);
-                  setDrillLevel(null);
-                  setSelectedProvince(null);
-                  setSelectedDistrict(null);
-                  setSelectedBranch(null);
-                } else {
-                  setSelectedKPI(kpiName);
-                  setDrillDownKPI(kpiName);
-                  if (userLevel === 'institution') setDrillLevel('province');
-                  else if (userLevel === 'province') setDrillLevel('district');
-                  else if (userLevel === 'district') setDrillLevel('branch');
-                  else if (userLevel === 'branch') setDrillLevel('branch');
-                  setSelectedProvince(null);
-                  setSelectedDistrict(null);
-                  setSelectedBranch(null);
-                }
-              }}
-              selectedKPI={selectedKPI}
-              drillDownKPI={drillDownKPI}
-              setDrillDownKPI={setDrillDownKPI}
-              drillLevel={drillLevel}
-              selectedProvince={selectedProvince}
-              selectedDistrict={selectedDistrict}
-              selectedBranch={selectedBranch}
-              setSelectedKPI={setSelectedKPI}
-              setDrillLevel={setDrillLevel}
-              setSelectedProvince={setSelectedProvince}
-              setSelectedDistrict={setSelectedDistrict}
-              setSelectedBranch={setSelectedBranch}
-              userProvinceId={userProvinceId}
-            />
-          )}
 
-          <HealthAnalysisSections
+           <HealthAnalysisSections
             userLevel={userLevel}
             parameters={parameters}
             keyMetrics={keyMetrics}
@@ -1545,11 +1443,9 @@ export function InstitutionalHealthSummary({
              yieldAchievementsData={yieldAchievementsData}
              revenueAchievementsData={revenueAchievementsData}
              profitabilityContributionData={profitabilityContributionData}
-             cashPositionData={cashPositionData}
-           />
-        </>
-      )}
-    </div>
+cashPositionData={cashPositionData}
+            />
+     </div>
     
   );
 }
