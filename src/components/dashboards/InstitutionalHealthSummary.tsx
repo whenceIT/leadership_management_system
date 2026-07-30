@@ -825,7 +825,7 @@ function aggregateCashLiquidityManagementKPIs(
   const varianceAbs = `${Math.abs(variance)}pp`;
 
   const trend = userLevel === 'institution' ? getCashPositionTrend(score) : (score >= 90 ? '↑' : score >= 70 ? '→' : '↓');
-  const status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' = userLevel === 'institution' ? getCashPositionStatus(score) : (score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical');
+  const status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent' = userLevel === 'institution' ? getCashPositionStatus(score) : (score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical');
 
   return {
     institutionalAvg: '70%',
