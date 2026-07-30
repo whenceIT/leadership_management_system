@@ -12,7 +12,7 @@ interface KPI {
   target: string | number | { min: number; max: number };
   variance: string;
   trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical';
+  status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent';
   contribution?: string;
 }
 
@@ -25,7 +25,7 @@ interface ParameterSummary {
   variance: string;
   varianceAbs: string;
   trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical';
+  status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent';
   contribution?: string;
 }
 
@@ -57,7 +57,7 @@ interface ParametersTableViewProps {
     cashPositionData?: any) => KPI[];
   getVarianceColor: (variance: string) => string;
   getTrendBadge: (trend: '↑' | '↓' | '→') => string;
-  getStatusBadge: (status: 'good' | 'warning' | 'critical') => string;
+  getStatusBadge: (status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent') => string;
   staffAdequacyData?: any;
   productivityAchievementData?: any;
   vacancyImpactData?: any;
@@ -382,7 +382,7 @@ export function ParametersTableView({
                                            </td>
                                           <td className="px-4 py-2 text-center">
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>
-                                              {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : 'CRITICAL'}
+                                              {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : kpi.status === 'excellent' ? 'EXCELLENT' : kpi.status === 'moderate' ? 'MODERATE' : kpi.status === 'bad' ? 'BAD' : 'CRITICAL'}
                                             </span>
                                           </td>
                                         </tr>
