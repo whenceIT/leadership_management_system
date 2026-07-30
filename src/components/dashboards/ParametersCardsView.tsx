@@ -12,7 +12,7 @@ interface KPI {
   target: string | number | { min: number; max: number };
   variance: string;
   trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical';
+  status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent';
   contribution?: string;
 }
 
@@ -25,7 +25,7 @@ interface ParameterSummary {
   variance: string;
   varianceAbs: string;
   trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical';
+  status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent';
   contribution?: string;
 }
 
@@ -60,7 +60,7 @@ interface ParametersCardsViewProps {
     approvedExceptionRatioData?: any) => KPI[];
   getVarianceColor: (variance: string) => string;
   getTrendBadge: (trend: '↑' | '↓' | '→') => string;
-  getStatusBadge: (status: 'good' | 'warning' | 'critical') => string;
+  getStatusBadge: (status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent') => string;
   staffAdequacyData?: any;
   productivityAchievementData?: any;
   vacancyImpactData?: any;
@@ -155,7 +155,7 @@ export function ParametersCardsView({
   }[userLevel];
 
   // Helper to get status color
-  const getStatusColor = (status: 'good' | 'warning' | 'critical') => {
+  const getStatusColor = (status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent') => {
     switch (status) {
       case 'good': return 'bg-green-500';
       case 'warning': return 'bg-yellow-500';
@@ -257,7 +257,7 @@ export function ParametersCardsView({
                   </div>
                 </div>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(param.status)}`}>
-                  {param.status === 'good' ? 'GOOD' : param.status === 'warning' ? 'WARNING' : 'CRITICAL'}
+                  {param.status === 'good' ? 'GOOD' : param.status === 'warning' ? 'WARNING' : param.status === 'excellent' ? 'EXCELLENT' : param.status === 'moderate' ? 'MODERATE' : param.status === 'bad' ? 'BAD' : 'CRITICAL'}
                 </span>
               </div>
             </div>
