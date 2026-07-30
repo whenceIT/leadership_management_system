@@ -198,7 +198,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
     let target = '100%';
     let variance = '--';
     let trend: '↑' | '↓' | '→' = '→';
-    let status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' = 'warning';
+    let status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent' = 'warning';
     let contribution = '--';
     let actualLcs = 0;
 
