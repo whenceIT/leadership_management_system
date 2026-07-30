@@ -319,11 +319,11 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         trend = score >= targetValue ? '↑' : score >= targetValue * 0.9 ? '→' : '↓';
         status = score >= targetValue ? 'good' : score >= targetValue * 0.9 ? 'warning' : 'critical';
       }
-    } else if (selectedKPI === 'Margin alignment with strategy' || selectedKPI === 'Cost-to-income ratios') {
-      current = data.CIR ? `${parseFloat(data.CIR).toFixed(2)}%` : '--';
+    } else if (selectedKPI === 'Efficiency Ratio (CIR)' || selectedKPI === 'Margin alignment with strategy' || selectedKPI === 'Cost-to-income ratios') {
+      current = data.CIR ? `${(parseFloat(data.CIR) * 100).toFixed(2)}%` : '--';
       target = data.target || '≤55%';
       if (data.CIR) {
-        const score = parseFloat(data.CIR);
+        const score = parseFloat(data.CIR) * 100;
         const targetValue = parseFloat(data.target || '55');
         variance = `${(score - targetValue).toFixed(2)}%`;
         trend = score <= targetValue ? '↑' : score <= targetValue * 1.1 ? '→' : '↓';
@@ -357,16 +357,16 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         trend = score <= 20 ? '↑' : score <= 30 ? '→' : '↓';
         status = score <= 20 ? 'good' : score <= 30 ? 'warning' : 'critical';
       }
-    } else if (selectedKPI === 'Branch revenue' || selectedKPI === 'Growth trajectory alignment') {
-      current = data.current_month_revenue ? `K${parseFloat(data.current_month_revenue).toLocaleString()}` : '--';
-      target = '≥2.5% MoM growth';
-      if (data.mom_revenue) {
-        const score = data.mom_revenue * 100;
-        variance = `${score.toFixed(2)}%`;
-        trend = score >= 2.5 ? '↑' : score >= 0 ? '→' : '↓';
-        status = score >= 2.5 ? 'good' : score >= 0 ? 'warning' : 'critical';
-      }
-    } else if (selectedKPI === 'Institutional average performance') {
+     } else if (selectedKPI === 'Growth trajectory alignment') {
+       current = data.mom_revenue ? `${(parseFloat(data.mom_revenue) * 100).toFixed(2)}%` : '--';
+       target = '≥2.5% MoM growth';
+       if (data.mom_revenue) {
+         const score = parseFloat(data.mom_revenue) * 100;
+         variance = `${score.toFixed(2)}%`;
+         trend = score >= 2.5 ? '↑' : score >= 0 ? '→' : '↓';
+         status = score >= 2.5 ? 'good' : score >= 0 ? 'warning' : 'critical';
+       }
+     } else if (selectedKPI === 'Institutional average performance') {
       current = data.normalized_score ? `${parseFloat(data.normalized_score).toFixed(2)}%` : '--';
       target = '≥100%';
       if (data.normalized_score) {
@@ -375,27 +375,27 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         trend = score >= 100 ? '↑' : score >= 90 ? '→' : '↓';
         status = score >= 100 ? 'good' : score >= 90 ? 'warning' : 'critical';
       }
-    } else if (selectedKPI === 'Revenue achievement') {
-      current = data.normalized_score ? `${parseFloat(data.normalized_score).toFixed(2)}%` : '--';
-      target = data.target || '≥100%';
-      if (data.normalized_score) {
-        const score = parseFloat(data.normalized_score);
-        const targetValue = parseFloat(data.target || '100');
-        variance = `${(score - targetValue).toFixed(2)}%`;
-        trend = score >= targetValue ? '↑' : score >= targetValue * 0.9 ? '→' : '↓';
-        status = score >= targetValue ? 'good' : score >= targetValue * 0.9 ? 'warning' : 'critical';
-      }
-    } else if (selectedKPI === 'Profitability contribution') {
-      current = data.normalized_score ? `${parseFloat(data.normalized_score).toFixed(2)}%` : '--';
-      target = data.target || '≥ institutional avg';
-      if (data.normalized_score) {
-        const score = parseFloat(data.normalized_score);
-        const targetValue = parseFloat(data.target || '100');
-        variance = `${(score - targetValue).toFixed(2)}%`;
-        trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-        status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-      }
-    } else if (selectedKPI === 'Cash Position Score') {
+     } else if (selectedKPI === 'Revenue achievement') {
+       current = data.average_score ? `${parseFloat(data.average_score).toFixed(2)}%` : '--';
+       target = data.target || '≥100%';
+       if (data.average_score) {
+         const score = parseFloat(data.average_score);
+         const targetValue = parseFloat(data.target || '100');
+         variance = `${(score - targetValue).toFixed(2)}%`;
+         trend = score >= targetValue ? '↑' : score >= targetValue * 0.9 ? '→' : '↓';
+         status = score >= targetValue ? 'good' : score >= targetValue * 0.9 ? 'warning' : 'critical';
+       }
+     } else if (selectedKPI === 'Profitability contribution') {
+       current = data.score ? `${parseFloat(data.score.replace('%', '')).toFixed(2)}%` : '--';
+       target = data.target || '≥ institutional avg';
+       if (data.score) {
+         const score = parseFloat(data.score.replace('%', ''));
+         const targetValue = parseFloat(data.target || '100');
+         variance = `${(score - targetValue).toFixed(2)}%`;
+         trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
+         status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+       }
+     } else if (selectedKPI === 'Cash Position Score') {
       const cashBalance = data.totalCashBalance || data.cashBalance || 0;
       const score = calculateCashPositionScore(cashBalance, 'branch');
       current = `${score.toFixed(2)}%`;

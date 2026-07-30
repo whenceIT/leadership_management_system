@@ -4,9 +4,11 @@ export interface ProfitabilityContributionData {
   offices_count?: number;
   period: string;
   company_net_contribution: string;
+  score?: string;
   average_score: string;
-  weight: string;
+  weight?: string;
   percentage_point: number;
+  target?: string;
 }
 
 export async function fetchProfitabilityContribution(branchId: number): Promise<ProfitabilityContributionData> {

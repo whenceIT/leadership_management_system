@@ -2,24 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLoading } from '@/context/LoadingContext';
-import { KPIStatus, KPITrend, ParameterSummary } from '@/types/dashboard';
+import { KPIStatus, KPITrend, ParameterSummary, KPI } from '@/types/dashboard';
 import HealthAnalysisSections from './HealthAnalysisSections';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { BranchLevelView } from './BranchLevelView';
 import { DistrictLevelView } from './DistrictLevelView';
 import { ConsultantLevelView } from './ConsultantLevelView';
 import { ParametersTableView } from './ParametersTableView';
-
-interface KPI {
-  name: string;
-  institutionalAvg: string;
-  currentPeriod: string;
-  target: string | number | { min: number; max: number };
-  variance: string;
-  trend: KPITrend;
-  status: KPIStatus;
-  contribution?: string;
-}
 
 interface ParameterKPIs {
   [key: string]: KPI[];
@@ -133,10 +122,13 @@ function getAggregateScore(data: any, paramName: string, kpiName: string): numbe
     case 'Revenue & Performance':
       switch (kpiName) {
         case 'Efficiency Ratio (CIR)':
+          return parseFloat(data.CIR || data.score || data.average_score || '0') * 100;
         case 'Growth trajectory alignment':
+          return (parseFloat(data.mom_revenue || data.average_score || '0')) * 100;
         case 'Revenue achievement':
+          return parseFloat(data.average_score || data.normalized_score || '0');
         case 'Profitability contribution':
-          return parseFloat(data.average_score || '0');
+          return parseFloat((data.score || data.average_score || '0').replace('%', ''));
       }
       break;
     case 'Cash & Liquidity Management':
@@ -1130,27 +1122,27 @@ function getParameterKPIs(userLevel: string, paramName: string,
       {
         name: 'Efficiency Ratio (CIR)',
         institutionalAvg: '--',
-        currentPeriod: efficiencyRatioData ? `${parseFloat(efficiencyRatioData.average_score || '0').toFixed(2)}` : '0',
+        currentPeriod: efficiencyRatioData ? `${parseFloat(efficiencyRatioData.CIR || '0').toFixed(4)}%` : '--',
         target: efficiencyRatioData ? efficiencyRatioData.target : '≤55%',
-        variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.average_score || '0') - parseFloat(efficiencyRatioData.target || '0')).toFixed(2)}` : '--',
-        trend: efficiencyRatioData ? (parseFloat(efficiencyRatioData.average_score || '0') <= parseFloat(efficiencyRatioData.target || '0') ? '↑' : '↓') : '↑',
-        status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.average_score || '0') <= parseFloat(efficiencyRatioData.target || '0') ? 'good' : parseFloat(efficiencyRatioData.average_score || '0') <= parseFloat(efficiencyRatioData.target || '0') * 1.1 ? 'warning' : 'critical') : 'critical',
+        variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.CIR || '0') * 100 - parseFloat(efficiencyRatioData.target || '0')).toFixed(2)}%` : '--',
+        trend: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR || '0') * 100 <= parseFloat(efficiencyRatioData.target || '0') ? '↑' : '↓') : '↓',
+        status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR || '0') * 100 <= parseFloat(efficiencyRatioData.target || '0') ? 'good' : parseFloat(efficiencyRatioData.CIR || '0') * 100 <= parseFloat(efficiencyRatioData.target || '0') * 1.1 ? 'warning' : 'critical') : 'warning',
         contribution: efficiencyRatioData ? `${(getAggregateScore(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)') * getAggregateWeight(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)')).toFixed(2)} of ${(getAggregateWeight(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Growth trajectory alignment',
         institutionalAvg: '--',
-        currentPeriod: growthTrajectoryData ? `${parseFloat(growthTrajectoryData.average_score || '0').toFixed(2)}` : '--',
+        currentPeriod: growthTrajectoryData ? `${(parseFloat(growthTrajectoryData.mom_revenue || '0') * 100).toFixed(2)}%` : '--',
         target: '≥2.5%',
-        variance: growthTrajectoryData ? `${(parseFloat(growthTrajectoryData.average_score || '0') * 100 - 2.5).toFixed(2)}` : '--',
-        trend: growthTrajectoryData ? (growthTrajectoryData.average_score >= 0.025 ? '↑' : '↓') : '↓',
-        status: growthTrajectoryData ? (growthTrajectoryData.average_score >= 0.025 ? 'good' : growthTrajectoryData.average_score >= 0 ? 'warning' : 'critical') : 'warning',
+        variance: growthTrajectoryData ? `${((parseFloat(growthTrajectoryData.mom_revenue || '0') * 100) - 2.5).toFixed(2)}%` : '--',
+        trend: growthTrajectoryData ? (parseFloat(growthTrajectoryData.mom_revenue || '0') * 100 >= 2.5 ? '↑' : '↓') : '↓',
+        status: growthTrajectoryData ? (parseFloat(growthTrajectoryData.mom_revenue || '0') * 100 >= 2.5 ? 'good' : 'warning') : 'warning',
         contribution: growthTrajectoryData ? `${(getAggregateScore(growthTrajectoryData, 'Revenue & Performance', 'Growth trajectory alignment') * getAggregateWeight(growthTrajectoryData, 'Revenue & Performance', 'Growth trajectory alignment')).toFixed(2)} of ${(getAggregateWeight(growthTrajectoryData, 'Revenue & Performance', 'Growth trajectory alignment') * 100).toFixed(0)}pp` : '--'
       },
       {
         name: 'Revenue achievement',
-        institutionalAvg: '65%',
-        currentPeriod: revenueAchievementsData ? `${parseFloat(revenueAchievementsData.average_score || '0').toFixed(2)}` : '--',
+        institutionalAvg: '--',
+        currentPeriod: revenueAchievementsData ? `${parseFloat(revenueAchievementsData.average_score || '0').toFixed(2)}%` : '--',
         target: revenueAchievementsData?.target ? revenueAchievementsData.target : '≥100%',
         variance: revenueAchievementsData ? `${(parseFloat(revenueAchievementsData.average_score || '0') - parseFloat(revenueAchievementsData.target || '0')).toFixed(2)}%` : '--',
         trend: revenueAchievementsData ? (parseFloat(revenueAchievementsData.average_score || '0') >= parseFloat(revenueAchievementsData.target || '0') ? '↑' : '↓') : '↓',
@@ -1159,12 +1151,12 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Profitability contribution',
-        institutionalAvg: '65%',
-        currentPeriod: profitabilityContributionData ? `${parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0').toFixed(2)}%` : '--',
+        institutionalAvg: '--',
+        currentPeriod: profitabilityContributionData ? `${parseFloat((profitabilityContributionData.score || profitabilityContributionData.average_score || '0').replace('%', '')).toFixed(2)}%` : '--',
         target: profitabilityContributionData && profitabilityContributionData.target ? `≥ ${profitabilityContributionData.target}` : '≥ institutional avg',
-        variance: profitabilityContributionData ? `${(parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') - parseFloat(profitabilityContributionData.target || '0')).toFixed(2)}%` : '--',
-        trend: profitabilityContributionData ? (parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') >= parseFloat(profitabilityContributionData.target || '0') ? '↑' : '↓') : '↓',
-        status: profitabilityContributionData ? (parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') >= 90 ? 'good' : parseFloat(profitabilityContributionData.average_score?.replace('%', '') || '0') >= 70 ? 'warning' : 'critical') : 'warning',
+        variance: profitabilityContributionData ? `${(parseFloat((profitabilityContributionData.score || profitabilityContributionData.average_score || '0').replace('%', '')) - parseFloat(profitabilityContributionData.target || '0')).toFixed(2)}%` : '--',
+        trend: profitabilityContributionData ? (parseFloat((profitabilityContributionData.score || profitabilityContributionData.average_score || '0').replace('%', '')) >= parseFloat(profitabilityContributionData.target || '0') ? '↑' : '↓') : '↓',
+        status: profitabilityContributionData ? (parseFloat((profitabilityContributionData.score || profitabilityContributionData.average_score || '0').replace('%', '')) >= 90 ? 'good' : parseFloat((profitabilityContributionData.score || profitabilityContributionData.average_score || '0').replace('%', '')) >= 70 ? 'warning' : 'critical') : 'warning',
         contribution: profitabilityContributionData ? `${(getAggregateScore(profitabilityContributionData, 'Revenue & Performance', 'Profitability contribution') * getAggregateWeight(profitabilityContributionData, 'Revenue & Performance', 'Profitability contribution')).toFixed(2)} of ${(getAggregateWeight(profitabilityContributionData, 'Revenue & Performance', 'Profitability contribution') * 100).toFixed(0)}pp` : '--'
       }
     ],

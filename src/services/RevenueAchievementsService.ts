@@ -5,6 +5,7 @@ export interface RevenueAchievementsData {
   period: string;
   expected_revenue: number;
   average_score: string;
+  target?: string;
   weight: string;
   percentage_point: number;
 }

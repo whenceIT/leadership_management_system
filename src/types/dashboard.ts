@@ -2,6 +2,17 @@ export type KPIStatus = 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | '
 
 export type KPITrend = '↑' | '↓' | '→';
 
+export interface KPI {
+  name: string;
+  institutionalAvg: string;
+  currentPeriod: string;
+  target: string | number | { min: number; max: number };
+  variance: string;
+  trend: KPITrend;
+  status: KPIStatus;
+  contribution?: string;
+}
+
 export interface Office {
   id: string | number;
   name: string;

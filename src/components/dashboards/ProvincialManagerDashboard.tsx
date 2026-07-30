@@ -298,27 +298,27 @@ export default function ProvincialManagerDashboard() {
     );
   };
 
-  const provinceId = getProvinceIdFromUser();
-  const { data: staffAdequacyData, isLoading: isStaffAdequacyLoading } = useProvincialStaffAdequacy(provinceId);
-  const { data: collectionEfficiencyData } = useProvincialCollectionEfficiency(provinceId);
-  const { data: portfolioQualityData } = useProvincialPortfolioQuality(provinceId);
-  const { data: productDiversificationData } = useProvincialProductDiversification(provinceId);
-  const { data: productRiskScoreData } = useProvincialProductRiskScore(provinceId);
-  const { data: productivityAchievementData } = useProvincialProductivityAchievement(provinceId);
-  const { data: vacancyImpactData } = useProvincialVacancyImpact(provinceId);
-  const { data: volumeAchievementData } = useProvincialVolumeAchievement(provinceId);
-  const { data: yieldAchievementsData } = useProvincialYieldAchievements(provinceId);
-  const { data: loanPortfolioLoadData } = useProvincialLoanPortfolioLoad(provinceId);
-  const { data: month3RecoveryAchievementsData } = useProvincialMonth3RecoveryAchievements(provinceId);
-  const { data: efficiencyRatioData } = useProvincialEfficiencyRatio(provinceId);
-  const { data: growthTrajectoryData } = useProvincialGrowthTrajectory(provinceId);
-  const { data: longTermDelinquencyData } = useProvincialLongTermDelinquency(provinceId);
-  const { data: revenueAchievementsData } = useProvincialRevenueAchievements(provinceId);
-  const { data: profitabilityContributionData } = useProvincialProfitabilityContribution(provinceId);
-  const { data: rollRateControlData } = useProvincialRollRateControl(provinceId);
-  const { data: cashPositionData } = useProvincialCashPosition(provinceId);
+   const provinceId = getProvinceIdFromUser();
+   const { data: staffAdequacyData, isLoading: isStaffAdequacyLoading } = useProvincialStaffAdequacy(provinceId);
+   const { data: collectionEfficiencyData } = useProvincialCollectionEfficiency(provinceId);
+   const { data: portfolioQualityData } = useProvincialPortfolioQuality(provinceId);
+   const { data: productDiversificationData } = useProvincialProductDiversification(provinceId);
+   const { data: productRiskScoreData } = useProvincialProductRiskScore(provinceId);
+   const { data: productivityAchievementData } = useProvincialProductivityAchievement(provinceId);
+   const { data: vacancyImpactData } = useProvincialVacancyImpact(provinceId);
+   const { data: volumeAchievementData } = useProvincialVolumeAchievement(provinceId);
+   const { data: yieldAchievementsData } = useProvincialYieldAchievements(provinceId);
+   const { data: loanPortfolioLoadData } = useProvincialLoanPortfolioLoad(provinceId);
+   const { data: month3RecoveryAchievementsData } = useProvincialMonth3RecoveryAchievements(provinceId);
+   const { data: efficiencyRatioData } = useProvincialEfficiencyRatio(provinceId);
+   const { data: growthTrajectoryData } = useProvincialGrowthTrajectory(provinceId);
+   const { data: longTermDelinquencyData } = useProvincialLongTermDelinquency(provinceId);
+   const { data: revenueAchievementsData } = useProvincialRevenueAchievements(provinceId);
+   const { data: profitabilityContributionData } = useProvincialProfitabilityContribution(provinceId);
+   const { data: rollRateControlData } = useProvincialRollRateControl(provinceId);
+   const { data: cashPositionData } = useProvincialCashPosition(provinceId);
 
-  const summaryData = getInstitutionalSummaryData('province', 'Provincial View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, cashPositionData, undefined, undefined);
+   const summaryData = getInstitutionalSummaryData('province', 'Provincial View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData, undefined, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData, longTermDelinquencyData, undefined, month3RecoveryAchievementsData, portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData, yieldAchievementsData, revenueAchievementsData, profitabilityContributionData, cashPositionData);
 
   return (
     <DashboardBase

@@ -22,6 +22,8 @@ import { useProductDiversification } from '@/hooks/useProductDiversification';
 import { useProductRiskScore } from '@/hooks/useProductRiskScore';
 import { useRollRateControl } from '@/hooks/useRollRateControl';
 import { useYieldAchievements } from '@/hooks/useYieldAchievements';
+import { useRevenueAchievements } from '@/hooks/useRevenueAchievements';
+import { useProfitabilityContribution } from '@/hooks/useProfitabilityContribution';
 import { useCashPosition } from '@/hooks/useCashPosition';
 
 interface BranchManagerDashboardProps {
@@ -109,6 +111,12 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
   // Fetch yield achievements data
   const { data: yieldAchievementsData, isLoading: isYieldAchievementsLoading, error: yieldAchievementsError } = useYieldAchievements(3);
 
+  // Fetch revenue achievements data
+  const { data: revenueAchievementsData, isLoading: isRevenueAchievementsLoading, error: revenueAchievementsError } = useRevenueAchievements(3);
+
+  // Fetch profitability contribution data
+  const { data: profitabilityContributionData, isLoading: isProfitabilityContributionLoading, error: profitabilityContributionError } = useProfitabilityContribution(3);
+
   // Fetch cash position data
   const { data: cashPositionData, isLoading: isCashPositionLoading, error: cashPositionError } = useCashPosition(3);
 
@@ -133,8 +141,8 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       productRiskScoreData,
       rollRateControlData,
       yieldAchievementsData,
-      undefined, // revenueAchievementsData - not available
-      undefined, // profitabilityContributionData - not available
+      revenueAchievementsData,
+      profitabilityContributionData,
       cashPositionData
     );
     let updatedData = { ...baseData };
@@ -306,29 +314,197 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
        });
       }
 
+      // Update Efficiency Ratio (CIR) key metric
+      if (efficiencyRatioData) {
+        const cirValue = parseFloat(efficiencyRatioData.CIR || '0') * 100;
+        const target = parseFloat(efficiencyRatioData.target || '55');
+        const weight = parseFloat((efficiencyRatioData.weight || '0%').replace('%', ''));
+        const percentagePoint = parseFloat(efficiencyRatioData.percentage_point || '0');
+        
+        keyMetrics = keyMetrics.map(metric => {
+          if (metric.parameter === 'Efficiency Ratio (CIR)') {
+            return {
+              ...metric,
+              institutionalAvg: '--',
+              currentPeriod: `${cirValue.toFixed(2)}%`,
+              target: `≤${target}%`,
+              variance: `${(cirValue - target).toFixed(2)}%`,
+              trend: (cirValue <= target ? '↑' : '↓') as '↑' | '↓' | '→',
+              provAvg: '90%',
+              contribution: `${percentagePoint.toFixed(2)}/${weight}pp ${cirValue <= target ? '▲' : '▼'}`
+            };
+          }
+          return metric;
+        });
+        
+        updatedData = {
+          ...updatedData,
+          parameters: updatedData.parameters.map(param => {
+            if (param.name === 'Efficiency Ratio (CIR)') {
+              return {
+                ...param,
+                institutionalAvg: '--',
+                userLevelAvg: `${cirValue.toFixed(2)}%`,
+                target: `≤${target}%`,
+                variance: `${(cirValue - target).toFixed(2)}%`,
+                trend: (cirValue <= target ? '↑' : '↓') as '↑' | '↓' | '→',
+                status: (cirValue <= target ? 'good' : 'warning') as 'good' | 'warning' | 'critical'
+              };
+            }
+            return param;
+          })
+        };
+      }
+
+      // Update Growth Trajectory key metric
+      if (growthTrajectoryData) {
+        const momRevenue = parseFloat(String(growthTrajectoryData.mom_revenue || '0')) * 100;
+        const target = 2.5;
+        
+        keyMetrics = keyMetrics.map(metric => {
+          if (metric.parameter === 'Growth trajectory alignment') {
+            return {
+              ...metric,
+              institutionalAvg: '--',
+              currentPeriod: `${momRevenue.toFixed(2)}%`,
+              target: '≥2.5%',
+              variance: `${(momRevenue - target).toFixed(2)}%`,
+              trend: (momRevenue >= target ? '↑' : '↓') as '↑' | '↓' | '→',
+              provAvg: '90%',
+              contribution: `${(momRevenue >= target ? 100 : 0).toFixed(0)} of 10pp ${momRevenue >= target ? '▲' : '▼'}`
+            };
+          }
+          return metric;
+        });
+        
+        updatedData = {
+          ...updatedData,
+          parameters: updatedData.parameters.map(param => {
+            if (param.name === 'Growth trajectory alignment') {
+              return {
+                ...param,
+                institutionalAvg: '--',
+                userLevelAvg: `${momRevenue.toFixed(2)}%`,
+                target: '≥2.5%',
+                variance: `${(momRevenue - target).toFixed(2)}%`,
+                trend: (momRevenue >= target ? '↑' : '↓') as '↑' | '↓' | '→',
+                status: (momRevenue >= target ? 'good' : 'warning') as 'good' | 'warning' | 'critical'
+              };
+            }
+            return param;
+          })
+        };
+      }
+
+      // Update Revenue Achievement key metric
+      if (revenueAchievementsData) {
+        const score = parseFloat(revenueAchievementsData.average_score || '0');
+        const target = parseFloat(revenueAchievementsData.target || '100');
+        const weight = parseFloat(String(revenueAchievementsData.weight || '0%').replace('%', ''));
+        const percentagePoint = parseFloat(String(revenueAchievementsData.percentage_point || '0'));
+        
+        keyMetrics = keyMetrics.map(metric => {
+          if (metric.parameter === 'Revenue achievement') {
+            return {
+              ...metric,
+              institutionalAvg: '--',
+              currentPeriod: `${score.toFixed(2)}%`,
+              target: `≥${target}%`,
+              variance: `${(score - target).toFixed(2)}%`,
+              trend: (score >= target ? '↑' : '↓') as '↑' | '↓' | '→',
+              provAvg: '90%',
+              contribution: `${percentagePoint.toFixed(2)}/${weight}pp ${score >= target ? '▲' : '▼'}`
+            };
+          }
+          return metric;
+        });
+        
+        updatedData = {
+          ...updatedData,
+          parameters: updatedData.parameters.map(param => {
+            if (param.name === 'Revenue achievement') {
+              return {
+                ...param,
+                institutionalAvg: '--',
+                userLevelAvg: `${score.toFixed(2)}%`,
+                target: `≥${target}%`,
+                variance: `${(score - target).toFixed(2)}%`,
+                trend: (score >= target ? '↑' : '↓') as '↑' | '↓' | '→',
+                status: (score >= target ? 'good' : score >= 70 ? 'warning' : 'critical') as 'good' | 'warning' | 'critical'
+              };
+            }
+            return param;
+          })
+        };
+      }
+
+      // Update Profitability Contribution key metric
+      if (profitabilityContributionData) {
+        const scoreStr = profitabilityContributionData.score || profitabilityContributionData.average_score || '0';
+        const score = parseFloat(scoreStr.replace('%', ''));
+        const target = parseFloat(profitabilityContributionData.target || '100');
+        const weightStr = profitabilityContributionData.weight || '0%';
+        const weight = parseFloat(String(weightStr).replace('%', ''));
+        const percentagePoint = parseFloat(String(profitabilityContributionData.percentage_point || '0'));
+        
+        keyMetrics = keyMetrics.map(metric => {
+          if (metric.parameter === 'Profitability contribution') {
+            return {
+              ...metric,
+              institutionalAvg: '--',
+              currentPeriod: `${score.toFixed(2)}%`,
+              target: '≥ institutional avg',
+              variance: `${(score - target).toFixed(2)}%`,
+              trend: (score >= target ? '↑' : '↓') as '↑' | '↓' | '→',
+              provAvg: '90%',
+              contribution: `${percentagePoint.toFixed(2)}/${weight}pp ${score >= target ? '▲' : '▼'}`
+            };
+          }
+          return metric;
+        });
+        
+        updatedData = {
+          ...updatedData,
+          parameters: updatedData.parameters.map(param => {
+            if (param.name === 'Profitability contribution') {
+              return {
+                ...param,
+                institutionalAvg: '--',
+                userLevelAvg: `${score.toFixed(2)}%`,
+                target: '≥ institutional avg',
+                variance: `${(score - target).toFixed(2)}%`,
+                trend: (score >= target ? '↑' : '↓') as '↑' | '↓' | '→',
+                status: (score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical') as 'good' | 'warning' | 'critical'
+              };
+            }
+            return param;
+          })
+        };
+      }
+
       // Recalculate overall score based on updated parameters
-    const overallScore = Math.round(
-      updatedData.parameters.reduce((sum, param) => {
-        const score = parseFloat(param.userLevelAvg.replace('%', ''));
-        return sum + (isNaN(score) ? 0 : score);
-      }, 0) / updatedData.parameters.length
-    );
+     const overallScore = Math.round(
+       updatedData.parameters.reduce((sum, param) => {
+         const score = parseFloat(param.userLevelAvg.replace('%', ''));
+         return sum + (isNaN(score) ? 0 : score);
+       }, 0) / updatedData.parameters.length
+     );
 
-    // Recalculate overall institutional average
-    const overallInstAvg = Math.round(
-      updatedData.parameters.reduce((sum, param) => {
-        const score = parseFloat(param.institutionalAvg.replace('%', ''));
-        return sum + (isNaN(score) ? 0 : score);
-      }, 0) / updatedData.parameters.length
-    );
+     // Recalculate overall institutional average
+     const overallInstAvg = Math.round(
+       updatedData.parameters.reduce((sum, param) => {
+         const score = parseFloat(param.institutionalAvg.replace('%', ''));
+         return sum + (isNaN(score) ? 0 : score);
+       }, 0) / updatedData.parameters.length
+     );
 
-    return {
-      ...updatedData,
-      keyMetrics,
-      overallScore,
-      overallInstAvg
-    };
-  }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData, longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData, portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData, yieldAchievementsData, cashPositionData]);
+     return {
+       ...updatedData,
+       keyMetrics,
+       overallScore,
+       overallInstAvg
+     };
+   }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData, longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData, portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData, yieldAchievementsData, revenueAchievementsData, profitabilityContributionData, cashPositionData]);
 
   return (
     <DashboardBase
