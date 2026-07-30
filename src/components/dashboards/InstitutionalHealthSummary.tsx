@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLoading } from '@/context/LoadingContext';
+import { KPIStatus, KPITrend, ParameterSummary } from '@/types/dashboard';
 import HealthAnalysisSections from './HealthAnalysisSections';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { BranchLevelView } from './BranchLevelView';
@@ -16,8 +17,8 @@ interface KPI {
   currentPeriod: string;
   target: string | number | { min: number; max: number };
   variance: string;
-  trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent';
+  trend: KPITrend;
+  status: KPIStatus;
   contribution?: string;
 }
 
@@ -53,19 +54,6 @@ status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent';
 interface DrillDownProps {
   data: DrillDownData;
   onClose: () => void;
-}
-
-interface ParameterSummary {
-  name: string;
-  shortName: string;
-  institutionalAvg: string;
-  userLevelAvg: string;
-  target: string | number;
-  variance: string;
-  varianceAbs: string;
-  trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent';
-  contribution?: string;
 }
 
 interface KeyMetric {
@@ -472,7 +460,7 @@ function getTrendBadge(trend: '↑' | '↓' | '→') {
   return 'text-orange-500 dark:text-gray-600 text-lg font-bold';
 }
 
-function getStatusBadge(status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent') {
+function getStatusBadge(status: KPIStatus) {
   switch (status) {
     case 'good': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
     case 'warning': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';

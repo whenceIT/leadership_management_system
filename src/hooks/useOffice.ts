@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { Office } from '@/types/dashboard';
 
 /**
  * useOffice Hook
@@ -9,31 +10,6 @@ import { useState, useEffect, useCallback } from 'react';
  * Includes district_id and province_id for hierarchical filtering.
  */
 
-export interface Office {
-  id: string | number;
-  name: string;
-  parentId: string | number | null;
-  externalId: string;
-  openingDate?: string | null;
-  branchCapacity?: number | string | null;
-  address?: string | null;
-  phone?: string | null;
-  email?: string | null;
-  notes?: string | null;
-  managerId?: string | number | null;
-  active: boolean | number;
-  defaultOffice?: boolean | number;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-  deletedAt?: string | null;
-  provinceId: string | number;
-  districtId?: string | number | null;
-  district_id?: string | number | null; // API often uses snake_case
-  province_id?: string | number | null;
-  withinhereWalletId?: string | null;
-  withinhere_wallet_id?: string | null; // raw API field
-  user_count: number;
-}
 
 export function useOffice() {
   const [offices, setOffices] = useState<Office[]>([]);

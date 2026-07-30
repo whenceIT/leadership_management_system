@@ -6,30 +6,6 @@ import { DistrictLevelView } from './DistrictLevelView';
 import { BranchLevelView } from './BranchLevelView';
 import { KPIStatus, KPITrend, ParameterSummary } from '@/types/dashboard';
 
-interface KPI {
-  name: string;
-  institutionalAvg: string;
-  currentPeriod: string;
-  target: string | number | { min: number; max: number };
-  variance: string;
-  trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent';
-  contribution?: string;
-}
-
-interface ParameterSummary {
-  name: string;
-  shortName: string;
-  institutionalAvg: string;
-  userLevelAvg: string;
-  target: string | number;
-  variance: string;
-  varianceAbs: string;
-  trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent';
-  contribution?: string;
-}
-
 interface ParametersCardsViewProps {
   parameters: ParameterSummary[];
   userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant';
@@ -61,7 +37,7 @@ interface ParametersCardsViewProps {
     approvedExceptionRatioData?: any) => KPI[];
   getVarianceColor: (variance: string) => string;
   getTrendBadge: (trend: '↑' | '↓' | '→') => string;
-  getStatusBadge: (status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent') => string;
+  getStatusBadge: (status: KPIStatus) => string;
   staffAdequacyData?: any;
   productivityAchievementData?: any;
   vacancyImpactData?: any;
@@ -156,7 +132,7 @@ export function ParametersCardsView({
   }[userLevel];
 
   // Helper to get status color
-  const getStatusColor = (status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent') => {
+  const getStatusColor = (status: KPIStatus) => {
     switch (status) {
       case 'good': return 'bg-green-500';
       case 'warning': return 'bg-yellow-500';

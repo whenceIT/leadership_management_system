@@ -6,6 +6,7 @@ import { useProvince } from '@/hooks/useProvince';
 import { useDistrict } from '@/hooks/useDistrict';
 import { useUserPosition } from '@/hooks/useUserPosition';
 import { calculateCashPositionScore } from './InstitutionalHealthSummary';
+import { KPIStatus, KPITrend } from '@/types/dashboard';
 
 // Import all provincial service functions (we'll reuse them for branch level)
 import { fetchStaffAdequacyPerformance } from '@/services/StaffAdequacyService';
@@ -174,7 +175,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
     return 'text-orange-500 dark:text-gray-600 text-lg font-bold';
   };
 
-  const getStatusBadge = (status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent') => {
+  const getStatusBadge = (status: KPIStatus) => {
     switch (status) {
       case 'good': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       case 'warning': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
@@ -192,13 +193,13 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
   };
 
   // Helper function to extract KPI value from data
-  const getKPIValue = (data: any, selectedKPI: string): { current: string; target: string; variance: string; trend: '↑' | '↓' | '→'; status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent'; contribution: string; actualLcs: number } => {
+  const getKPIValue = (data: any, selectedKPI: string): { current: string; target: string; variance: string; trend: KPITrend; status: KPIStatus; contribution: string; actualLcs: number } => {
     // Default values
     let current = '--';
     let target = '100%';
     let variance = '--';
     let trend: '↑' | '↓' | '→' = '→';
-    let status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent' = 'warning';
+    let status: KPIStatus = 'warning';
     let contribution = '--';
     let actualLcs = 0;
 
