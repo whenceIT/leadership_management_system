@@ -192,7 +192,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
   };
 
   // Helper function to extract KPI value from data
-  const getKPIValue = (data: any, selectedKPI: string): { current: string; target: string; variance: string; trend: '↑' | '↓' | '→'; status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate'; contribution: string; actualLcs: number } => {
+  const getKPIValue = (data: any, selectedKPI: string): { current: string; target: string; variance: string; trend: '↑' | '↓' | '→'; status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent'; contribution: string; actualLcs: number } => {
     // Default values
     let current = '--';
     let target = '100%';
@@ -404,7 +404,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         variance = `${(score - 100).toFixed(2)}%`;
         if (score >= 70) {
           trend = '↑';
-          status = 'excellent' as 'good' | 'warning' | 'critical' | 'bad' | 'moderate';
+          status = 'excellent';
         } else if (score >= 50) {
           trend = '→';
           status = 'good';
