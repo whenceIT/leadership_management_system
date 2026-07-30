@@ -25,7 +25,7 @@ const THRESHOLDS = {
   CRITICAL_MIN: 10000
 };
 
-import { Office } from '@/hooks/useOffice';
+import { Office } from '@/types/dashboard';
 
 const LEDGER_API = 'https://withinheremobileapi.com/api/v1/lmsuser/branch_ledger';
 
