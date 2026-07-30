@@ -122,7 +122,17 @@ function getAggregateScore(data: any, paramName: string, kpiName: string): numbe
     case 'Revenue & Performance':
       switch (kpiName) {
         case 'Efficiency Ratio (CIR)':
-          return parseFloat(data.CIR || data.score || data.average_score || '0') * 100;
+          // CIR is an inverse metric (lower is better)
+          // Normalize to 0-100 scale where 100 = perfect (CIR=0), 0 = at/beyond target
+          {
+            const cir = parseFloat(data.CIR || data.score || data.average_score || '0');
+            const cirPct = cir * 100;
+            const target = parseFloat(data.target || '55');
+            if (target > 0) {
+              return Math.max(0, Math.min(100, 100 - (cirPct / target) * 100));
+            }
+            return Math.max(0, Math.min(100, 100 - cirPct));
+          }
         case 'Growth trajectory alignment':
           return (parseFloat(data.mom_revenue || data.average_score || '0')) * 100;
         case 'Revenue achievement':
@@ -1122,9 +1132,9 @@ function getParameterKPIs(userLevel: string, paramName: string,
       {
         name: 'Efficiency Ratio (CIR)',
         institutionalAvg: '--',
-        currentPeriod: efficiencyRatioData ? `${parseFloat(efficiencyRatioData.CIR || '0').toFixed(4)}%` : '--',
+        currentPeriod: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.CIR || '0') * 100).toFixed(2)}%` : '--',
         target: efficiencyRatioData ? efficiencyRatioData.target : '≤55%',
-        variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.CIR || '0') * 100 - parseFloat(efficiencyRatioData.target || '0')).toFixed(2)}%` : '--',
+        variance: efficiencyRatioData ? `${((parseFloat(efficiencyRatioData.CIR || '0') * 100) - parseFloat(efficiencyRatioData.target || '0')).toFixed(2)}%` : '--',
         trend: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR || '0') * 100 <= parseFloat(efficiencyRatioData.target || '0') ? '↑' : '↓') : '↓',
         status: efficiencyRatioData ? (parseFloat(efficiencyRatioData.CIR || '0') * 100 <= parseFloat(efficiencyRatioData.target || '0') ? 'good' : parseFloat(efficiencyRatioData.CIR || '0') * 100 <= parseFloat(efficiencyRatioData.target || '0') * 1.1 ? 'warning' : 'critical') : 'warning',
         contribution: efficiencyRatioData ? `${(getAggregateScore(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)') * getAggregateWeight(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)')).toFixed(2)} of ${(getAggregateWeight(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)') * 100).toFixed(0)}pp` : '--'
