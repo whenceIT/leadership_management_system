@@ -483,27 +483,40 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       }
 
       // Recalculate overall score based on updated parameters
-     const overallScore = Math.round(
-       updatedData.parameters.reduce((sum, param) => {
-         const score = parseFloat(param.userLevelAvg.replace('%', ''));
-         return sum + (isNaN(score) ? 0 : score);
-       }, 0) / updatedData.parameters.length
-     );
+      const overallScore = Math.round(
+        updatedData.parameters.reduce((sum, param) => {
+          const score = parseFloat(param.userLevelAvg.replace('%', ''));
+          return sum + (isNaN(score) ? 0 : score);
+        }, 0) / updatedData.parameters.length
+      );
 
-     // Recalculate overall institutional average
-     const overallInstAvg = Math.round(
-       updatedData.parameters.reduce((sum, param) => {
-         const score = parseFloat(param.institutionalAvg.replace('%', ''));
-         return sum + (isNaN(score) ? 0 : score);
-       }, 0) / updatedData.parameters.length
-     );
+      // Mocked previous 3 months scores (fixed snapshots)
+      const prevMonth1 = 68;
+      const prevMonth2 = 62;
+      const prevMonth3 = 65;
+      const previousScore = Math.round((prevMonth1 + prevMonth2 + prevMonth3) / 3);
+      const prevMonthScores = [
+        { label: '3 months ago', score: prevMonth3 },
+        { label: '2 months ago', score: prevMonth2 },
+        { label: 'last month', score: prevMonth1 }
+      ];
 
-     return {
-       ...updatedData,
-       keyMetrics,
-       overallScore,
-       overallInstAvg
-     };
+      // Recalculate overall institutional average
+      const overallInstAvg = Math.round(
+        updatedData.parameters.reduce((sum, param) => {
+          const score = parseFloat(param.institutionalAvg.replace('%', ''));
+          return sum + (isNaN(score) ? 0 : score);
+        }, 0) / updatedData.parameters.length
+      );
+
+      return {
+        ...updatedData,
+        keyMetrics,
+        overallScore,
+        previousScore,
+        prevMonthScores,
+        overallInstAvg
+      };
    }, [staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData, loanPortfolioLoadData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData, longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData, portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData, yieldAchievementsData, revenueAchievementsData, profitabilityContributionData, cashPositionData]);
 
   return (
@@ -520,6 +533,8 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         keyMetrics={summaryData.keyMetrics}
         recentActivities={summaryData.recentActivities}
         overallScore={summaryData.overallScore}
+        previousScore={summaryData.previousScore}
+        prevMonthScores={summaryData.prevMonthScores}
         overallInstAvg={summaryData.overallInstAvg}
         overallTarget={summaryData.overallTarget}
         staffAdequacyData={staffAdequacyData}

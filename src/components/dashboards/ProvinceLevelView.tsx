@@ -411,8 +411,8 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
           className="ml-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
           title="KPI Information"
         >
-          <svg className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15.5A3.5 3.5 0 0115.5 12 3.5 3.5 0 0112 8.5a3.5 3.5 0 01-3.5 3.5 3.5 3.5 0 010 7z" />
+          <svg className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-1" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M3.5 11.5a3.5 3.5 0 1 1 3.163-5H14L15.5 8 14 9.5l-1-1-1 1-1-1-1 1-1-1-1 1-1-1-1 1H6.663a3.5 3.5 0 0 1-3.163 2M2.5 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
           </svg>
           <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Key</span>
         </button>

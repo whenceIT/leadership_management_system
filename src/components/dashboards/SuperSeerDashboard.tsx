@@ -285,6 +285,8 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
         parameters={summaryData.parameters}
         recentActivities={summaryData.recentActivities}
         overallScore={summaryData.overallScore}
+        previousScore={summaryData.previousScore}
+        prevMonthScores={summaryData.prevMonthScores}
         overallInstAvg={summaryData.overallInstAvg}
         overallTarget={summaryData.overallTarget}
         isLoading={isLoading || isKpiLoading}

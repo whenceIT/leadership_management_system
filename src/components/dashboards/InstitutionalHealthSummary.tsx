@@ -67,6 +67,8 @@ export interface InstitutionalSummaryData {
   keyMetrics: KeyMetric[];
   recentActivities: RecentActivity[];
   overallScore: number;
+  previousScore: number;
+  prevMonthScores: { label: string; score: number }[];
   overallInstAvg: number;
   overallTarget: number;
 }
@@ -387,11 +389,24 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
   // Calculate overall target (assuming target is ≥90% for all parameters)
   const overallTarget = 90;
 
+  // Mocked previous 3 months scores (fixed snapshots)
+  const prevMonth1 = 68;
+  const prevMonth2 = 62;
+  const prevMonth3 = 65;
+  const previousScore = Math.round((prevMonth1 + prevMonth2 + prevMonth3) / 3);
+  const prevMonthScores = [
+    { label: '3 months ago', score: prevMonth3 },
+    { label: '2 months ago', score: prevMonth2 },
+    { label: 'last month', score: prevMonth1 }
+  ];
+
   return {
     parameters: baseParameters,
     keyMetrics: baseKeyMetrics,
     recentActivities: baseRecentActivities,
     overallScore,
+    previousScore,
+    prevMonthScores,
     overallInstAvg,
     overallTarget
   };
@@ -405,6 +420,8 @@ interface InstitutionalHealthSummaryProps {
   keyMetrics?: KeyMetric[];
   recentActivities?: RecentActivity[];
   overallScore?: number;
+  previousScore?: number;
+  prevMonthScores?: { label: string; score: number }[];
   overallInstAvg?: number;
   overallTarget?: number;
   staffAdequacyData?: any;
@@ -1236,8 +1253,10 @@ export function InstitutionalHealthSummary({
   parameters,
   keyMetrics,
   recentActivities = [],
-  overallScore,
-  overallInstAvg,
+   overallScore,
+   previousScore,
+   prevMonthScores,
+   overallInstAvg,
   overallTarget,
   staffAdequacyData,
   productivityAchievementData,
@@ -1293,8 +1312,39 @@ const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
               <p className="text-white font-semibold mt-0.5">{userLevelLabel}</p>
             </div>
             <div className="text-right">
-              <p className="text-4xl font-black text-white">{overallScore}%</p>
+              <div className="flex items-center justify-end gap-3 mb-1">
+                {prevMonthScores && prevMonthScores.length === 3 && (
+                  <>
+                    <span className="text-2xl font-bold text-gray-400 opacity-40">
+                      {prevMonthScores[0].score}%
+                    </span>
+                    <span className="text-xs text-gray-500 opacity-40">3mo</span>
+                    <span className="text-2xl font-bold text-gray-400 opacity-50">
+                      {prevMonthScores[1].score}%
+                    </span>
+                    <span className="text-xs text-gray-500 opacity-50">2mo</span>
+                    <span className="text-3xl font-bold text-gray-400 opacity-60">
+                      {prevMonthScores[2].score}%
+                    </span>
+                    <span className="text-xs text-gray-500 opacity-60">last</span>
+                  </>
+                )}
+                <span className={`text-xs font-medium ${
+                  overallScore >= (prevMonthScores?.[2]?.score ?? 0)
+                    ? 'text-green-400'
+                    : 'text-red-400'
+                }`}>
+                  {overallScore >= (prevMonthScores?.[2]?.score ?? 0) ? '▲' : '▼'}
+                  {Math.abs(overallScore - (prevMonthScores?.[2]?.score ?? 0))}%
+                </span>
+                <span className="text-4xl font-black text-white">{overallScore}%</span>
+              </div>
               <p className="text-gray-400 text-xs">Overall Health Score</p>
+              {prevMonthScores && prevMonthScores.length === 3 && (
+                <p className="text-xs text-gray-500 opacity-60">
+                  Previous: {prevMonthScores[2].score}% (last month) · Avg: {Math.round((prevMonthScores[0].score + prevMonthScores[1].score + prevMonthScores[2].score) / 3)}% (3-month)
+                </p>
+              )}
             </div>
           </div>
           {overallInstAvg !== undefined && overallTarget !== undefined && (
