@@ -4,6 +4,7 @@ import React from 'react';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { DistrictLevelView } from './DistrictLevelView';
 import { BranchLevelView } from './BranchLevelView';
+import { KPIStatus, KPITrend, ParameterSummary } from '@/types/dashboard';
 
 interface KPI {
   name: string;

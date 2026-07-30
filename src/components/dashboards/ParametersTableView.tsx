@@ -4,30 +4,8 @@ import React from 'react';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { DistrictLevelView } from './DistrictLevelView';
 import { BranchLevelView } from './BranchLevelView';
+import { KPIStatus, KPITrend, ParameterSummary } from '@/types/dashboard';
 
-interface KPI {
-  name: string;
-  institutionalAvg: string;
-  currentPeriod: string;
-  target: string | number | { min: number; max: number };
-  variance: string;
-  trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent';
-  contribution?: string;
-}
-
-interface ParameterSummary {
-  name: string;
-  shortName: string;
-  institutionalAvg: string;
-  userLevelAvg: string;
-  target: string | number;
-  variance: string;
-  varianceAbs: string;
-  trend: '↑' | '↓' | '→';
-  status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent';
-  contribution?: string;
-}
 
 interface ParametersTableViewProps {
   parameters: ParameterSummary[];
@@ -57,7 +35,7 @@ interface ParametersTableViewProps {
     cashPositionData?: any) => KPI[];
   getVarianceColor: (variance: string) => string;
   getTrendBadge: (trend: '↑' | '↓' | '→') => string;
-  getStatusBadge: (status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent') => string;
+  getStatusBadge: (status: KPIStatus) => string;
   staffAdequacyData?: any;
   productivityAchievementData?: any;
   vacancyImpactData?: any;

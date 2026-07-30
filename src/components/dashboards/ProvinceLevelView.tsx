@@ -336,13 +336,10 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
     return 'text-orange-500 dark:text-gray-600 text-lg font-bold';
   }
 
-  function getStatusBadge(status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent') {
+  function getStatusBadge(status: 'good' | 'warning' | 'critical') {
     switch (status) {
       case 'good': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case 'excellent': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
       case 'warning': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-      case 'moderate': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300';
-      case 'bad': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
       case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
     }
   }
@@ -496,7 +493,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                 let target = '100%';
                 let variance = '0';
                 let trend: '↑' | '↓' | '→' = '→';
-                let status: 'good' | 'warning' | 'critical' | 'moderate' | 'bad' | 'excellent' = 'warning';
+                let status: 'good' | 'warning' | 'critical' = 'warning';
                 let actualLcs = 0;
                 let contribution = '--';
                 let branchesBelowThreshold = 0;
@@ -606,7 +603,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
                      </td>
                      <td className="px-4 py-2">
                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(status)}`}>
-                         {status === 'good' ? 'GOOD' : status === 'warning' ? 'WARNING' : status === 'moderate' ? 'MODERATE' : status === 'bad' ? 'BAD' : 'CRITICAL'}
+                         {status === 'good' ? 'GOOD' : status === 'warning' ? 'WARNING' : 'CRITICAL'}
                        </span>
                      </td>
                    </tr>
