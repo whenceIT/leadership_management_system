@@ -31,6 +31,7 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
+  disabled?: boolean;
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
@@ -75,31 +76,37 @@ const navItems: NavItem[] = [
     icon: <AssistantIconComponent />,
     name: "Assistant",
     path: "/lms/assistant",
+    disabled: true,
   },
   {
     icon: <KPIIconComponent />,
     name: "My KPI Scores",
     path: "/lms/kpi-dashboard",
+    disabled: true,
   },
   {
     icon: <ReviewIconComponent />,
     name: "Reviews",
     path: "/lms/reviews",
+    disabled: true,
   },
   {
     icon: <WorkflowIconComponent />,
     name: "Workflows",
     path: "/lms/workflows",
+    disabled: true,
   },
   {
     icon: <CalenderIcon />,
     name: "Calendar",
     path: "/calendar",
+    disabled: true,
   },
   {
     icon: <RoleCardIconComponent />,
     name: "Role Card",
     path: "/lms/role-cards",
+    disabled: true,
   },
   {
     name: "Settings",
@@ -209,25 +216,38 @@ const AppSidebar: React.FC = () => {
             </button>
           ) : (
             nav.path && (
-              <Link
-                href={nav.path}
-                className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                }`}
-              >
-                <span
-                  className={`${
-                    isActive(nav.path)
-                      ? "menu-item-icon-active"
-                      : "menu-item-icon-inactive"
+              nav.disabled ? (
+                <div
+                  className={`menu-item group menu-item-inactive opacity-50 cursor-not-allowed`}
+                >
+                  <span className="menu-item-icon-inactive">
+                    {nav.icon}
+                  </span>
+                  {(isExpanded || isHovered || isMobileOpen) && (
+                    <span className={`menu-item-text`}>{nav.name}</span>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href={nav.path}
+                  className={`menu-item group ${
+                    isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
                   }`}
                 >
-                  {nav.icon}
-                </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className={`menu-item-text`}>{nav.name}</span>
-                )}
-              </Link>
+                  <span
+                    className={`${
+                      isActive(nav.path)
+                        ? "menu-item-icon-active"
+                        : "menu-item-icon-inactive"
+                    }`}
+                  >
+                    {nav.icon}
+                  </span>
+                  {(isExpanded || isHovered || isMobileOpen) && (
+                    <span className={`menu-item-text`}>{nav.name}</span>
+                  )}
+                </Link>
+              )
             )
           )}
           {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (

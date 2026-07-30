@@ -32,6 +32,7 @@ export interface Office {
   province_id?: string | number | null;
   withinhereWalletId?: string | null;
   withinhere_wallet_id?: string | null; // raw API field
+  user_count?: number;
 }
 
 export function useOffice() {
