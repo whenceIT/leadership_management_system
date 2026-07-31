@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardBase, KPICard, AlertCard, CollapsibleCard } from './DashboardBase';
 import { getHeadlineParameters } from '@/data/headline-parameters-mock';
 import { InstitutionalHealthSummary, getInstitutionalSummaryData, calculateCashPositionScore } from './InstitutionalHealthSummary';
@@ -25,6 +25,7 @@ import { useYieldAchievements } from '@/hooks/useYieldAchievements';
 import { useRevenueAchievements } from '@/hooks/useRevenueAchievements';
 import { useProfitabilityContribution } from '@/hooks/useProfitabilityContribution';
 import { useCashPosition } from '@/hooks/useCashPosition';
+import { fetchOfficeUsers, OfficeUsersResponse } from '@/services/OfficeUserService';
 
 interface BranchManagerDashboardProps {
   userTier?: string | null;
@@ -119,6 +120,27 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
   // Fetch cash position data
   const { data: cashPositionData, isLoading: isCashPositionLoading, error: cashPositionError } = useCashPosition(3);
+
+  // Fetch office users for manager and referral counts
+  const [officeUsers, setOfficeUsers] = useState<OfficeUsersResponse | null>(null);
+  const [isOfficeUsersLoading, setIsOfficeUsersLoading] = useState(true);
+  const [officeUsersError, setOfficeUsersError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadOfficeUsers = async () => {
+      try {
+        setIsOfficeUsersLoading(true);
+        setOfficeUsersError(null);
+        const data = await fetchOfficeUsers(3);
+        setOfficeUsers(data);
+      } catch (err) {
+        setOfficeUsersError(err instanceof Error ? err.message : 'Failed to fetch office users');
+      } finally {
+        setIsOfficeUsersLoading(false);
+      }
+    };
+    loadOfficeUsers();
+  }, []);
 
   // Custom summary data with dynamic aggregated Branch Structure & Staffing
   const summaryData = useMemo(() => {
@@ -554,9 +576,99 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         rollRateControlData={rollRateControlData}
         yieldAchievementsData={yieldAchievementsData}
          cashPositionData={cashPositionData}
-         isLoading={isLoading || isKpiLoading || isStaffAdequacyLoading || isProductivityLoading || isVacancyLoading || isVolumeLoading || isLoanPortfolioLoading || isCollectionEfficiencyLoading || isEfficiencyRatioLoading || isGrowthTrajectoryLoading || isLongTermDelinquencyLoading || isMonth1DefaultPerformanceLoading || isMonth3RecoveryAchievementsLoading || isPortfolioQualityLoading || isProductDiversificationLoading || isProductRiskScoreLoading || isRollRateControlLoading || isYieldAchievementsLoading || isCashPositionLoading}
+         isLoading={isLoading || isKpiLoading || isStaffAdequacyLoading || isProductivityLoading || isVacancyLoading || isVolumeLoading || isLoanPortfolioLoading || isCollectionEfficiencyLoading || isEfficiencyRatioLoading || isGrowthTrajectoryLoading || isLongTermDelinquencyLoading || isMonth1DefaultPerformanceLoading || isMonth3RecoveryAchievementsLoading || isPortfolioQualityLoading || isProductDiversificationLoading || isProductRiskScoreLoading || isRollRateControlLoading || isYieldAchievementsLoading || isCashPositionLoading || isOfficeUsersLoading}
+         />
+
+      {/* Staff Composition */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-6">
+        <KPICard
+          title="Manager Users"
+          value={officeUsers ? `${officeUsers.manager_users.length}` : '--'}
+          change={officeUsers && officeUsers.manager_users.length > 0 ? `${officeUsers.manager_users.length} assigned` : 'No manager users'}
+          changeType={officeUsers && officeUsers.manager_users.length > 0 ? 'positive' : 'neutral'}
+          icon={
+            <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          }
         />
 
+        <KPICard
+          title="Referral Users"
+          value={officeUsers ? `${officeUsers.referral_users.length}` : '--'}
+          change={officeUsers && officeUsers.referral_users.length > 0 ? `${officeUsers.referral_users.length} assigned` : 'No referral users'}
+          changeType={officeUsers && officeUsers.referral_users.length > 0 ? 'positive' : 'neutral'}
+          icon={
+            <svg className="w-6 h-6 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          }
+        />
+      </div>
+
+      {/* Manager Users List */}
+      {officeUsers && officeUsers.manager_users.length > 0 && (
+        <div className="mt-6">
+          <CollapsibleCard title={`Manager Users (${officeUsers.manager_users.length})`}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {officeUsers.manager_users.map(user => (
+                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{user.first_name} {user.last_name}</td>
+                      <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">{user.email}</td>
+                      <td className="px-4 py-2 text-sm">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                          {user.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CollapsibleCard>
+        </div>
+      )}
+
+      {/* Referral Users List */}
+      {officeUsers && officeUsers.referral_users.length > 0 && (
+        <div className="mt-6">
+          <CollapsibleCard title={`Referral Users (${officeUsers.referral_users.length})`}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-900">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {officeUsers.referral_users.map(user => (
+                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{user.first_name} {user.last_name}</td>
+                      <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">{user.email}</td>
+                      <td className="px-4 py-2 text-sm">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                          {user.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CollapsibleCard>
+        </div>
+      )}
 
     </DashboardBase>
   );

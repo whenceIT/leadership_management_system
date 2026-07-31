@@ -122,10 +122,10 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
         const previousMetricsMap = new Map(previousMetrics.map(m => [m.user_id, m]));
 
         // Fetch users
-        const data = await fetchOfficeUsers(officeId);
+        const officeUsersData = await fetchOfficeUsers(officeId);
 
         // Enrich data with performance metrics
-        const enriched = await Promise.all(data.map(async user => {
+        const enriched = await Promise.all(officeUsersData.users.map(async user => {
           const currentMetric = currentMetricsMap.get(user.id);
           const previousMetric = previousMetricsMap.get(user.id);
 

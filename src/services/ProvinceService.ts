@@ -84,8 +84,9 @@ export class ProvinceService {
 
   /**
    * Get provinces with office counts
+   * @param skipCashBalance - If true, skip fetching cash balances from ledger API
    */
-  public async getProvincesWithOfficeCounts(): Promise<Province[]> {
+  public async getProvincesWithOfficeCounts(skipCashBalance = false): Promise<Province[]> {
     try {
       // Fetch offices from the API
       const response = await fetch('https://smartbackend.whencefinancesystem.com/offices', {
@@ -114,6 +115,16 @@ export class ProvinceService {
           officeCounts[provinceIdStr] = (officeCounts[provinceIdStr] || 0) + 1;
         }
       });
+
+      // Get provinces and add office counts
+      const provinces = await this.getProvinces();
+      
+      if (skipCashBalance) {
+        return provinces.map(province => ({
+          ...province,
+          offices_count: officeCounts[province.id.toString()] || 0
+        }));
+      }
 
       // Group offices by province for cash balance calculation
       const provinceOffices: { [provinceId: string]: any[] } = {};
@@ -169,8 +180,6 @@ export class ProvinceService {
         cashBalances[provinceId] = totalCash;
       }
 
-      // Get provinces and add office counts
-      const provinces = await this.getProvinces();
       return provinces.map(province => ({
         ...province,
         offices_count: officeCounts[province.id.toString()] || 0,

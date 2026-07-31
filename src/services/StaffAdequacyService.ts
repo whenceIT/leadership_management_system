@@ -9,6 +9,7 @@ export interface StaffAdequacyData {
   percentage_point: number;
   target: number; // Fixed target of 100%
   instAvg?: string; // Institutional average
+  total_staff?: number;
 }
 
 export async function fetchStaffAdequacyPerformance(branchId: number): Promise<StaffAdequacyData> {

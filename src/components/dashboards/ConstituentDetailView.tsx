@@ -13,6 +13,20 @@ interface ConstituentDetailProps {
     provAvg?: string;
     branchAvg?: string;
   };
+  managerUsers?: Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    status: string;
+  }>;
+  referralUsers?: Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    status: string;
+  }>;
   onClose: () => void;
 }
 
@@ -169,6 +183,38 @@ export function ConstituentDetailView({ constituent, onClose }: ConstituentDetai
               )}
             </div>
           </div>
+
+          {(managerUsers && managerUsers.length > 0) || (referralUsers && referralUsers.length > 0) ? (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-600 mb-2">Additional Staff</h3>
+              <div className="space-y-3">
+                {managerUsers && managerUsers.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Manager Users ({managerUsers.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {managerUsers.map(user => (
+                        <span key={user.id} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          {user.first_name} {user.last_name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {referralUsers && referralUsers.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-1">Referral Users ({referralUsers.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {referralUsers.map(user => (
+                        <span key={user.id} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {user.first_name} {user.last_name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex gap-2">
             <button

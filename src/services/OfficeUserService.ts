@@ -33,7 +33,31 @@ export interface OfficeUser {
   target_achievement?: number;
 }
 
-export async function fetchOfficeUsers(officeId: number | string): Promise<OfficeUser[]> {
+export interface ManagerUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  office_id: number;
+  status: string;
+}
+
+export interface ReferralUser {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  office_id: number;
+  status: string;
+}
+
+export interface OfficeUsersResponse {
+  users: OfficeUser[];
+  manager_users: ManagerUser[];
+  referral_users: ReferralUser[];
+}
+
+export async function fetchOfficeUsers(officeId: number | string): Promise<OfficeUsersResponse> {
   const response = await fetch(`https://smartbackend.whencefinancesystem.com/office-users/${officeId}`, {
     cache: "no-store" // Real-time performance data
   });
@@ -44,6 +68,13 @@ export async function fetchOfficeUsers(officeId: number | string): Promise<Offic
   
   const data = await response.json();
   
-  // The API returns an array of users for the office
-  return Array.isArray(data) ? data : (data.data || []);
+  const users = Array.isArray(data) ? data : (data.data || data.users || []);
+  const managerUsers = Array.isArray(data.manager_users) ? data.manager_users : [];
+  const referralUsers = Array.isArray(data.referral_users) ? data.referral_users : [];
+  
+  return {
+    users,
+    manager_users: managerUsers,
+    referral_users: referralUsers
+  };
 }

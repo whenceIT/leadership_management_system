@@ -193,7 +193,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
   };
 
   // Helper function to extract KPI value from data
-  const getKPIValue = (data: any, selectedKPI: string): { current: string; target: string; variance: string; trend: KPITrend; status: KPIStatus; contribution: string; actualLcs: number } => {
+  const getKPIValue = (data: any, selectedKPI: string): { current: string; target: string; variance: string; trend: KPITrend; status: KPIStatus; contribution: string; actualLcs: number; totalStaff: number } => {
     // Default values
     let current = '--';
     let target = '100%';
@@ -202,10 +202,11 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
     let status: KPIStatus = 'warning';
     let contribution = '--';
     let actualLcs = 0;
+    let totalStaff = 0;
 
-    if (!data) return { current, target, variance, trend, status, contribution, actualLcs };
+    if (!data) return { current, target, variance, trend, status, contribution, actualLcs, totalStaff };
 
-    // Extract actual_lcs if available
+    totalStaff = data.total_staff || 0;
     actualLcs = data.actual_lcs || 0;
     
     // Extract contribution (percentage_points) if available
@@ -421,7 +422,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         }
       }
     }
-    return { current, target, variance, trend, status, contribution, actualLcs };
+    return { current, target, variance, trend, status, contribution, actualLcs, totalStaff };
   };
 
   if (error) {
@@ -576,7 +577,20 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
             <div className="flex items-start">
               <div className="flex-1">
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">{selectedKPI}</h4>
-                {selectedKPI === 'Cash Position Score' ? (
+                {selectedKPI === 'Staff Adequacy Score' ? (
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                    <p><strong>Parameter:</strong> Branch Structure & Staffing</p>
+                    <p><strong>Formula:</strong> Current LCs / Optimal LCs (capped at 100%)</p>
+                    <p><strong>Target:</strong> 100% (10-12 LCs)</p>
+                    <p><strong>Weight:</strong> 25% (22pp Contribution)</p>
+                    <p><strong>How the score works:</strong></p>
+                    <ul className="list-disc list-inside mt-1 space-y-1 text-xs">
+                      <li>If Current &ge; Optimal: 100%</li>
+                      <li>If Current &lt; Optimal: (Current / Optimal) &times; 100</li>
+                    </ul>
+                    <p><strong>Drill Context:</strong> Branch-level staffing adequacy showing actual LCs vs optimal capacity for this branch.</p>
+                  </div>
+                ) : selectedKPI === 'Cash Position Score' ? (
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
                     <p><strong>Target Cash Balance:</strong> K100,000</p>
                     <p><strong>Formula:</strong> Score = 100 - (shortfall ÷ 10,000) × 50 for balances K10,000-K20,000</p>
@@ -585,7 +599,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                         <li>Below K10,000: Critical</li>
                         <li>K10,000-K20,000: Bad</li>
                         <li>K20,000-K30,000: Good</li>
-                        <li>K30,000-K50,000: Excellent</li>
+                        <li>K30,000-K50,000: Excellent </li>
                         <li>Above K50,000: Risky</li>
                       </ul>
                     </p>
@@ -613,11 +627,10 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-<th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch Avg Score</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Staff Count</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Contribution (pp)</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Cash Balance</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
@@ -652,11 +665,10 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                         setSelectedBranchForDrill(Number(branch.id));
                       }}
                     >
-                      <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
-                      <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{kpiValue.current}</td>
-                      <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{branch.user_count > 0 ? branch.user_count : '--'}</td>
-                      <td className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400">{kpiValue.contribution}</td>
-                      <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{selectedKPI === 'Cash Position Score' ? `K${data?.totalCashBalance?.toLocaleString() || '0'}` : '--'}</td>
+                       <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
+                       <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{kpiValue.current}</td>
+                       <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{selectedKPI === 'Staff Adequacy Score' ? (kpiValue.totalStaff || kpiValue.actualLcs || '--') : (branch.user_count > 0 ? branch.user_count : '--')}</td>
+                       <td className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400">{kpiValue.contribution}</td>
                       <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{kpiValue.target}</td>
                       <td className="px-4 py-2 text-sm">
                         <span className={`${getVarianceColor(kpiValue.variance)}`}>{kpiValue.variance}</span>

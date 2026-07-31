@@ -194,8 +194,7 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
   const tableHeaders = useMemo(() => {
     switch(selectedKPI) {
       case 'Staff Adequacy Score':
-      case 'Productivity Achievement Score':
-        return ['District', 'Inst. Avg', 'District Avg', 'Target', 'Variance', 'Trend', 'Status'];
+        return ['District', 'Offices', 'Total Staff', 'Score', 'Target', 'Variance', 'Trend', 'Status'];
       case 'Vacancy Impact':
         return ['District', 'Offices', 'Actual LCs', 'Auth. Pos.', 'Vacancies', 'Score', 'Status'];
       case 'Volume Achievement':
@@ -282,10 +281,12 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Districts in {provinceName}</h3>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Districts in {provinceName}</h3>
+        </div>
         <button
           onClick={() => setShowKpiInfo(!showKpiInfo)}
-          className="ml-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
           title="KPI Information"
         >
           <svg className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-1" fill="currentColor" viewBox="0 0 16 16">
@@ -298,7 +299,20 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
             <div className="flex items-start">
               <div className="flex-1">
                 <h4 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">{selectedKPI}</h4>
-                {selectedKPI === 'Cash Position Score' ? (
+                {selectedKPI === 'Staff Adequacy Score' ? (
+                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                    <p><strong>Parameter:</strong> Branch Structure & Staffing</p>
+                    <p><strong>Formula:</strong> Current LCs / Optimal LCs (capped at 100%)</p>
+                    <p><strong>Target:</strong> 100% (10-12 LCs)</p>
+                    <p><strong>Weight:</strong> 25% (22pp Contribution)</p>
+                    <p><strong>How the score works:</strong></p>
+                    <ul className="list-disc list-inside mt-1 space-y-1 text-xs">
+                      <li>If Current &ge; Optimal: 100%</li>
+                      <li>If Current &lt; Optimal: (Current / Optimal) &times; 100</li>
+                    </ul>
+                    <p><strong>Drill Context:</strong> District aggregated view of staffing adequacy across branches in this district.</p>
+                  </div>
+                ) : selectedKPI === 'Cash Position Score' ? (
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
                     <p><strong>Target Cash Balance:</strong> K100,000</p>
                     <p><strong>Formula:</strong> Score = 100 - (shortfall ÷ 10,000) × 50 for balances K10,000-K20,000</p>
@@ -358,10 +372,10 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
 
               if (data) {
                 switch(selectedKPI) {
-                  case 'Staff Adequacy Score':
-                  case 'Productivity Achievement Score': {
-                    const instAvg = selectedKPI === 'Staff Adequacy Score' ? '78%' : '75%';
-                    const score = parseFloat(data.average_normalized_score || '0');
+                  case 'Staff Adequacy Score': {
+                    const officesCount = district.offices_count || 0;
+                    const totalStaff = data?.total_staff || data?.total_actual_lcs || data?.actual_lcs || 0;
+                    const score = parseFloat(data?.average_normalized_score || '0');
                     const target = '100%';
                     const varianceNum = score - 100;
                     const variance = varianceNum >= 0 ? `+${varianceNum.toFixed(2)}%` : `${varianceNum.toFixed(2)}%`;
@@ -369,7 +383,8 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
                     rowData = [
                       district.name,
-                      instAvg,
+                      officesCount,
+                      totalStaff,
                       `${score.toFixed(2)}%`,
                       target,
                       <span className={getVarianceColor(variance)}>{variance}</span>,
