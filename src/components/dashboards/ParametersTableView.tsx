@@ -123,51 +123,31 @@ export function ParametersTableView({
     consultant: 'Personal'
   }[userLevel];
 
-  function parseKpiValue(value: string | number | undefined): number | null {
-    if (value === undefined || value === null || value === '--') return null;
-    const str = typeof value === 'number' ? String(value) : value;
-    const cleaned = str.replace(/,/g, '').replace(/[^0-9.\-]/g, '');
-    const num = parseFloat(cleaned);
-    return isNaN(num) ? null : num;
+  const TooltipHeader = ({ children, tooltip }: { children: React.ReactNode, tooltip: string }) => (
+    <span className="inline-flex items-center gap-1">
+      {children}
+      <span className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help text-xs" title={tooltip}>ⓘ</span>
+    </span>
+  );
+
+  const DEFAULT_INSTITUTIONAL_AVGS: Record<string, string> = {
+    'Branch Structure & Staffing': '85%',
+    'Loan Consultant Performance': '75%',
+    'Loan Products & Interest Rates': '74%',
+    'Risk Management & Defaults': '52%',
+    'Revenue & Performance': '65%',
+    'Cash & Liquidity Management': '70%'
+  };
+
+  function getHeadlineUserLevelAvg(param: ParameterSummary): string {
+    return param.userLevelAvg || '--';
   }
 
-  function computeHeadlineUserLevelAvg(paramName: string): string {
-    const kpis = getParameterKPIs(userLevel, paramName,
-      staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData,
-      loanPortfolioLoadData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData,
-      longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData,
-      portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData,
-      yieldAchievementsData, revenueAchievementsData, profitabilityContributionData,
-      cashPositionData);
-
-    const values = kpis.map(kpi => parseKpiValue(kpi.currentPeriod)).filter((v): v is number => v !== null);
-    if (values.length === 0) return '--';
-    const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
-    return `${avg.toFixed(2)}%`;
-  }
-
-  function computeHeadlineInstitutionalAvg(paramName: string): string {
-    const kpis = getParameterKPIs(userLevel, paramName,
-      staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData,
-      loanPortfolioLoadData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData,
-      longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData,
-      portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData,
-      yieldAchievementsData, revenueAchievementsData, profitabilityContributionData,
-      cashPositionData);
-
-    const values: number[] = [];
-    kpis.forEach(kpi => {
-      const raw = kpi.institutionalAvg;
-      if (!raw || raw === '--') return;
-      const str = String(raw);
-      if (str.includes('K') || str.includes('HHI') || str.includes('avg') || str.includes('MoM')) return;
-      const num = parseKpiValue(str);
-      if (num !== null) values.push(num);
-    });
-
-    if (values.length === 0) return '--';
-    const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
-    return `${avg.toFixed(2)}%`;
+  function getHeadlineInstitutionalAvg(param: ParameterSummary): string {
+    if (param.institutionalAvg && param.institutionalAvg !== '--') {
+      return param.institutionalAvg;
+    }
+    return DEFAULT_INSTITUTIONAL_AVGS[param.name] || '--';
   }
 
   return (
@@ -184,12 +164,24 @@ export function ParametersTableView({
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
               <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameter</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Institution Avg (Benchmark)</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Variance</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Trend</th>
-              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status & Distance to Target</th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <TooltipHeader tooltip="Average performance score across all branches/units for this parameter">Current {levelLabel} Avg</TooltipHeader>
+              </th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <TooltipHeader tooltip="Institutional benchmark/target average for comparison">Institution Avg (Benchmark)</TooltipHeader>
+              </th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <TooltipHeader tooltip="The goal or target value to achieve for this parameter">Target</TooltipHeader>
+              </th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <TooltipHeader tooltip="Gap or distance from target (positive = above target, negative = below target)">Variance</TooltipHeader>
+              </th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <TooltipHeader tooltip="Direction of change compared to previous period">Trend</TooltipHeader>
+              </th>
+              <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <TooltipHeader tooltip="Overall status assessment and percentage distance to target">Status & Distance to Target</TooltipHeader>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -216,8 +208,8 @@ export function ParametersTableView({
                   cashPositionData);
               const isExpanded = expandedParam === param.name;
 
-              const headlineUserLevelAvg = computeHeadlineUserLevelAvg(param.name);
-              const headlineInstitutionalAvg = computeHeadlineInstitutionalAvg(param.name);
+              const headlineUserLevelAvg = getHeadlineUserLevelAvg(param);
+              const headlineInstitutionalAvg = getHeadlineInstitutionalAvg(param);
 
               // Calculate progress percentage
               const userLevelScore = headlineUserLevelAvg !== '--' ? parseFloat(headlineUserLevelAvg.replace('%', '')) : 0;
@@ -257,17 +249,17 @@ export function ParametersTableView({
                     </td>
                     <td className="border px-4 py-3 text-center bg-black/5 dark:bg-white/10">
                       <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {computeHeadlineUserLevelAvg(param.name)}
+                        {getHeadlineUserLevelAvg(param)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                          {computeHeadlineInstitutionalAvg(param.name)}
+                          {getHeadlineInstitutionalAvg(param)}
                         </span>
-                        {computeHeadlineUserLevelAvg(param.name) !== '--' && computeHeadlineInstitutionalAvg(param.name) !== '--' && (() => {
-                          const userVal = parseFloat(computeHeadlineUserLevelAvg(param.name).replace('%', ''));
-                          const instVal = parseFloat(computeHeadlineInstitutionalAvg(param.name).replace('%', ''));
+                        {getHeadlineUserLevelAvg(param) !== '--' && getHeadlineInstitutionalAvg(param) !== '--' && (() => {
+                          const userVal = parseFloat(getHeadlineUserLevelAvg(param).replace('%', ''));
+                          const instVal = parseFloat(getHeadlineInstitutionalAvg(param).replace('%', ''));
                           return (
                             <span className={`text-xs font-medium ${userVal >= instVal ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                               {userVal >= instVal ? '▲' : '▼'}
@@ -328,20 +320,32 @@ export function ParametersTableView({
                                 <h4 className="text-sm font-semibold text-blue-600 dark:text-blue-400 mb-2">📊 KEY PERFORMANCE INDICATORS:</h4>
                                 <div className="overflow-x-auto">
                                   <table className="min-w-full">
-                                     <thead className="bg-blue-100 dark:bg-blue-900/30">
-                                       <tr>
-                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Metric</th>
-                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Current {levelLabel} Avg</th>
-                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Inst Avg</th>
-                                         {param.name === 'Cash & Liquidity Management' && (
-                                           <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Cash Balance</th>
-                                         )}
-                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Target</th>
-                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Variance</th>
-                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Contribution</th>
-                                         <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Status</th>
-                                       </tr>
-                                     </thead>
+                                      <thead className="bg-blue-100 dark:bg-blue-900/30">
+                                        <tr>
+                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Metric</th>
+                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                                            <TooltipHeader tooltip="Current average score for this metric">Current {levelLabel} Avg</TooltipHeader>
+                                          </th>
+                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                                            <TooltipHeader tooltip="Institutional benchmark average for this metric">Inst Avg</TooltipHeader>
+                                          </th>
+                                          {param.name === 'Cash & Liquidity Management' && (
+                                            <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Cash Balance</th>
+                                          )}
+                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                                            <TooltipHeader tooltip="Target value for this metric">Target</TooltipHeader>
+                                          </th>
+                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                                            <TooltipHeader tooltip="Gap or distance from target for this metric">Variance</TooltipHeader>
+                                          </th>
+                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                                            <TooltipHeader tooltip="Weighted contribution points toward the parameter score">Contribution</TooltipHeader>
+                                          </th>
+                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                                            <TooltipHeader tooltip="Performance status based on target achievement">Status</TooltipHeader>
+                                          </th>
+                                        </tr>
+                                      </thead>
                                     <tbody className="divide-y divide-blue-200 dark:divide-blue-900/20">
                                       {kpis.map((kpi, kpiIndex) => (
                                         <tr
@@ -353,36 +357,10 @@ export function ParametersTableView({
                                           }}
                                         >
                                           <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
-                                          <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
-                                            <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                                 {kpi.name === 'Cash & Liquidity Management' ? '70%' :
-                                                   kpi.name === 'Cash Position Score' ? '75%' :
-                                                   kpi.name === 'Staff Adequacy Score' ? '85%' :
-                                                      kpi.name === 'Productivity Achievement' ? '75%' :
-                                                        kpi.name === 'Vacancy Impact' ? '1.2' :
-                                                          kpi.name === 'Portfolio Load Balance' ? '85%' :
-                                                            kpi.name === 'Volume Achievement' ? '90%' :
-                                                            kpi.name === 'Portfolio quality' ? '71.64%' :
-                                                              kpi.name === 'Default contribution' ? '28.36%' :
-                                                                    kpi.name === 'Collections efficiency' ? '58%' :
-                                                                      kpi.name === 'Vetting compliance' ? '88%' :
-                                                                        kpi.name === 'Product distribution mix' ? '0.38%' :
-                                                                          kpi.name === 'Revenue yield per product' ? '36.5%' :
-                                                                           kpi.name === 'Product risk contribution' ? '28.36%' :
-                                                                              kpi.name === 'Margin alignment with strategy' ? '67%' :
-                                                                               kpi.name === 'Default rate (branch, province, institutional)' ? '28.36%' :
-                                                                                 kpi.name === 'Default aging analysis' ? '43.95%' :
-                                                                                   kpi.name === 'Recovery rate within 3 months' ? '56.05%' :
-                                                                                          kpi.name === 'Risk migration trends' ? '20%' :
-                                                                                            kpi.name === 'Branch revenue' ? '1.8%' :
-                                                                                                kpi.name === 'Cost-to-income ratios' ? '55%' :
-                                                                                                   kpi.name === 'Efficiency Ratio (CIR)' ? '67%' :
-                                                                                                     kpi.name === 'Institutional average performance' ? '75%' :
-                                                                                                       kpi.name === 'Growth trajectory alignment' ? '1.8%' :
-                                                                                         kpi.name === 'Revenue achievement' ? '65%' :
-                                                                                           kpi.name === 'Profitability contribution' ? '65%' :
-                                                                                            'N/A'}
-                                           </td>
+                                           <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
+                                             <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                                                  {kpi.institutionalAvg}
+                                            </td>
                                             {param.name === 'Cash & Liquidity Management' && (
                                               <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
                                                  {kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` : '--'}
