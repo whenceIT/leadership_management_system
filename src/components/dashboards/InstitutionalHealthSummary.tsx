@@ -163,6 +163,15 @@ function getAggregateWeight(data: any, paramName: string, kpiName: string): numb
   return 0;
 }
 
+function formatAvg(value: any, suffix = '%'): string {
+  if (value === undefined || value === null || value === '--') return '--';
+  const str = String(value);
+  if (str.includes('K') || str.includes('HHI') || str.includes('avg') || str.includes('MoM')) return str;
+  const num = typeof value === 'number' ? value : parseFloat(str.replace(/,/g, '').replace(/[^0-9.\-]/g, ''));
+  if (isNaN(num) || !isFinite(num)) return '--';
+  return `${num.toFixed(2)}${suffix}`;
+}
+
 export function calculateCashPositionScore(cashBalance: number, userLevel: string): number {
   if (!cashBalance || cashBalance <= 0) return 0;
 
@@ -183,6 +192,21 @@ export function calculateCashPositionScore(cashBalance: number, userLevel: strin
 
   const score = (cashBalance / maxBalance) * 100;
   return Math.round(Math.min(Math.max(score, 0), 100));
+}
+
+function parseInstitutionalAvg(value: string | undefined): number | null {
+  if (!value || value === '--') return null;
+  const cleaned = value.replace(/,/g, '');
+  const match = cleaned.match(/(\d+(?:\.\d+)?)/);
+  if (!match) return null;
+  const num = parseFloat(match[1]);
+  return isNaN(num) ? null : num;
+}
+
+function calculateSimpleAverage(values: (number | null)[]): number | null {
+  const valid = values.filter((v): v is number => v !== null);
+  if (valid.length === 0) return null;
+  return valid.reduce((sum, v) => sum + v, 0) / valid.length;
 }
 
 export function getInstitutionalSummaryData(userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant', userLevelLabel: string,
@@ -383,8 +407,13 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
     }, 0) / baseParameters.length
   );
 
-  // Calculate overall institutional average from fixed benchmarks: 78, 62, 74, 52, 65, 70
-  const overallInstAvg = Math.round((78 + 62 + 74 + 52 + 65 + 70) / 6);
+  // Calculate overall institutional average from headline parameter institutional averages
+  const overallInstAvg = Math.round(
+    baseParameters.reduce((sum, param) => {
+      const score = parseFloat(param.institutionalAvg.replace('%', ''));
+      return sum + (isNaN(score) ? 0 : score);
+    }, 0) / baseParameters.length
+  );
 
   // Calculate overall target (assuming target is ≥90% for all parameters)
   const overallTarget = 90;
@@ -536,32 +565,15 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     };
   }
 
-  // For branch-level data, aggregate from individual metrics
-  const kpis = [
-    {
-      data: staffAdequacyData,
-      getScore: (d: any) => getAggregateScore(d, 'Branch Structure & Staffing', 'Staff Adequacy Score'),
-      weight: getAggregateWeight(staffAdequacyData, 'Branch Structure & Staffing', 'Staff Adequacy Score')
-    },
-    {
-      data: productivityAchievementData,
-      getScore: (d: any) => getAggregateScore(d, 'Branch Structure & Staffing', 'Productivity Achievement'),
-      weight: getAggregateWeight(productivityAchievementData, 'Branch Structure & Staffing', 'Productivity Achievement')
-    },
-    {
-      data: vacancyImpactData,
-      getScore: (d: any) => getAggregateScore(d, 'Branch Structure & Staffing', 'Vacancy Impact'),
-      weight: getAggregateWeight(vacancyImpactData, 'Branch Structure & Staffing', 'Vacancy Impact')
-    },
-    {
-      data: loanPortfolioLoadData,
-      getScore: (d: any) => getAggregateScore(d, 'Branch Structure & Staffing', 'Portfolio Load Balance'),
-      weight: getAggregateWeight(loanPortfolioLoadData, 'Branch Structure & Staffing', 'Portfolio Load Balance')
-    }
-  ].filter(kpi => kpi.data);
+  // For branch-level data, compute headline averages from KPI values
+  const kpiDataList = [
+    { data: staffAdequacyData, scoreField: 'normalized_score', avgField: 'instAvg' },
+    { data: productivityAchievementData, scoreField: 'normalized_score', avgField: 'instAvg' },
+    { data: vacancyImpactData, scoreField: 'normalized_score', avgField: 'instAvg', multiplier: 100 },
+    { data: loanPortfolioLoadData, scoreField: 'score', avgField: 'instAvg' }
+  ].filter(item => item.data);
 
-  // If no data, return default values instead of '--'
-  if (kpis.length === 0) {
+  if (kpiDataList.length === 0) {
     return {
       institutionalAvg: '--',
       userLevelAvg: '--',
@@ -574,27 +586,43 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     };
   }
 
-  const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
-  const overallScore = Math.round(weightedScore);
-  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
+  const userLevelValues = kpiDataList.map(item => {
+    const raw = item.data[item.scoreField] ?? item.data.average_normalized_score ?? item.data.average_score ?? '0';
+    let num = parseFloat(String(raw));
+    if (item.multiplier) num = num * item.multiplier;
+    return isNaN(num) ? 0 : num;
+  });
+
+  const instAvgValues = kpiDataList.map(item => {
+    const raw = item.data[item.avgField];
+    if (!raw || raw === '--') return null;
+    const str = String(raw);
+    if (str.includes('K') || str.includes('HHI') || str.includes('avg') || str.includes('MoM')) return null;
+    const cleaned = str.replace(/,/g, '').replace(/[^0-9.\-]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }).filter((v): v is number => v !== null);
+
+  const overallUserScore = userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0;
+  const overallInstScore = instAvgValues.length > 0 ? Math.round(instAvgValues.reduce((a, b) => a + b, 0) / instAvgValues.length) : 0;
 
   const target = 100;
-  const variance = overallScore - target;
+  const variance = overallUserScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
 
-  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+  const trend = overallUserScore >= 90 ? '↑' : overallUserScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallUserScore >= 90 ? 'good' : overallUserScore >= 70 ? 'warning' : 'critical';
 
   return {
-    institutionalAvg: '78%', // Hardcoded from Five Parameters.md
-    userLevelAvg: `${overallScore}%`,
-    target: '85%',
+    institutionalAvg: `${overallInstScore}%`,
+    userLevelAvg: `${overallUserScore}%`,
+    target: '100%',
     variance: varianceStr,
     varianceAbs,
     trend,
     status,
-    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
+    contribution: `${overallUserScore.toFixed(2)} of 100pp`
   };
 }
 
@@ -605,69 +633,62 @@ function aggregateLoanConsultantPerformanceKPIs(
   month1DefaultPerformanceData?: any,
   productRiskScoreData?: any
 ): Partial<ParameterSummary> {
-  const kpis = [
-    {
-      data: volumeAchievementData,
-      getScore: (d: any) => getAggregateScore(d, 'Loan Consultant Performance', 'Volume Achievement'),
-      weight: getAggregateWeight(volumeAchievementData, 'Loan Consultant Performance', 'Volume Achievement')
-    },
-    {
-      data: collectionEfficiencyData,
-      getScore: (d: any) => getAggregateScore(d, 'Loan Consultant Performance', 'Collections efficiency'),
-      weight: getAggregateWeight(collectionEfficiencyData, 'Loan Consultant Performance', 'Collections efficiency')
-    },
-    {
-      data: portfolioQualityData,
-      getScore: (d: any) => getAggregateScore(d, 'Loan Consultant Performance', 'Portfolio quality'),
-      weight: getAggregateWeight(portfolioQualityData, 'Loan Consultant Performance', 'Portfolio quality')
-    },
-    {
-      data: month1DefaultPerformanceData,
-      getScore: (d: any) => getAggregateScore(d, 'Loan Consultant Performance', 'Default contribution'),
-      weight: getAggregateWeight(month1DefaultPerformanceData, 'Loan Consultant Performance', 'Default contribution')
-    },
-    {
-      data: productRiskScoreData,
-      getScore: (d: any) => getAggregateScore(d, 'Loan Consultant Performance', 'Vetting compliance'),
-      weight: getAggregateWeight(productRiskScoreData, 'Loan Consultant Performance', 'Vetting compliance')
-    }
-  ].filter(kpi => kpi.data);
+  const kpiDataList = [
+    { data: volumeAchievementData, scoreField: 'normalized_score', avgField: 'instAvg' },
+    { data: collectionEfficiencyData, scoreField: 'benchmark', avgField: 'instAvg' },
+    { data: portfolioQualityData, scoreField: 'PAR', avgField: 'instAvg' },
+    { data: month1DefaultPerformanceData, scoreField: 'month_1_default_rate', avgField: 'instAvg' },
+    { data: productRiskScoreData, scoreField: 'defaulted_rate', avgField: 'instAvg' }
+  ].filter(item => item.data);
 
-  // If no data, return default values
-  if (kpis.length === 0) {
+  if (kpiDataList.length === 0) {
     return {
-      institutionalAvg: '62%',
-      userLevelAvg: '62%',
+      institutionalAvg: '--',
+      userLevelAvg: '--',
       target: '80%',
-      variance: '-18%',
-      varianceAbs: '18pp',
+      variance: '--',
+      varianceAbs: '--',
       trend: '→',
       status: 'warning',
       contribution: '--'
     };
   }
 
-  const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
-  const overallScore = Math.round(weightedScore);
-  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
+  const userLevelValues = kpiDataList.map(item => {
+    const raw = item.data[item.scoreField] ?? item.data.average_normalized_score ?? item.data.average_score ?? '0';
+    return parseFloat(String(raw));
+  }).filter(v => !isNaN(v));
+
+  const instAvgValues = kpiDataList.map(item => {
+    const raw = item.data[item.avgField];
+    if (!raw || raw === '--') return null;
+    const str = String(raw);
+    if (str.includes('K') || str.includes('HHI') || str.includes('avg') || str.includes('MoM')) return null;
+    const cleaned = str.replace(/,/g, '').replace(/[^0-9.\-]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }).filter((v): v is number => v !== null);
+
+  const overallUserScore = userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0;
+  const overallInstScore = instAvgValues.length > 0 ? Math.round(instAvgValues.reduce((a, b) => a + b, 0) / instAvgValues.length) : 0;
 
   const target = 80;
-  const variance = overallScore - target;
+  const variance = overallUserScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
 
-  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+  const trend = overallUserScore >= 90 ? '↑' : overallUserScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallUserScore >= 90 ? 'good' : overallUserScore >= 70 ? 'warning' : 'critical';
 
   return {
-    institutionalAvg: '62%',
-    userLevelAvg: `${overallScore}%`,
+    institutionalAvg: `${overallInstScore}%`,
+    userLevelAvg: `${overallUserScore}%`,
     target: '80%',
     variance: varianceStr,
     varianceAbs,
     trend,
     status,
-    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
+    contribution: `${overallUserScore.toFixed(2)} of 80pp`
   };
 }
 
@@ -677,64 +698,64 @@ function aggregateLoanProductsKPIs(
   productRiskScoreData?: any,
   efficiencyRatioData?: any
 ): Partial<ParameterSummary> {
-  const kpis = [
-    {
-      data: productDiversificationData,
-      getScore: (d: any) => getAggregateScore(d, 'Loan Products & Interest Rates', 'Product distribution mix'),
-      weight: getAggregateWeight(productDiversificationData, 'Loan Products & Interest Rates', 'Product distribution mix')
-    },
-    {
-      data: yieldAchievementsData,
-      getScore: (d: any) => getAggregateScore(d, 'Loan Products & Interest Rates', 'Revenue yield per product'),
-      weight: getAggregateWeight(yieldAchievementsData, 'Loan Products & Interest Rates', 'Revenue yield per product')
-    },
-    {
-      data: productRiskScoreData,
-      getScore: (d: any) => getAggregateScore(d, 'Loan Products & Interest Rates', 'Product risk contribution'),
-      weight: getAggregateWeight(productRiskScoreData, 'Loan Products & Interest Rates', 'Product risk contribution')
-    },
-    {
-      data: efficiencyRatioData,
-      getScore: (d: any) => getAggregateScore(d, 'Loan Products & Interest Rates', 'Margin alignment with strategy'),
-      weight: getAggregateWeight(efficiencyRatioData, 'Loan Products & Interest Rates', 'Margin alignment with strategy')
-    }
-  ].filter(kpi => kpi.data);
+  const kpiDataList = [
+    { data: productDiversificationData, scoreField: 'HHI', avgField: 'instAvg', isPercentage: false },
+    { data: yieldAchievementsData, scoreField: 'effective_interest_rate', avgField: 'instAvg' },
+    { data: productRiskScoreData, scoreField: 'defaulted_rate', avgField: 'instAvg' },
+    { data: efficiencyRatioData, scoreField: 'CIR', avgField: 'instAvg', multiplier: 100 }
+  ].filter(item => item.data);
 
-  // If no data, return default values
-  if (kpis.length === 0) {
+  if (kpiDataList.length === 0) {
     return {
-      institutionalAvg: '74%',
-      userLevelAvg: '74%',
+      institutionalAvg: '--',
+      userLevelAvg: '--',
       target: '80%',
-      variance: '-6%',
-      varianceAbs: '6pp',
+      variance: '--',
+      varianceAbs: '--',
       trend: '→',
       status: 'warning',
       contribution: '--'
     };
   }
 
-  const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
-  const overallScore = Math.round(weightedScore);
-  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
+  const userLevelValues = kpiDataList.map(item => {
+    const raw = item.data[item.scoreField] ?? item.data.average_score ?? '0';
+    let num = parseFloat(String(raw));
+    if (item.multiplier) num = num * item.multiplier;
+    return isNaN(num) ? 0 : num;
+  });
+
+  const instAvgValues = kpiDataList.map(item => {
+    if (!item.isPercentage) return null;
+    const raw = item.data[item.avgField];
+    if (!raw || raw === '--') return null;
+    const str = String(raw);
+    if (str.includes('K') || str.includes('HHI') || str.includes('avg') || str.includes('MoM')) return null;
+    const cleaned = str.replace(/,/g, '').replace(/[^0-9.\-]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }).filter((v): v is number => v !== null);
+
+  const overallUserScore = userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0;
+  const overallInstScore = instAvgValues.length > 0 ? Math.round(instAvgValues.reduce((a, b) => a + b, 0) / instAvgValues.length) : 0;
 
   const target = 80;
-  const variance = overallScore - target;
+  const variance = overallUserScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
 
-  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+  const trend = overallUserScore >= 90 ? '↑' : overallUserScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallUserScore >= 90 ? 'good' : overallUserScore >= 70 ? 'warning' : 'critical';
 
   return {
-    institutionalAvg: '74%',
-    userLevelAvg: `${overallScore}%`,
+    institutionalAvg: `${overallInstScore}%`,
+    userLevelAvg: `${overallUserScore}%`,
     target: '80%',
     variance: varianceStr,
     varianceAbs,
     trend,
     status,
-    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
+    contribution: `${overallUserScore.toFixed(2)} of 80pp`
   };
 }
 
@@ -744,64 +765,61 @@ function aggregateRiskManagementKPIs(
   month3RecoveryAchievementsData?: any,
   rollRateControlData?: any
 ): Partial<ParameterSummary> {
-  const kpis = [
-    {
-      data: month1DefaultPerformanceData,
-      getScore: (d: any) => getAggregateScore(d, 'Risk Management & Defaults', 'Default rate (branch, province, institutional)'),
-      weight: getAggregateWeight(month1DefaultPerformanceData, 'Risk Management & Defaults', 'Default rate (branch, province, institutional)')
-    },
-    {
-      data: longTermDelinquencyData,
-      getScore: (d: any) => getAggregateScore(d, 'Risk Management & Defaults', 'Default aging analysis'),
-      weight: getAggregateWeight(longTermDelinquencyData, 'Risk Management & Defaults', 'Default aging analysis')
-    },
-    {
-      data: month3RecoveryAchievementsData,
-      getScore: (d: any) => getAggregateScore(d, 'Risk Management & Defaults', 'Recovery rate within 3 months'),
-      weight: getAggregateWeight(month3RecoveryAchievementsData, 'Risk Management & Defaults', 'Recovery rate within 3 months')
-    },
-    {
-      data: rollRateControlData,
-      getScore: (d: any) => getAggregateScore(d, 'Risk Management & Defaults', 'Risk migration trends'),
-      weight: getAggregateWeight(rollRateControlData, 'Risk Management & Defaults', 'Risk migration trends')
-    }
-  ].filter(kpi => kpi.data);
+  const kpiDataList = [
+    { data: month1DefaultPerformanceData, scoreField: 'average_score', avgField: 'instAvg' },
+    { data: longTermDelinquencyData, scoreField: 'average_score', avgField: 'instAvg' },
+    { data: month3RecoveryAchievementsData, scoreField: 'average_score', avgField: 'instAvg' },
+    { data: rollRateControlData, scoreField: 'average_score', avgField: 'instAvg' }
+  ].filter(item => item.data);
 
-  // If no data, return default values
-  if (kpis.length === 0) {
+  if (kpiDataList.length === 0) {
     return {
-      institutionalAvg: '52%',
-      userLevelAvg: '52%',
+      institutionalAvg: '--',
+      userLevelAvg: '--',
       target: '75%',
-      variance: '-23%',
-      varianceAbs: '23pp',
+      variance: '--',
+      varianceAbs: '--',
       trend: '→',
       status: 'warning',
       contribution: '--'
     };
   }
 
-  const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
-  const overallScore = Math.round(weightedScore);
-  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
+  const userLevelValues = kpiDataList.map(item => {
+    const raw = item.data[item.scoreField] ?? item.data.average_normalized_score ?? '0';
+    return parseFloat(String(raw));
+  }).filter(v => !isNaN(v));
+
+  const instAvgValues = kpiDataList.map(item => {
+    const raw = item.data[item.avgField];
+    if (!raw || raw === '--') return null;
+    const str = String(raw);
+    if (str.includes('K') || str.includes('HHI') || str.includes('avg') || str.includes('MoM')) return null;
+    const cleaned = str.replace(/,/g, '').replace(/[^0-9.\-]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }).filter((v): v is number => v !== null);
+
+  const overallUserScore = userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0;
+  const overallInstScore = instAvgValues.length > 0 ? Math.round(instAvgValues.reduce((a, b) => a + b, 0) / instAvgValues.length) : 0;
 
   const target = 75;
-  const variance = overallScore - target;
+  const variance = overallUserScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
 
-  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+  const trend = overallUserScore >= 90 ? '↑' : overallUserScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallUserScore >= 90 ? 'good' : overallUserScore >= 70 ? 'warning' : 'critical';
 
   return {
-    institutionalAvg: '52%',
-    userLevelAvg: `${overallScore}%`,
+    institutionalAvg: `${overallInstScore}%`,
+    userLevelAvg: `${overallUserScore}%`,
     target: '75%',
     variance: varianceStr,
     varianceAbs,
     trend,
     status,
-    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
+    contribution: `${overallUserScore.toFixed(2)} of 75pp`
   };
 }
 
@@ -834,7 +852,7 @@ function aggregateCashLiquidityManagementKPIs(
   const status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent' = userLevel === 'institution' ? getCashPositionStatus(score) : (score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical');
 
   return {
-    institutionalAvg: '70%',
+    institutionalAvg: cashPositionData?.instAvg || `${score}%`,
     userLevelAvg: `${score}%`,
     target: userLevel === 'branch' ? 'K100,000' : userLevel === 'province' ? 'K500,000' : 'K50,000,000',
     variance: varianceStr,
@@ -852,69 +870,64 @@ function aggregateRevenuePerformanceKPIs(
   revenueAchievementsData?: any,
   profitabilityContributionData?: any
 ): Partial<ParameterSummary> {
-  const kpis = [
-    {
-      data: growthTrajectoryData,
-      getScore: (d: any) => getAggregateScore(d, 'Revenue & Performance', 'Growth trajectory alignment'),
-      weight: getAggregateWeight(growthTrajectoryData, 'Revenue & Performance', 'Growth trajectory alignment')
-    },
-    {
-      data: efficiencyRatioData,
-      getScore: (d: any) => getAggregateScore(d, 'Revenue & Performance', 'Efficiency Ratio (CIR)'),
-      weight: getAggregateWeight(efficiencyRatioData, 'Revenue & Performance', 'Efficiency Ratio (CIR)')
-    },
-    {
-      data: productivityAchievementData,
-      getScore: (d: any) => getAggregateScore(d, 'Revenue & Performance', 'Institutional average performance'),
-      weight: getAggregateWeight(productivityAchievementData, 'Revenue & Performance', 'Institutional average performance')
-    },
-    {
-      data: revenueAchievementsData,
-      getScore: (d: any) => getAggregateScore(d, 'Revenue & Performance', 'Revenue achievement'),
-      weight: getAggregateWeight(revenueAchievementsData, 'Revenue & Performance', 'Revenue achievement')
-    },
-    {
-      data: profitabilityContributionData,
-      getScore: (d: any) => getAggregateScore(d, 'Revenue & Performance', 'Profitability contribution'),
-      weight: getAggregateWeight(profitabilityContributionData, 'Revenue & Performance', 'Profitability contribution')
-    }
-  ].filter(kpi => kpi.data);
+  const kpiDataList = [
+    { data: growthTrajectoryData, scoreField: 'mom_revenue', avgField: 'instAvg', multiplier: 100 },
+    { data: efficiencyRatioData, scoreField: 'CIR', avgField: 'instAvg', multiplier: 100 },
+    { data: productivityAchievementData, scoreField: 'normalized_score', avgField: 'instAvg' },
+    { data: revenueAchievementsData, scoreField: 'average_score', avgField: 'instAvg' },
+    { data: profitabilityContributionData, scoreField: 'score', avgField: 'instAvg', fallbackField: 'average_score' }
+  ].filter(item => item.data);
 
-  // If no data, return default values
-  if (kpis.length === 0) {
+  if (kpiDataList.length === 0) {
     return {
-      institutionalAvg: '65%',
-      userLevelAvg: '65%',
+      institutionalAvg: '--',
+      userLevelAvg: '--',
       target: '75%',
-      variance: '-10%',
-      varianceAbs: '10pp',
+      variance: '--',
+      varianceAbs: '--',
       trend: '→',
       status: 'warning',
       contribution: '--'
     };
   }
 
-  const weightedScore = kpis.reduce((sum, kpi) => sum + (kpi.getScore(kpi.data) * kpi.weight), 0);
-  const overallScore = Math.round(weightedScore);
-  const totalWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
+  const userLevelValues = kpiDataList.map(item => {
+    const raw = item.data[item.scoreField] ?? item.data[item.fallbackField || ''] ?? item.data.average_normalized_score ?? item.data.average_score ?? '0';
+    let num = parseFloat(String(raw));
+    if (item.multiplier) num = num * item.multiplier;
+    return isNaN(num) ? 0 : num;
+  });
+
+  const instAvgValues = kpiDataList.map(item => {
+    const raw = item.data[item.avgField];
+    if (!raw || raw === '--') return null;
+    const str = String(raw);
+    if (str.includes('K') || str.includes('HHI') || str.includes('avg') || str.includes('MoM')) return null;
+    const cleaned = str.replace(/,/g, '').replace(/[^0-9.\-]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }).filter((v): v is number => v !== null);
+
+  const overallUserScore = userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0;
+  const overallInstScore = instAvgValues.length > 0 ? Math.round(instAvgValues.reduce((a, b) => a + b, 0) / instAvgValues.length) : 0;
 
   const target = 75;
-  const variance = overallScore - target;
+  const variance = overallUserScore - target;
   const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
   const varianceAbs = `${Math.abs(variance)}pp`;
 
-  const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-  const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
+  const trend = overallUserScore >= 90 ? '↑' : overallUserScore >= 70 ? '→' : '↓';
+  const status: 'good' | 'warning' | 'critical' = overallUserScore >= 90 ? 'good' : overallUserScore >= 70 ? 'warning' : 'critical';
 
   return {
-    institutionalAvg: '65%',
-    userLevelAvg: `${overallScore}%`,
+    institutionalAvg: `${overallInstScore}%`,
+    userLevelAvg: `${overallUserScore}%`,
     target: '75%',
     variance: varianceStr,
     varianceAbs,
     trend,
     status,
-    contribution: `${weightedScore.toFixed(2)} of ${(totalWeight * 100).toFixed(0)}pp`
+    contribution: `${overallUserScore.toFixed(2)} of 75pp`
   };
 }
 
@@ -955,9 +968,9 @@ function getParameterKPIs(userLevel: string, paramName: string,
     'Branch Structure & Staffing': [
       {
         name: 'Staff Adequacy Score',
-        institutionalAvg: staffAdequacyData?.instAvg || '--',
+        institutionalAvg: formatAvg(staffAdequacyData?.instAvg || staffAdequacyData?.average_normalized_score),
         currentPeriod: staffAdequacyData ? `${getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score').toFixed(2)}` : '--',
-        target: staffAdequacyData?.target || 100,
+        target: staffAdequacyData ? `${(staffAdequacyData.target || 100)}%` : '100%',
         variance: staffAdequacyData ? `${(getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') - (staffAdequacyData.target || 100)).toFixed(2)}%` : '--',
         trend: getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= (staffAdequacyData?.target || 100) ? '↑' : '↓',
         status: getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= 90 ? 'good' : getScore(staffAdequacyData, 'normalized_score', 'average_normalized_score') >= 70 ? 'warning' : 'critical',
@@ -965,9 +978,9 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Productivity Achievement',
-        institutionalAvg: productivityAchievementData ? '--' : '--',
+        institutionalAvg: formatAvg(productivityAchievementData?.instAvg || productivityAchievementData?.average_normalized_score),
         currentPeriod: productivityAchievementData ? `${getScore(productivityAchievementData, 'normalized_score', 'average_normalized_score').toFixed(2)}` : '0',
-        target: productivityAchievementData ? 100 : '--',
+        target: productivityAchievementData ? '100%' : '--',
         variance: productivityAchievementData ? `${((score) => {
           const s = score ?? 0;
           const t = productivityAchievementData?.target ?? 100;
@@ -980,14 +993,14 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Vacancy Impact',
-        institutionalAvg: vacancyImpactData ? '--' : '--',
-        currentPeriod: vacancyImpactData ? `${(getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100).toFixed(2)}` : '--',
-        target: vacancyImpactData ? 0 : 0,
+        institutionalAvg: formatAvg(vacancyImpactData?.instAvg || vacancyImpactData?.average_normalized_score),
+        currentPeriod: vacancyImpactData ? `${(getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100).toFixed(2)}%` : '--',
+        target: vacancyImpactData ? `${(vacancyImpactData.target ?? 20)}%` : '20%',
         variance: vacancyImpactData ? `${((score) => {
           const s = score ?? 0;
           const t = vacancyImpactData?.target ?? 20;
           const v = (s * 100) - t;
-          return isNaN(v) ? '--' : `${v.toFixed(2)}`;
+          return isNaN(v) ? '--' : `${v.toFixed(2)}%`;
         })(getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score'))}` : '--',
         trend: vacancyImpactData ? ((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= vacancyImpactData.target ? '↑' : '↓') : '↑',
         status: vacancyImpactData ? ((getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= 90 ? 'good' : (getScore(vacancyImpactData, 'normalized_score', 'average_normalized_score') * 100) >= 70 ? 'warning' : 'critical') : 'warning',
@@ -995,9 +1008,9 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Portfolio Load Balance',
-        institutionalAvg: loanPortfolioLoadData ? '--' : '--',
+        institutionalAvg: formatAvg(loanPortfolioLoadData?.instAvg || loanPortfolioLoadData?.average_score),
         currentPeriod: loanPortfolioLoadData ? `${getScore(loanPortfolioLoadData, 'score', 'average_score').toFixed(2)}` : '--',
-        target: 100,
+        target: loanPortfolioLoadData ? '100%' : '100%',
         variance: loanPortfolioLoadData ? `${((score) => {
           const s = score ?? 0;
           const t = loanPortfolioLoadData?.target ?? 100;
@@ -1012,7 +1025,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
     'Loan Consultant Performance': [
       {
         name: 'Volume Achievement',
-        institutionalAvg: volumeAchievementData ? '--' : '--',
+        institutionalAvg: formatAvg(volumeAchievementData?.instAvg || volumeAchievementData?.average_normalized_score),
         currentPeriod: volumeAchievementData ? `${getScore(volumeAchievementData, 'normalized_score', 'average_normalized_score').toFixed(2)}` : '--',
         target: volumeAchievementData ? `≥${parseFloat(volumeAchievementData.branch_target || '0').toLocaleString()}` : '100',
         variance: volumeAchievementData ? `${parseFloat(volumeAchievementData.total_disbursement || '0') >= parseFloat(volumeAchievementData.branch_target || '0') ? '+' : ''}${(parseFloat(volumeAchievementData.total_disbursement || '0') - parseFloat(volumeAchievementData.branch_target || '0')).toLocaleString()}` : '--',
@@ -1022,7 +1035,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Portfolio quality',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(portfolioQualityData?.instAvg || portfolioQualityData?.average_score),
         currentPeriod: portfolioQualityData ? `${getScore(portfolioQualityData, 'PAR', 'average_score').toFixed(2)}` : '--',
         target: '≤5%',
         variance: portfolioQualityData ? `${(getScore(portfolioQualityData, 'PAR', 'average_score') - 5).toFixed(2)}` : '--',
@@ -1032,7 +1045,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Default contribution',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(month1DefaultPerformanceData?.instAvg || month1DefaultPerformanceData?.average_score),
         currentPeriod: month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0').toFixed(2)}` : '--',
         target: '≤15%',
         variance: month1DefaultPerformanceData ? `${(parseFloat(month1DefaultPerformanceData.month_1_default_rate || '0') - 15).toFixed(2)}` : '--',
@@ -1042,7 +1055,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Collections efficiency',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(collectionEfficiencyData?.instAvg || collectionEfficiencyData?.average_score),
         currentPeriod: collectionEfficiencyData ? `${getScore(collectionEfficiencyData, 'benchmark', 'average_score').toFixed(2)}` : '--',
         target: '≥75%',
         variance: collectionEfficiencyData ? `${(getScore(collectionEfficiencyData, 'benchmark', 'average_score') - 75).toFixed(2)}` : '--',
@@ -1052,7 +1065,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Vetting compliance',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(productRiskScoreData?.instAvg || productRiskScoreData?.average_score, ''),
         currentPeriod: productRiskScoreData ? `${getScore(productRiskScoreData, 'defaulted_rate', 'average_score').toFixed(2)}` : '--',
         target: '≤1.0',
         variance: productRiskScoreData ? `${(getScore(productRiskScoreData, 'defaulted_rate', 'average_score') - 1.0).toFixed(2)}` : '--',
@@ -1064,7 +1077,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
     'Loan Products & Interest Rates': [
       {
         name: 'Product distribution mix',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(productDiversificationData?.instAvg || productDiversificationData?.average_HHI ? `HHI ${productDiversificationData.average_HHI}` : undefined, ''),
         currentPeriod: productDiversificationData ? `${getScore(productDiversificationData, 'HHI', 'average_HHI').toFixed(3)}` : '--',
         target: 'HHI < 0.3',
         variance: productDiversificationData ? `${(getScore(productDiversificationData, 'HHI', 'average_HHI') - 0.3).toFixed(3)}` : '--',
@@ -1074,7 +1087,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Revenue yield per product',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(yieldAchievementsData?.instAvg || yieldAchievementsData?.average_score),
         currentPeriod: yieldAchievementsData ? `${getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score').toFixed(2)}` : '--',
         target: yieldAchievementsData ? yieldAchievementsData.target : '≥38.2%',
         variance: yieldAchievementsData ? `${(getScore(yieldAchievementsData, 'effective_interest_rate', 'average_score') - parseFloat(yieldAchievementsData.target || '0')).toFixed(2)}` : '--',
@@ -1084,7 +1097,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Product risk contribution',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(productRiskScoreData?.instAvg || productRiskScoreData?.average_score, ''),
         currentPeriod: productRiskScoreData ? `${getScore(productRiskScoreData, 'defaulted_rate', 'average_score').toFixed(2)}` : '--',
         target: '≤1.0',
         variance: productRiskScoreData ? `${(getScore(productRiskScoreData, 'defaulted_rate', 'average_score') - 1.0).toFixed(2)}` : '--',
@@ -1094,7 +1107,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Margin alignment with strategy',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(efficiencyRatioData?.instAvg || efficiencyRatioData?.average_score),
         currentPeriod: efficiencyRatioData ? `${parseFloat(efficiencyRatioData.CIR || '0').toFixed(2)}` : '--',
         target: efficiencyRatioData ? efficiencyRatioData.target : '≤55%',
         variance: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.CIR || '0') - parseFloat(efficiencyRatioData.target || '0')).toFixed(2)}` : '--',
@@ -1106,7 +1119,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
     'Risk Management & Defaults': [
       {
         name: 'Default rate (branch, province, institutional)',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(month1DefaultPerformanceData?.instAvg || month1DefaultPerformanceData?.average_score),
         currentPeriod: month1DefaultPerformanceData ? `${parseFloat(month1DefaultPerformanceData.average_score || '0').toFixed(2)}` : '--',
         target: '≤15%',
         variance: month1DefaultPerformanceData ? `${(parseFloat(month1DefaultPerformanceData.average_score || '0') - 15).toFixed(2)}` : '--',
@@ -1116,7 +1129,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Default aging analysis',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(longTermDelinquencyData?.instAvg || longTermDelinquencyData?.average_score),
         currentPeriod: longTermDelinquencyData ? `${parseFloat(longTermDelinquencyData.average_score || '0').toFixed(2)}` : '--',
         target: longTermDelinquencyData ? longTermDelinquencyData.target : '≤43.95%',
         variance: longTermDelinquencyData ? `${(parseFloat(longTermDelinquencyData.average_score || '0') - parseFloat(longTermDelinquencyData.target || '0')).toFixed(2)}%` : '--',
@@ -1126,7 +1139,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Recovery rate within 3 months',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(month3RecoveryAchievementsData?.instAvg || month3RecoveryAchievementsData?.average_score),
         currentPeriod: month3RecoveryAchievementsData ? `${parseFloat(month3RecoveryAchievementsData.average_score || '0').toFixed(2)}` : '--',
         target: '≥100%',
         variance: month3RecoveryAchievementsData ? `${(parseFloat(month3RecoveryAchievementsData.average_score || '0') - 100).toFixed(2)}` : '--',
@@ -1136,7 +1149,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Risk migration trends',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(rollRateControlData?.instAvg || rollRateControlData?.average_score),
         currentPeriod: rollRateControlData ? `${parseFloat(rollRateControlData.average_score || '0').toFixed(2)}` : '--',
         target: '≤20%',
         variance: rollRateControlData ? `${(parseFloat(rollRateControlData.average_score || '0') - 20).toFixed(2)}` : '--',
@@ -1148,7 +1161,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
     'Revenue & Performance': [
       {
         name: 'Efficiency Ratio (CIR)',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(efficiencyRatioData?.instAvg || efficiencyRatioData?.average_score),
         currentPeriod: efficiencyRatioData ? `${(parseFloat(efficiencyRatioData.CIR || '0') * 100).toFixed(2)}%` : '--',
         target: efficiencyRatioData ? efficiencyRatioData.target : '≤55%',
         variance: efficiencyRatioData ? `${((parseFloat(efficiencyRatioData.CIR || '0') * 100) - parseFloat(efficiencyRatioData.target || '0')).toFixed(2)}%` : '--',
@@ -1158,7 +1171,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Growth trajectory alignment',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(growthTrajectoryData?.instAvg || growthTrajectoryData?.average_score),
         currentPeriod: growthTrajectoryData ? `${(parseFloat(growthTrajectoryData.mom_revenue || '0') * 100).toFixed(2)}%` : '--',
         target: '≥2.5%',
         variance: growthTrajectoryData ? `${((parseFloat(growthTrajectoryData.mom_revenue || '0') * 100) - 2.5).toFixed(2)}%` : '--',
@@ -1168,7 +1181,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Revenue achievement',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(revenueAchievementsData?.instAvg || revenueAchievementsData?.average_score),
         currentPeriod: revenueAchievementsData ? `${parseFloat(revenueAchievementsData.average_score || '0').toFixed(2)}%` : '--',
         target: revenueAchievementsData?.target ? revenueAchievementsData.target : '≥100%',
         variance: revenueAchievementsData ? `${(parseFloat(revenueAchievementsData.average_score || '0') - parseFloat(revenueAchievementsData.target || '0')).toFixed(2)}%` : '--',
@@ -1178,7 +1191,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
       },
       {
         name: 'Profitability contribution',
-        institutionalAvg: '--',
+        institutionalAvg: formatAvg(profitabilityContributionData?.instAvg || profitabilityContributionData?.average_score),
         currentPeriod: profitabilityContributionData ? `${parseFloat((profitabilityContributionData.score || profitabilityContributionData.average_score || '0').replace('%', '')).toFixed(2)}%` : '--',
         target: profitabilityContributionData && profitabilityContributionData.target ? `≥ ${profitabilityContributionData.target}` : '≥ institutional avg',
         variance: profitabilityContributionData ? `${(parseFloat((profitabilityContributionData.score || profitabilityContributionData.average_score || '0').replace('%', '')) - parseFloat(profitabilityContributionData.target || '0')).toFixed(2)}%` : '--',
@@ -1194,7 +1207,7 @@ function getParameterKPIs(userLevel: string, paramName: string,
           if (!cashPositionData) return '--';
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
           const score = calculateCashPositionScore(cashBalance, userLevel);
-          return `${score.toFixed(2)}`;
+          return `${score.toFixed(2)}%`;
         })(),
         currentPeriod: (() => {
           if (!cashPositionData) return '--';

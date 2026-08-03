@@ -523,13 +523,8 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         { label: 'last month', score: prevMonth1 }
       ];
 
-      // Recalculate overall institutional average
-      const overallInstAvg = Math.round(
-        updatedData.parameters.reduce((sum, param) => {
-          const score = parseFloat(param.institutionalAvg.replace('%', ''));
-          return sum + (isNaN(score) ? 0 : score);
-        }, 0) / updatedData.parameters.length
-      );
+      // Use overall institutional average from base data which is computed from headline parameter averages
+      const overallInstAvg = baseData.overallInstAvg;
 
       return {
         ...updatedData,

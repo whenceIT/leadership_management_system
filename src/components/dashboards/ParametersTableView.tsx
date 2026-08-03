@@ -123,6 +123,53 @@ export function ParametersTableView({
     consultant: 'Personal'
   }[userLevel];
 
+  function parseKpiValue(value: string | number | undefined): number | null {
+    if (value === undefined || value === null || value === '--') return null;
+    const str = typeof value === 'number' ? String(value) : value;
+    const cleaned = str.replace(/,/g, '').replace(/[^0-9.\-]/g, '');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? null : num;
+  }
+
+  function computeHeadlineUserLevelAvg(paramName: string): string {
+    const kpis = getParameterKPIs(userLevel, paramName,
+      staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData,
+      loanPortfolioLoadData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData,
+      longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData,
+      portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData,
+      yieldAchievementsData, revenueAchievementsData, profitabilityContributionData,
+      cashPositionData);
+
+    const values = kpis.map(kpi => parseKpiValue(kpi.currentPeriod)).filter((v): v is number => v !== null);
+    if (values.length === 0) return '--';
+    const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
+    return `${avg.toFixed(2)}%`;
+  }
+
+  function computeHeadlineInstitutionalAvg(paramName: string): string {
+    const kpis = getParameterKPIs(userLevel, paramName,
+      staffAdequacyData, productivityAchievementData, vacancyImpactData, volumeAchievementData,
+      loanPortfolioLoadData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData,
+      longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData,
+      portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData,
+      yieldAchievementsData, revenueAchievementsData, profitabilityContributionData,
+      cashPositionData);
+
+    const values: number[] = [];
+    kpis.forEach(kpi => {
+      const raw = kpi.institutionalAvg;
+      if (!raw || raw === '--') return;
+      const str = String(raw);
+      if (str.includes('K') || str.includes('HHI') || str.includes('avg') || str.includes('MoM')) return;
+      const num = parseKpiValue(str);
+      if (num !== null) values.push(num);
+    });
+
+    if (values.length === 0) return '--';
+    const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
+    return `${avg.toFixed(2)}%`;
+  }
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
@@ -169,8 +216,11 @@ export function ParametersTableView({
                   cashPositionData);
               const isExpanded = expandedParam === param.name;
 
+              const headlineUserLevelAvg = computeHeadlineUserLevelAvg(param.name);
+              const headlineInstitutionalAvg = computeHeadlineInstitutionalAvg(param.name);
+
               // Calculate progress percentage
-              const userLevelScore = parseFloat(param.userLevelAvg.replace('%', ''));
+              const userLevelScore = headlineUserLevelAvg !== '--' ? parseFloat(headlineUserLevelAvg.replace('%', '')) : 0;
               let progress = 0;
 
               if (typeof param.target === 'object' && param.target && 'min' in param.target) {
@@ -207,26 +257,24 @@ export function ParametersTableView({
                     </td>
                     <td className="border px-4 py-3 text-center bg-black/5 dark:bg-white/10">
                       <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {param.userLevelAvg}
+                        {computeHeadlineUserLevelAvg(param.name)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                          {param.name === 'Branch Structure & Staffing' ? '78%' :
-                              param.name === 'Loan Consultant Performance' ? '62%' :
-                                param.name === 'Loan Products & Interest Rates' ? '74%' :
-                                  param.name === 'Risk Management & Defaults' ? '52%' :
-                                    param.name === 'Revenue & Performance' ? '65%' :
-                                      param.name === 'Cash & Liquidity Management' ? '70%' :
-                                        '--'}
+                          {computeHeadlineInstitutionalAvg(param.name)}
                         </span>
-                        {param.userLevelAvg !== '--' && param.userLevelAvg !== '--%' && param.institutionalAvg !== '--' && (
-                          <span className={`text-xs font-medium ${parseFloat(param.userLevelAvg) >= parseFloat(param.institutionalAvg.replace('%', '')) ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                            {parseFloat(param.userLevelAvg) >= parseFloat(param.institutionalAvg.replace('%', '')) ? '▲' : '▼'}
-                            {Math.abs(parseFloat(param.userLevelAvg) - parseFloat(param.institutionalAvg.replace('%', ''))).toFixed(0)}%
-                          </span>
-                        )}
+                        {computeHeadlineUserLevelAvg(param.name) !== '--' && computeHeadlineInstitutionalAvg(param.name) !== '--' && (() => {
+                          const userVal = parseFloat(computeHeadlineUserLevelAvg(param.name).replace('%', ''));
+                          const instVal = parseFloat(computeHeadlineInstitutionalAvg(param.name).replace('%', ''));
+                          return (
+                            <span className={`text-xs font-medium ${userVal >= instVal ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                              {userVal >= instVal ? '▲' : '▼'}
+                              {Math.abs(userVal - instVal).toFixed(0)}%
+                            </span>
+                          );
+                        })()}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center text-sm text-gray-500 dark:text-gray-400">
