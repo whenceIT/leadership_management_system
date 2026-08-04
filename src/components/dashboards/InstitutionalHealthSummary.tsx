@@ -456,9 +456,9 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
   const overallTarget = 90;
 
   // Mocked previous 3 months scores (fixed snapshots)
-  const prevMonth1 = 68;
-  const prevMonth2 = 62;
-  const prevMonth3 = 65;
+  const prevMonth1 = 0;
+  const prevMonth2 = 0;
+  const prevMonth3 = 0;
   const previousScore = Math.round((prevMonth1 + prevMonth2 + prevMonth3) / 3);
   const prevMonthScores = [
     { label: '3 months ago', score: prevMonth3 },
