@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
-    "cron:overall-score": "npx tsx cron/overall-score-worker.ts"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.19",
@@ -28,7 +27,6 @@
     "laravel-echo": "^2.3.0",
     "mysql2": "^3.16.2",
     "next": "16.0.10",
-    "node-cron": "^4.0.5",
     "pusher-js": "^8.4.0",
     "react": "^19.2.0",
     "react-apexcharts": "^1.8.0",
