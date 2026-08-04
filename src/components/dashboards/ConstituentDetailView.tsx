@@ -30,7 +30,7 @@ interface ConstituentDetailProps {
   onClose: () => void;
 }
 
-export function ConstituentDetailView({ constituent, onClose }: ConstituentDetailProps) {
+export function ConstituentDetailView({ constituent, managerUsers, referralUsers, onClose }: ConstituentDetailProps) {
   const [expanded, setExpanded] = useState(false);
 
   const ppContribution = (constituent.score / 100) * constituent.weight;
