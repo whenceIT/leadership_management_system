@@ -460,10 +460,18 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
   const prevMonth2 = 0;
   const prevMonth3 = 0;
   const previousScore = Math.round((prevMonth1 + prevMonth2 + prevMonth3) / 3);
+
+  const getMonthName = (date: Date) => date.toLocaleString('default', { month: 'long' });
+
+  const today = new Date();
+  const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+  const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+
   const prevMonthScores = [
-    { label: '3 months ago', score: prevMonth3 },
-    { label: '2 months ago', score: prevMonth2 },
-    { label: 'last month', score: prevMonth1 }
+    { label: getMonthName(threeMonthsAgo), score: prevMonth3 },
+    { label: getMonthName(twoMonthsAgo), score: prevMonth2 },
+    { label: getMonthName(lastMonth), score: prevMonth1 }
   ];
 
   return {
@@ -1380,15 +1388,15 @@ const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
                     <span className="text-2xl font-bold text-gray-400 opacity-40">
                       {prevMonthScores[0].score}%
                     </span>
-                    <span className="text-xs text-gray-500 opacity-40">3mo</span>
+                    <span className="text-xs text-gray-500 opacity-40">{prevMonthScores[0].label}</span>
                     <span className="text-2xl font-bold text-gray-400 opacity-50">
                       {prevMonthScores[1].score}%
                     </span>
-                    <span className="text-xs text-gray-500 opacity-50">2mo</span>
+                    <span className="text-xs text-gray-500 opacity-50">{prevMonthScores[1].label}</span>
                     <span className="text-3xl font-bold text-gray-400 opacity-60">
                       {prevMonthScores[2].score}%
                     </span>
-                    <span className="text-xs text-gray-500 opacity-60">last</span>
+                    <span className="text-xs text-gray-500 opacity-60">{prevMonthScores[2].label}</span>
                   </>
                 )}
                 <span className={`text-xs font-medium ${
@@ -1404,7 +1412,7 @@ const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
               <p className="text-gray-400 text-xs">Overall Health Score</p>
               {prevMonthScores && prevMonthScores.length === 3 && (
                 <p className="text-xs text-gray-500 opacity-60">
-                  Previous: {prevMonthScores[2].score}% (last month) · Avg: {Math.round((prevMonthScores[0].score + prevMonthScores[1].score + prevMonthScores[2].score) / 3)}% (3-month)
+                  Previous: {prevMonthScores[2].score}% ({prevMonthScores[2].label}) · Avg: {Math.round((prevMonthScores[0].score + prevMonthScores[1].score + prevMonthScores[2].score) / 3)}% (3-month)
                 </p>
               )}
             </div>

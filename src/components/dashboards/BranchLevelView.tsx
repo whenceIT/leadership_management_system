@@ -52,7 +52,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
   const [error, setError] = useState<string | null>(null);
   const [selectedBranchForDrill, setSelectedBranchForDrill] = useState<number | null>(null);
   const [showKpiInfo, setShowKpiInfo] = useState<boolean>(false);
-  const [verdictPopup, setVerdictPopup] = useState<{ branchName: string; verdict: string; reason: string; workstations?: number; total_minimum_needed?: number; amount_disbursed?: number; adjusted_disbursed_140_percent?: number; defaults?: number; mandatory_fixed_costs?: number; salaries_performance_allowances?: number; net_cash_position?: number } | null>(null);
+  const [verdictPopup, setVerdictPopup] = useState<{ branchName: string; verdict: string; reason: string; workstations?: number; minimum_loan_target?: number; amount_disbursed?: number; adjusted_disbursed_140_percent?: number; defaults?: number; mandatory_fixed_costs?: number; salaries_performance_allowances?: number; net_cash_position?: number } | null>(null);
 
   const userBranchId = useMemo(() => {
     if (!user) return null;
@@ -678,7 +678,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                                     verdict: data?.verdict || '--',
                                     reason: data?.verdict_reason || 'No reason provided.',
                                     workstations: data?.workstations,
-                                    total_minimum_needed: data?.total_minimum_needed,
+                                    minimum_loan_target: data?.minimum_loan_target,
                                     amount_disbursed: data?.amount_disbursed,
                                     adjusted_disbursed_140_percent: data?.adjusted_disbursed_140_percent,
                                     defaults: data?.defaults,
@@ -762,7 +762,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                     </tr>
                     <tr>
                       <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Minimum loan target</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.total_minimum_needed != null ? `K${verdictPopup.total_minimum_needed.toLocaleString()}` : '--'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.minimum_loan_target != null ? `K${verdictPopup.minimum_loan_target.toLocaleString()}` : '--'}</td>
                     </tr>
                     <tr>
                       <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Amount disbursed</td>
