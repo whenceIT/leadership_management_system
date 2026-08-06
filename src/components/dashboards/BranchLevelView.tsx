@@ -52,6 +52,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
   const [error, setError] = useState<string | null>(null);
   const [selectedBranchForDrill, setSelectedBranchForDrill] = useState<number | null>(null);
   const [showKpiInfo, setShowKpiInfo] = useState<boolean>(false);
+  const [verdictPopup, setVerdictPopup] = useState<{ branchName: string; verdict: string; reason: string; workstations?: number; total_minimum_needed?: number; amount_disbursed?: number; adjusted_disbursed_140_percent?: number; defaults?: number; mandatory_fixed_costs?: number; salaries_performance_allowances?: number; net_cash_position?: number } | null>(null);
 
   const userBranchId = useMemo(() => {
     if (!user) return null;
@@ -193,31 +194,20 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
   };
 
   // Helper function to extract KPI value from data
-  const getKPIValue = (data: any, selectedKPI: string): { current: string; target: string; variance: string; trend: KPITrend; status: KPIStatus; contribution: string; actualLcs: number; totalStaff: number } => {
+  const getKPIValue = (data: any, selectedKPI: string): { current: string; target: string; variance: string; trend: KPITrend; status: KPIStatus; actualLcs: number; totalStaff: number } => {
     // Default values
     let current = '--';
     let target = '100%';
     let variance = '--';
     let trend: '↑' | '↓' | '→' = '→';
     let status: KPIStatus = 'warning';
-    let contribution = '--';
     let actualLcs = 0;
     let totalStaff = 0;
 
-    if (!data) return { current, target, variance, trend, status, contribution, actualLcs, totalStaff };
+    if (!data) return { current, target, variance, trend, status, actualLcs, totalStaff };
 
     totalStaff = data.total_staff || 0;
     actualLcs = data.actual_lcs || 0;
-    
-    // Extract contribution (percentage_points) if available
-    if (data.percentage_point) {
-      contribution = `${parseFloat(data.percentage_point).toFixed(2)}pp`;
-    } else if (data.weight) {
-      // Calculate contribution based on normalized_score and weight
-      const weight = parseFloat(data.weight.replace('%', '')) / 100;
-      const score = parseFloat(data.normalized_score || '0');
-      contribution = `${(score * weight / 100).toFixed(2)}pp`;
-    }
 
     // Extract values based on KPI type
     if (selectedKPI === 'Staff Adequacy Score') {
@@ -397,32 +387,29 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
          status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
        }
      } else if (selectedKPI === 'Cash Position Score') {
-      const cashBalance = data.totalCashBalance || data.cashBalance || 0;
-      const score = calculateCashPositionScore(cashBalance, 'branch');
-      current = `${score.toFixed(2)}%`;
-      target = 'K100,000';
-      contribution = `${score.toFixed(2)} of 100pp`;
-      if (cashBalance > 0) {
+      const score = data.cash_position_score ?? parseFloat(String(data.score ?? data.average_score ?? NaN));
+      const netCashPosition = data.net_cash_position;
+      const hasScore = !Number.isNaN(score);
+
+      if (hasScore) {
+        current = `${score.toFixed(2)}%`;
+        target = '≥100%';
         variance = `${(score - 100).toFixed(2)}%`;
-        if (score >= 70) {
-          trend = '↑';
-          status = 'excellent';
-        } else if (score >= 50) {
-          trend = '→';
-          status = 'good';
-        } else if (score >= 30) {
-          trend = '↓';
-          status = 'moderate';
-        } else if (score >= 20) {
-          trend = '↓';
-          status = 'bad';
-        } else {
-          trend = '↓';
-          status = 'critical';
+        trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
+        status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+      }
+
+      if (netCashPosition != null) {
+        if (!hasScore) {
+          current = `K${netCashPosition.toLocaleString()}`;
+          target = '≥K0';
+          variance = `${netCashPosition >= 0 ? '+' : '-'}K${Math.abs(netCashPosition).toLocaleString()}`;
+          trend = netCashPosition >= 0 ? '↑' : '↓';
+          status = netCashPosition >= 0 ? 'good' : 'critical';
         }
       }
     }
-    return { current, target, variance, trend, status, contribution, actualLcs, totalStaff };
+    return { current, target, variance, trend, status, actualLcs, totalStaff };
   };
 
   if (error) {
@@ -627,14 +614,27 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Staff Count</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Contribution (pp)</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              {selectedKPI === 'Cash Position Score' ? (
+                <>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Net Cash Position</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Verdict</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Disbursed</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Collection Rate</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Collection Threshold</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Capacity</th>
+                </>
+              ) : (
+                <>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Staff Count</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -656,37 +656,145 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                   }
                 }
 
-               return (
-                    <tr 
-                      key={branch.id} 
-                      className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${rowBg}`}
-                      onClick={() => {
-                        onBranchClick(Number(branch.id));
-                        setSelectedBranchForDrill(Number(branch.id));
-                      }}
-                    >
-                       <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
-                       <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{kpiValue.current}</td>
-                       <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{selectedKPI === 'Staff Adequacy Score' ? (kpiValue.totalStaff || kpiValue.actualLcs || '--') : (branch.user_count > 0 ? branch.user_count : '--')}</td>
-                       <td className="px-4 py-2 text-sm font-medium text-purple-600 dark:text-purple-400">{kpiValue.contribution}</td>
-                      <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{kpiValue.target}</td>
-                      <td className="px-4 py-2 text-sm">
-                        <span className={`${getVarianceColor(kpiValue.variance)}`}>{kpiValue.variance}</span>
-                      </td>
-                      <td className="px-4 py-2 text-sm">
-                        <span className={getTrendBadge(kpiValue.trend)}>{kpiValue.trend}</span>
-                      </td>
-                      <td className="px-4 py-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpiValue.status)}`}>
-                          {kpiValue.status === 'good' ? 'GOOD' : kpiValue.status === 'warning' ? 'WARNING' : kpiValue.status === 'excellent' ? 'EXCELLENT' : kpiValue.status === 'moderate' ? 'MODERATE' : kpiValue.status === 'bad' ? 'BAD' : 'CRITICAL'}
-                        </span>
-                      </td>
-                    </tr>
-              );
+                return (
+                     <tr 
+                       key={branch.id} 
+                       className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${rowBg}`}
+                       onClick={() => {
+                         onBranchClick(Number(branch.id));
+                         setSelectedBranchForDrill(Number(branch.id));
+                       }}
+                     >
+                        {selectedKPI === 'Cash Position Score' ? (
+                          <>
+                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.net_cash_position != null ? `K${data.net_cash_position.toLocaleString()}` : '--'}</td>
+                            <td className="px-4 py-2 text-sm">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setVerdictPopup({
+                                    branchName: branch.name,
+                                    verdict: data?.verdict || '--',
+                                    reason: data?.verdict_reason || 'No reason provided.',
+                                    workstations: data?.workstations,
+                                    total_minimum_needed: data?.total_minimum_needed,
+                                    amount_disbursed: data?.amount_disbursed,
+                                    adjusted_disbursed_140_percent: data?.adjusted_disbursed_140_percent,
+                                    defaults: data?.defaults,
+                                    mandatory_fixed_costs: data?.mandatory_fixed_costs,
+                                    salaries_performance_allowances: data?.salaries_performance_allowances,
+                                    net_cash_position: data?.net_cash_position
+                                  });
+                                }}
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
+                              >
+                                {data?.verdict || '--'}
+                              </button>
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.amount_disbursed != null ? `K${data.amount_disbursed.toLocaleString()}` : '--'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.collection_rate != null ? `${data.collection_rate.toFixed(2)}%` : '--'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.total_minimum_needed != null ? `K${data.total_minimum_needed.toLocaleString()}` : '--'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.workstations ?? '--'}</td>
+                          </>
+                        ) : (
+                         <>
+                           <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
+                           <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{kpiValue.current}</td>
+                           <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{selectedKPI === 'Staff Adequacy Score' ? (kpiValue.totalStaff || kpiValue.actualLcs || '--') : (branch.user_count > 0 ? branch.user_count : '--')}</td>
+                           <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{kpiValue.target}</td>
+                           <td className="px-4 py-2 text-sm">
+                             <span className={`${getVarianceColor(kpiValue.variance)}`}>{kpiValue.variance}</span>
+                           </td>
+                           <td className="px-4 py-2 text-sm">
+                             <span className={getTrendBadge(kpiValue.trend)}>{kpiValue.trend}</span>
+                           </td>
+                           <td className="px-4 py-2">
+                             <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpiValue.status)}`}>
+                               {kpiValue.status === 'good' ? 'GOOD' : kpiValue.status === 'warning' ? 'WARNING' : kpiValue.status === 'excellent' ? 'EXCELLENT' : kpiValue.status === 'moderate' ? 'MODERATE' : kpiValue.status === 'bad' ? 'BAD' : 'CRITICAL'}
+                             </span>
+                           </td>
+                         </>
+                       )}
+                     </tr>
+               );
             })}
           </tbody>
         </table>
       </div>
+
+      {verdictPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setVerdictPopup(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Verdict: {verdictPopup.branchName}</h3>
+              <button
+                onClick={() => setVerdictPopup(null)}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Verdict</p>
+              <p className="text-sm text-gray-900 dark:text-white">{verdictPopup.verdict}</p>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Reason</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{verdictPopup.reason}</p>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Calculation Detail</p>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tr>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Workstations</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.workstations ?? '--'}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Minimum loan target</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.total_minimum_needed != null ? `K${verdictPopup.total_minimum_needed.toLocaleString()}` : '--'}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Amount disbursed</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.amount_disbursed != null ? `K${verdictPopup.amount_disbursed.toLocaleString()}` : '--'}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Maximum expected repayment (×1.40)</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.adjusted_disbursed_140_percent != null ? `K${verdictPopup.adjusted_disbursed_140_percent.toLocaleString()}` : '--'}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Defaults</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.defaults != null ? `K${verdictPopup.defaults.toLocaleString()}` : '--'}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Mandatory fixed costs</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.mandatory_fixed_costs != null ? `K${verdictPopup.mandatory_fixed_costs.toLocaleString()}` : '--'}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Salaries & allowances</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.salaries_performance_allowances != null ? `K${verdictPopup.salaries_performance_allowances.toLocaleString()}` : '--'}</td>
+                    </tr>
+                    <tr className="bg-gray-100 dark:bg-gray-700">
+                      <td className="px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white">Net cash position</td>
+                      <td className="px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white text-right">{verdictPopup.net_cash_position != null ? `K${verdictPopup.net_cash_position.toLocaleString()}` : '--'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

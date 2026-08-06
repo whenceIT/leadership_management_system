@@ -55,8 +55,11 @@ export default function SignInForm() {
       const data = await response.json();
 
       if (data.success) {
-        // Store all user data in localStorage
-        localStorage.setItem('thisUser', JSON.stringify(data.user));
+        // Store all user data in localStorage with a 1-hour client-side expiry
+        localStorage.setItem(
+          'thisUser',
+          JSON.stringify({ ...data.user, expiresAt: Date.now() + 60 * 60 * 1000 })
+        );
         
         setSuccess("Login successful! Redirecting...");
         setTimeout(() => {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useCallback } from 'react';
+import { getUserData } from '@/utils/userContext';
 
 interface UserData {
   [key: string]: any;
@@ -19,16 +20,9 @@ export function useUserSync() {
         return;
       }
 
-      // Get current user from localStorage
-      const storedUser = localStorage.getItem('thisUser');
-      if (!storedUser) {
-        return;
-      }
-
-      const currentUser: UserData = JSON.parse(storedUser);
-      
-      // Check if user has an email
-      if (!currentUser.email) {
+      // Get current user from localStorage with expiry validation
+      const currentUser = getUserData();
+      if (!currentUser || typeof currentUser.email !== 'string') {
         return;
       }
 
@@ -47,6 +41,7 @@ export function useUserSync() {
         const mergedData = {
           ...existingData,
           ...data.user,
+          expiresAt: existingData.expiresAt,
           // Ensure position_id is preserved if not in new data
           position_id: data.user.position_id || existingData.position_id,
           // Ensure position is preserved if not in new data

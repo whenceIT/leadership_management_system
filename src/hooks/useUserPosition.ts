@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { getUserData } from '@/utils/userContext';
 
 // Custom event names for impersonation sync
 export const IMPERSONATION_STARTED_EVENT = 'impersonation:started';
@@ -94,24 +95,6 @@ export function useUserPosition() {
     return position?.name || getPositionNameByIdStatic(id);
   }, [positions]);
 
-  const getUserData = useCallback((): UserData | null => {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-
-    const storedUser = localStorage.getItem('thisUser');
-    if (!storedUser) {
-      return null;
-    }
-
-    try {
-      return JSON.parse(storedUser);
-    } catch (e) {
-      console.error('Error parsing user data from localStorage:', e);
-      return null;
-    }
-  }, []);
-
   const syncAndGetPosition = useCallback(async (forceSync: boolean = false) => {
     // Check for impersonation data FIRST - this takes priority
     if (typeof window !== 'undefined') {
@@ -126,7 +109,7 @@ export function useUserPosition() {
             setPositionName(impData.positionName);
             
             // Get the impersonated user from thisUser
-            const thisUser = getUserData();
+            const thisUser = getUserData() as UserData | null;
             if (thisUser) {
               setUser(thisUser);
               setUserTier(thisUser.tier || null);
@@ -147,7 +130,7 @@ export function useUserPosition() {
     }
     
     // Prevent over-polling: skip if already synced and not forcing
-    const currentUser = getUserData();
+    const currentUser = getUserData() as UserData | null;
     if (!forceSync && hasSyncedRef.current && lastSyncedEmailRef.current === currentUser?.email) {
       // Use cached data without API call
       if (currentUser) {
@@ -175,7 +158,7 @@ export function useUserPosition() {
       }
 
       // Fetch latest user data from API to get updated position_id
-      if (currentUser.email) {
+      if (typeof currentUser.email === 'string' && currentUser.email) {
         try {
           const response = await fetch(`/api/auth/user?email=${encodeURIComponent(currentUser.email)}`, {
             cache: "force-cache",
@@ -184,8 +167,12 @@ export function useUserPosition() {
           const data = await response.json();
 
           if (data.success && data.user) {
-            // Merge with existing data
-            const mergedUser = { ...currentUser, ...data.user };
+            // Merge with existing data and preserve expiry
+            const mergedUser = {
+              ...currentUser,
+              ...data.user,
+              expiresAt: currentUser.expiresAt,
+            };
             localStorage.setItem('thisUser', JSON.stringify(mergedUser));
             setUser(mergedUser);
             
@@ -268,7 +255,7 @@ export function useUserPosition() {
     }
 
     try {
-      return JSON.parse(storedUser);
+      return JSON.parse(storedUser) as UserData;
     } catch (e) {
       return null;
     }
@@ -299,7 +286,7 @@ export function useUserPosition() {
     }
 
     try {
-      const currentUser = getUserData();
+      const currentUser = getUserData() as UserData | null;
       if (!currentUser) {
         return { success: false, message: 'No user logged in', cancel: () => {} };
       }
@@ -431,7 +418,7 @@ export function useUserPosition() {
     }
 
     try {
-      const currentUser = getUserData();
+      const currentUser = getUserData() as UserData | null;
       if (!currentUser) {
         return { success: false, message: 'No user logged in' };
       }
@@ -517,7 +504,7 @@ export function useUserPosition() {
     }
 
     try {
-      const currentUser = getUserData();
+      const currentUser = getUserData() as UserData | null;
       if (!currentUser) {
         return { success: false, message: 'No user logged in' };
       }

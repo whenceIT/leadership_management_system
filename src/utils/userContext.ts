@@ -22,21 +22,73 @@ export interface UserContext {
  * Get user data from localStorage
  * Returns the current user (impersonated or original)
  */
-export function getUserData(): Record<string, unknown> | null {
+const USER_SESSION_KEY = 'thisUser';
+
+export interface StoredUserData {
+  id?: number;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  office_id?: number;
+  province_id?: number;
+  role?: string;
+  position_id?: number;
+  job_position?: number;
+  position?: string;
+  tier?: string;
+  status?: string;
+  expiresAt?: number;
+  [key: string]: any;
+}
+
+export function getUserData(): StoredUserData | null {
   if (typeof window === 'undefined') {
     return null;
   }
 
   try {
-    const storedUser = localStorage.getItem('thisUser');
+    const storedUser = localStorage.getItem(USER_SESSION_KEY);
     if (!storedUser) {
       return null;
     }
-    return JSON.parse(storedUser);
+
+    const parsed = JSON.parse(storedUser) as StoredUserData;
+
+    if (parsed.expiresAt && Date.now() > parsed.expiresAt) {
+      localStorage.removeItem(USER_SESSION_KEY);
+      return null;
+    }
+
+    return parsed;
   } catch (e) {
     console.error('Error parsing user data from localStorage:', e);
+    localStorage.removeItem(USER_SESSION_KEY);
     return null;
   }
+}
+
+export function setUserData(userData: StoredUserData): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const currentData = getUserData();
+  const expiresAt = userData.expiresAt ?? currentData?.expiresAt;
+  const mergedData = {
+    ...currentData,
+    ...userData,
+    ...(expiresAt ? { expiresAt } : {}),
+  };
+
+  localStorage.setItem(USER_SESSION_KEY, JSON.stringify(mergedData));
+}
+
+export function clearUserData(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  localStorage.removeItem(USER_SESSION_KEY);
 }
 
 /**

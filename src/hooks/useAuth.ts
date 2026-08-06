@@ -21,6 +21,33 @@ export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [wasPreviouslyAuthenticated, setWasPreviouslyAuthenticated] = useState(false);
 
+  const handleSessionExpired = useCallback(() => {
+    setSession(null);
+    setIsAuthenticated(false);
+    setWasPreviouslyAuthenticated(false);
+
+    // Clear localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('thisUser');
+      } catch (e) {
+        // ignore
+      }
+
+      // Notify any UI listeners to show the non-closable overlay
+      try {
+        window.dispatchEvent(new Event('session:expired'));
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // Delay redirect slightly to allow the overlay to render
+    setTimeout(() => {
+      window.location.replace('/signin');
+    }, 2200);
+  }, []);
+
   const checkSession = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/session');
@@ -30,16 +57,12 @@ export function useAuth() {
         setSession(data.session);
         setIsAuthenticated(true);
         setWasPreviouslyAuthenticated(true);
+      } else if (response.status === 401) {
+        // Session is invalid or expired, clear auth state and redirect
+        handleSessionExpired();
       } else {
-        // Session is invalid or expired
-        // Only handle session expired if user was previously authenticated
-        if (wasPreviouslyAuthenticated || isAuthenticated) {
-          handleSessionExpired();
-        } else {
-          // User was never authenticated or already logged out
-          setSession(null);
-          setIsAuthenticated(false);
-        }
+        setSession(null);
+        setIsAuthenticated(false);
       }
     } catch (error) {
       console.error('Error checking session:', error);
@@ -53,21 +76,8 @@ export function useAuth() {
     } finally {
       setIsLoading(false);
     }
-  }, [wasPreviouslyAuthenticated, isAuthenticated]);
-
-  const handleSessionExpired = useCallback(() => {
-    setSession(null);
-    setIsAuthenticated(false);
-    setWasPreviouslyAuthenticated(false);
-    
-    // Clear localStorage
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('thisUser');
-    }
-    
-    // Redirect to login page
-    router.push('/signin');
-  }, [router]);
+  }, [wasPreviouslyAuthenticated, isAuthenticated, handleSessionExpired]);
+ 
 
   useEffect(() => {
     checkSession();

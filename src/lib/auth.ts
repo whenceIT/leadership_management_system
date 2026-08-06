@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-const SESSION_EXPIRY_HOURS = 24;
+const SESSION_EXPIRY_HOURS = 1;
 
 // Session storage interface
 interface SessionData {
@@ -198,7 +198,7 @@ export function createSessionResponse(
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24, // 24 hours
+    maxAge: 60 * 60, // 1 hour
     path: '/',
   });
 

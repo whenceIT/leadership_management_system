@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { resolveSession } from '@/lib/auth';
 
 const protectedRoutes = ['/admin', '/dashboard', '/profile', '/settings', '/users'];
 const publicRoutes = ['/signin', '/signup', '/forgot-password', '/reset-password'];
@@ -17,9 +18,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith(route)
   );
 
-  // Check if session_id cookie exists
-  const sessionId = request.cookies.get('session_id')?.value;
-  const hasValidSession = !!sessionId;
+  // Validate session server-side, not only cookie presence
+  const session = await resolveSession(request);
+  const hasValidSession = !!session;
 
   // Protected route without valid session -> redirect to signin
   if (isProtectedRoute && !hasValidSession) {

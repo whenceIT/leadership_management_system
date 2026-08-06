@@ -76,13 +76,14 @@ export async function POST(request: NextRequest) {
       status: user.status,
     });
 
-    // Return success response with session cookie
+    // Return success response with session cookie and expiry metadata
     return createSessionResponse(
       sessionId,
       {
         success: true,
         message: 'Login successful',
         user: user,
+        expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
       },
       200
     );

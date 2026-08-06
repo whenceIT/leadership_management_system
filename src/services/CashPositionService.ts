@@ -1,16 +1,33 @@
 export interface CashPositionData {
+  filter_type?: string;
   office_id?: string;
+  office_name?: string;
   province_id?: string;
   district_id?: string;
   offices_count?: number;
-  period?: string;
-  score?: string;
-  average_score?: string;
-  average_normalized_score?: string;
-  percentage_points?: string;
-  closing_balance?: string;
-  weight?: string;
-  percentage_point?: string;
+  period?: { start_date?: string; end_date?: string } | string;
+  workstations?: number;
+  minimum_loan_target?: number;
+  amount_disbursed?: number;
+  adjusted_disbursed_140_percent?: number;
+  total_collected?: number;
+  collection_rate?: number;
+  shortfall_against_target?: number;
+  defaults?: number;
+  mandatory_fixed_costs?: number;
+  salaries_performance_allowances?: number;
+  net_cash_position?: number;
+  total_minimum_needed?: number;
+  verdict?: string;
+  verdict_reason?: string;
+
+  score?: number | string;
+  average_score?: number | string;
+  average_normalized_score?: number | string;
+  percentage_points?: number | string;
+  closing_balance?: number | string;
+  weight?: number | string;
+  percentage_point?: number | string;
   totalCashBalance?: number;
 
   cash_position_score?: number;
@@ -114,27 +131,81 @@ async function fetchLedgerForWallet(walletId: string, startDate = '2026-01-01', 
   };
 }
 
-export async function fetchCashPosition(branchId: number, offices?: Office[]): Promise<CashPositionData> {
-  const allOffices = offices || await getOfficesFromApi();
-  const office = allOffices.find(o => String(o.id) === String(branchId));
-  const walletId = office?.withinhereWalletId;
+export async function fetchCashPosition(branchId: number): Promise<CashPositionData> {
+  const url = `https://smartbackend.whencefinancesystem.com/api/kpi-scores/cash-position?office_id=${branchId}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
 
-  if (!walletId) {
-    throw new Error(`No withinhere_wallet_id found for branch ${branchId}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch cash position: ${response.statusText}`);
   }
 
-  const { cashBalance } = await fetchLedgerForWallet(walletId);
+  const result = await response.json();
+  if (!result?.success) {
+    throw new Error('API returned success false');
+  }
 
-  const metrics = calculateCashLiquidityIndex(cashBalance);
+  const apiData = result.data || {};
+  const parseNumber = (value: any): number | undefined => {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (typeof value === 'number') return value;
+    const cleaned = String(value).replace(/,/g, '').replace(/[^0-9.\-]/g, '');
+    const parsed = parseFloat(cleaned);
+    return Number.isNaN(parsed) ? undefined : parsed;
+  };
+
+  const parsedCashPositionData: CashPositionData = {
+    ...apiData,
+    workstations: parseNumber(apiData.workstations),
+    minimum_loan_target: parseNumber(apiData.minimum_loan_target),
+    amount_disbursed: parseNumber(apiData.amount_disbursed),
+    adjusted_disbursed_140_percent: parseNumber(apiData.adjusted_disbursed_140_percent),
+    total_collected: parseNumber(apiData.total_collected),
+    collection_rate: parseNumber(apiData.collection_rate),
+    shortfall_against_target: parseNumber(apiData.shortfall_against_target),
+    defaults: parseNumber(apiData.defaults),
+    mandatory_fixed_costs: parseNumber(apiData.mandatory_fixed_costs),
+    salaries_performance_allowances: parseNumber(apiData.salaries_performance_allowances),
+    net_cash_position: parseNumber(apiData.net_cash_position),
+    total_minimum_needed: parseNumber(apiData.total_minimum_needed),
+    cash_position_score: parseNumber(apiData.cash_position_score),
+    score: parseNumber(apiData.score),
+    average_score: parseNumber(apiData.average_score),
+    average_normalized_score: parseNumber(apiData.average_normalized_score),
+    percentage_points: parseNumber(apiData.percentage_points),
+    percentage_point: parseNumber(apiData.percentage_point),
+    totalCashBalance: parseNumber(apiData.totalCashBalance)
+  };
+
+  const deriveScoreFromNetCash = (netCashPosition?: number, totalMinimumNeeded?: number): number | undefined => {
+    if (netCashPosition === undefined || netCashPosition === null) return undefined;
+    if (netCashPosition >= 0) return 100;
+    if (totalMinimumNeeded && totalMinimumNeeded > 0) {
+      const ratio = 1 + netCashPosition / totalMinimumNeeded;
+      return Math.max(0, Math.min(100, ratio * 100));
+    }
+    const fallback = Math.max(0, Math.min(100, 100 + (netCashPosition / 100000) * 100));
+    return fallback;
+  };
+
+  const computedScore = parsedCashPositionData.cash_position_score ?? parsedCashPositionData.score ?? parsedCashPositionData.average_score ?? deriveScoreFromNetCash(parsedCashPositionData.net_cash_position, parsedCashPositionData.total_minimum_needed);
 
   return {
-    office_id: branchId.toString(),
-    score: metrics.compositeScore.toString(),
-    average_score: metrics.compositeScore.toString(),
-    average_normalized_score: metrics.compositeScore.toString(),
-    totalCashBalance: cashBalance,
-    percentage_point: metrics.compositeScore.toString(),
-    cash_position_score: metrics.cashPositionScore,
+    ...parsedCashPositionData,
+    score: parsedCashPositionData.score ?? computedScore,
+    average_score: parsedCashPositionData.average_score ?? computedScore,
+    average_normalized_score: parsedCashPositionData.average_normalized_score ?? computedScore,
+    percentage_point: parsedCashPositionData.percentage_point ?? computedScore,
+    percentage_points: parsedCashPositionData.percentage_points ?? computedScore,
+    cash_position_score: (parsedCashPositionData.cash_position_score ?? computedScore) as number | undefined,
   };
 }
 

@@ -27,18 +27,24 @@ interface User {
  */
 function getStoredUser(): User | null {
   if (typeof window === 'undefined') return null;
-  
+
   const userStr = localStorage.getItem('thisUser');
   if (!userStr) return null;
-  
+
   try {
-    const user = JSON.parse(userStr);
+    const user = JSON.parse(userStr) as User & { expiresAt?: number };
+    if (user.expiresAt && Date.now() > user.expiresAt) {
+      localStorage.removeItem('thisUser');
+      return null;
+    }
+
     if (user && user.id && user.email) {
       return user as User;
     }
     return null;
   } catch (e) {
     console.error('Error parsing stored user:', e);
+    localStorage.removeItem('thisUser');
     return null;
   }
 }
@@ -95,9 +101,18 @@ export default function UserDropdown() {
           const data = await response.json();
           if (data.success && data.user) {
             setUser(data.user);
-            // Store in localStorage for future use
+            // Store in localStorage for future use, preserving expiry if present
             if (typeof window !== 'undefined') {
-              localStorage.setItem('thisUser', JSON.stringify(data.user));
+              const currentStored = localStorage.getItem('thisUser');
+              const existingData = currentStored ? JSON.parse(currentStored) : {};
+              const expiresAt = data.session?.expires_at
+                ? new Date(data.session.expires_at).getTime()
+                : existingData.expiresAt || Date.now() + 60 * 60 * 1000;
+
+              localStorage.setItem(
+                'thisUser',
+                JSON.stringify({ ...existingData, ...data.user, expiresAt })
+              );
             }
           }
         }

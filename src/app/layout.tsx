@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { LoadingProvider } from '@/context/LoadingContext';
 import { GlobalPageLoader } from '@/components/ui/loader/GlobalLoading';
 import InternetStatus from '@/components/InternetStatus/InternetStatus';
+import SessionExpiredModal from '@/components/auth/SessionExpiredModal';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -28,6 +29,7 @@ export default function RootLayout({
             <LoadingProvider>
               <GlobalPageLoader />
               <InternetStatus />
+              <SessionExpiredModal />
               {children}
             </LoadingProvider>
           </SidebarProvider>
