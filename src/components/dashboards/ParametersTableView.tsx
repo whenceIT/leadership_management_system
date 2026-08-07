@@ -6,6 +6,19 @@ import { DistrictLevelView } from './DistrictLevelView';
 import { BranchLevelView } from './BranchLevelView';
 import { KPI, KPIStatus, KPITrend, ParameterSummary } from '@/types/dashboard';
 
+interface TooltipHeaderProps {
+  children: React.ReactNode;
+  tooltip: string;
+}
+
+function TooltipHeader({ children, tooltip }: TooltipHeaderProps) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      {children}
+      <span className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help text-xs" title={tooltip}>ⓘ</span>
+    </span>
+  );
+}
 
 interface ParametersTableViewProps {
   parameters: ParameterSummary[];
@@ -123,13 +136,6 @@ export function ParametersTableView({
     consultant: 'Personal'
   }[userLevel];
 
-  const TooltipHeader = ({ children, tooltip }: { children: React.ReactNode, tooltip: string }) => (
-    <span className="inline-flex items-center gap-1">
-      {children}
-      <span className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 cursor-help text-xs" title={tooltip}>ⓘ</span>
-    </span>
-  );
-
   const DEFAULT_INSTITUTIONAL_AVGS: Record<string, string> = {
     'Branch Structure & Staffing': '85%',
     'Loan Consultant Performance': '75%',
@@ -144,10 +150,7 @@ export function ParametersTableView({
   }
 
   function getHeadlineInstitutionalAvg(param: ParameterSummary): string {
-    if (param.institutionalAvg && param.institutionalAvg !== '--') {
-      return param.institutionalAvg;
-    }
-    return DEFAULT_INSTITUTIONAL_AVGS[param.name] || '--';
+    return DEFAULT_INSTITUTIONAL_AVGS[param.name] || param.institutionalAvg || '--';
   }
 
   return (
@@ -338,12 +341,9 @@ export function ParametersTableView({
                                           <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
                                             <TooltipHeader tooltip="Gap or distance from target for this metric">Variance</TooltipHeader>
                                           </th>
-                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                                            <TooltipHeader tooltip="Weighted contribution points toward the parameter score">Contribution</TooltipHeader>
-                                          </th>
-                                          <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                                            <TooltipHeader tooltip="Performance status based on target achievement">Status</TooltipHeader>
-                                          </th>
+                                            <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                                              <TooltipHeader tooltip="Performance status based on target achievement">Status</TooltipHeader>
+                                            </th>
                                         </tr>
                                       </thead>
                                     <tbody className="divide-y divide-blue-200 dark:divide-blue-900/20">
@@ -381,14 +381,11 @@ export function ParametersTableView({
                                               <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
                                             </div>
                                           </td>
-                                           <td className="px-4 py-2 text-center text-sm">
-                                             {kpi.contribution || '--'}
-                                           </td>
-                                          <td className="px-4 py-2 text-center">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>
-                                              {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : kpi.status === 'excellent' ? 'EXCELLENT' : kpi.status === 'moderate' ? 'MODERATE' : kpi.status === 'bad' ? 'BAD' : 'CRITICAL'}
-                                            </span>
-                                          </td>
+                                            <td className="px-4 py-2 text-center">
+                                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>
+                                                {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : kpi.status === 'excellent' ? 'EXCELLENT' : kpi.status === 'moderate' ? 'MODERATE' : kpi.status === 'bad' ? 'BAD' : 'CRITICAL'}
+                                              </span>
+                                            </td>
                                         </tr>
                                       ))}
                                     </tbody>

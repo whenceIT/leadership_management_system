@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLoading } from '@/context/LoadingContext';
 import { KPIStatus, KPITrend, ParameterSummary, KPI } from '@/types/dashboard';
 import HealthAnalysisSections from './HealthAnalysisSections';
@@ -9,6 +9,7 @@ import { BranchLevelView } from './BranchLevelView';
 import { DistrictLevelView } from './DistrictLevelView';
 import { ConsultantLevelView } from './ConsultantLevelView';
 import { ParametersTableView } from './ParametersTableView';
+import { useKPISuggestions } from '@/hooks/useKPISuggestions';
 
 interface ParameterKPIs {
   [key: string]: KPI[];
@@ -1357,7 +1358,42 @@ export function InstitutionalHealthSummary({
   const [drillLevel, setDrillLevel] = useState<'province' | 'district' | 'branch' | 'consultant' | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<number | null>(null);
-const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
+   const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
+
+   const otherMetrics = useMemo(() => [
+     { name: 'Volume Achievement', data: volumeAchievementData },
+     { name: 'Collection Efficiency', data: collectionEfficiencyData },
+     { name: 'Efficiency Ratio (CIR)', data: efficiencyRatioData },
+     { name: 'Growth Trajectory', data: growthTrajectoryData },
+     { name: 'Long-Term Delinquency', data: longTermDelinquencyData },
+     { name: 'Month-1 Default Performance', data: month1DefaultPerformanceData },
+     { name: '3-Month Recovery Achievements', data: month3RecoveryAchievementsData },
+     { name: 'Portfolio Quality', data: portfolioQualityData },
+     { name: 'Product Diversification', data: productDiversificationData },
+     { name: 'Product Risk Score', data: productRiskScoreData },
+     { name: 'Roll Rate Control', data: rollRateControlData },
+     { name: 'Yield Achievements', data: yieldAchievementsData },
+     { name: 'Revenue Achievements', data: revenueAchievementsData },
+     { name: 'Profitability Contribution', data: profitabilityContributionData },
+   ], [volumeAchievementData, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData,
+       longTermDelinquencyData, month1DefaultPerformanceData, month3RecoveryAchievementsData,
+       portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData,
+       yieldAchievementsData, revenueAchievementsData, profitabilityContributionData]);
+
+   const { suggestions } = useKPISuggestions({
+     userLevel,
+     userProvinceId,
+     selectedProvince,
+     selectedDistrict,
+     selectedBranch,
+     staffAdequacyData,
+     productivityAchievementData,
+     vacancyImpactData,
+     loanPortfolioLoadData,
+     otherMetrics,
+     enableDrillDown: true,
+   });
+
 
    const levelLabel = {
     institution: 'Institutional',
@@ -1565,7 +1601,8 @@ userProvinceId={userProvinceId}
              yieldAchievementsData={yieldAchievementsData}
              revenueAchievementsData={revenueAchievementsData}
              profitabilityContributionData={profitabilityContributionData}
-cashPositionData={cashPositionData}
+            cashPositionData={cashPositionData}
+            suggestions={suggestions}
             />
      </div>
     
