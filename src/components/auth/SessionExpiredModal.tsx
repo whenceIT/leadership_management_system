@@ -43,7 +43,7 @@ export default function SessionExpiredModal() {
     };
   }, []);
 
-  if (!visible) return null;
+  if (!visible || pathname === "/signin") return null;
 
   const handleSignIn = () => {
     try {
@@ -51,7 +51,8 @@ export default function SessionExpiredModal() {
     } catch (e) {
       // ignore
     }
-    router.push("/signin");
+    router.replace("/signin");
+    router.refresh();
   };
 
   return (

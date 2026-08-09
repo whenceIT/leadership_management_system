@@ -31,13 +31,12 @@ export default function SignInForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
     setSuccess("");
+    setLoading(true);
 
-    // Create AbortController for timeout handling
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort("Request timed out"), 6000);
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -49,9 +48,6 @@ export default function SignInForm() {
         signal: controller.signal,
       });
 
-      // Clear timeout immediately after response
-      clearTimeout(timeoutId);
-
       const data = await response.json();
 
       if (data.success) {
@@ -60,7 +56,7 @@ export default function SignInForm() {
           'thisUser',
           JSON.stringify({ ...data.user, expiresAt: Date.now() + 60 * 60 * 1000 })
         );
-        
+
         setSuccess("Login successful! Redirecting...");
         setTimeout(() => {
           router.push("/");
@@ -70,14 +66,14 @@ export default function SignInForm() {
         setError(data.message || "Login failed. Please try again.");
       }
     } catch (err: any) {
-      // Handle timeout/abort errors
-      if (err.name === 'AbortError' || err.name === 'TimeoutError') {
-        setError("Your credentials couldn't be found.");
+      if (err.name === 'AbortError') {
+        setError("The request timed out. Please try again.");
       } else {
         setError("An error occurred. Please try again.");
       }
       console.error("Login error:", err);
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
