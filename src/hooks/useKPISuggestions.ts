@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useOffice, getOfficeNameById } from '@/hooks/useOffice';
-import { useProvince } from '@/hooks/useProvince';
-import { fetchOfficeUsers, OfficeUsersResponse } from '@/services/OfficeUserService';
+import { getOfficeNameById } from '@/hooks/useOffice';
+import { ProvinceService } from '@/services/ProvinceService';
+import { fetchOfficeUsers } from '@/services/OfficeUserService';
 import { BranchPerformance, default as ProvincialDataService } from '@/services/ProvincialDataService';
 import {
   Suggestion,
@@ -59,7 +59,11 @@ function buildLocation(input: UseKPISuggestionsInput, offices?: Office[], provin
   if (input.selectedBranch) {
     loc.branchId = input.selectedBranch;
   }
-  if (input.officeName) loc.branchName = input.officeName;
+  if (input.officeName) {
+    loc.branchName = input.officeName;
+  } else if (input.selectedBranch) {
+    loc.branchName = getOfficeNameById(input.selectedBranch) || loc.branchName;
+  }
   if (offices && input.selectedBranch) {
     const branch = offices.find((o) => String(o.id) === String(input.selectedBranch));
     if (branch) {
@@ -242,13 +246,23 @@ function deriveFromBranches(branchPerformances: BranchPerformance[] | undefined,
 }
 
 export function useKPISuggestions(input: UseKPISuggestionsInput): UseKPISuggestionsResult {
-  const { offices: allOffices, loading: officesLoading } = useOffice();
-  const { provinces, isLoading: provincesLoading } = useProvince();
   const [branchPerformances, setBranchPerformances] = useState<BranchPerformance[]>([]);
   const [officeUsers, setOfficeUsers] = useState<any>(null);
+  const [provinceList, setProvinceList] = useState<any[]>([]);
   const [drillLoading, setDrillLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Province list is static data (no network fetch) — used only for name resolution.
+  useEffect(() => {
+    let cancelled = false;
+    ProvinceService.getInstance()
+      .getProvinces()
+      .then((provs) => { if (!cancelled) setProvinceList(provs ?? []); })
+      .catch(() => { if (!cancelled) setProvinceList([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  // Resolve office name via the static lookup map (no network fetch).
   const officeName = input.officeName ?? (input.selectedBranch ? getOfficeNameById(input.selectedBranch) : undefined);
 
   useEffect(() => {
@@ -259,23 +273,21 @@ export function useKPISuggestions(input: UseKPISuggestionsInput): UseKPISuggesti
       try {
         setDrillLoading(true);
 
+        // Consultant-level root cause at branch scope (single office).
         if (input.userLevel === 'branch' && input.selectedBranch) {
-          const res: OfficeUsersResponse = await fetchOfficeUsers(input.selectedBranch);
+          const res = await fetchOfficeUsers(input.selectedBranch);
           if (!cancelled) setOfficeUsers(res);
         }
 
+        // Branch-level attribution for a single selected province only (avoids N parallel fetches).
         const provinceId = input.selectedProvince ?? input.userProvinceId;
-        if (provinceId) {
+        if (
+          (provinceId && (input.userLevel === 'province' || input.userLevel === 'district' || input.userLevel === 'branch')) ||
+          (provinceId && input.userLevel === 'institution')
+        ) {
           const svc = ProvincialDataService.getInstance();
           const branches = await svc.getBranchPerformance(provinceId);
           if (!cancelled && branches) setBranchPerformances(branches);
-        } else if (input.userLevel === 'institution') {
-          const list = provinces.length ? provinces : [];
-          const svc = ProvincialDataService.getInstance();
-          const results = await Promise.all(
-            list.map((p: any) => svc.getBranchPerformance(p.id).catch(() => null))
-          );
-          if (!cancelled) setBranchPerformances(results.filter(Boolean).flat() as BranchPerformance[]);
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load suggestion context');
@@ -287,12 +299,13 @@ export function useKPISuggestions(input: UseKPISuggestionsInput): UseKPISuggesti
     run();
 
     return () => { cancelled = true; };
-  }, [input.enableDrillDown, input.selectedBranch, input.selectedProvince, input.userProvinceId, input.userLevel, provinces]);
+  }, [input.enableDrillDown, input.selectedBranch, input.selectedProvince, input.userProvinceId, input.userLevel]);
 
-  const officesForCtx = input.offices ?? (input.enableDrillDown ? allOffices : undefined);
+  const officesForCtx = input.offices;
+  const provincesForCtx = provinceList;
 
-   const result = useMemo(() => {
-    const location = buildLocation(input, officesForCtx, provinces);
+  const result = useMemo(() => {
+    const location = buildLocation(input, officesForCtx, provincesForCtx);
 
     const directStaff = extractStaffAdequacy(input.staffAdequacyData, input.userLevel === 'branch' ? location : undefined);
     const directProd = extractProductivity(input.productivityAchievementData, input.userLevel === 'branch' ? location : undefined);
@@ -361,10 +374,10 @@ export function useKPISuggestions(input: UseKPISuggestionsInput): UseKPISuggesti
   }, [
     input.staffAdequacyData, input.productivityAchievementData, input.vacancyImpactData, input.loanPortfolioLoadData,
     input.otherMetrics, input.userLevel, input.selectedBranch, input.selectedProvince, input.userProvinceId,
-    branchPerformances, officesForCtx, officeUsers, officeName, provinces, input.enableDrillDown,
+    branchPerformances, officesForCtx, officeUsers, officeName, provincesForCtx, input.enableDrillDown,
   ]);
 
-  const isLoading = officesLoading || provincesLoading || drillLoading;
+  const isLoading = drillLoading;
 
   return {
     suggestions: result.suggestions,

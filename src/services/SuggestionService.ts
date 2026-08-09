@@ -73,8 +73,23 @@ function uid(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+function scoreFallback(m: MetricMeasurement): Suggestion | null {
+  if (m.normalizedScore === undefined || m.normalizedScore >= KPI_SCORE_WARNING) return null;
+  const sev: SuggestionSeverity = m.normalizedScore < KPI_SCORE_CRITICAL ? 'critical' : 'warning';
+  return {
+    id: uid('score'),
+    severity: sev,
+    metric: m.metric,
+    target: `≥ ${KPI_SCORE_WARNING}% normalized score`,
+    actual: `${m.normalizedScore.toFixed(0)}%`,
+    finding: `${m.metric} normalized score is ${m.normalizedScore.toFixed(0)}%, which is below the ${KPI_SCORE_WARNING}% (GOOD) threshold.`,
+    recommendation: `Investigate drivers of "${m.metric}" — score below target. Review root-cause at branch level.`,
+    location: m.location,
+  };
+}
+
 export function evaluateStaffAdequacy(m: MetricMeasurement): Suggestion | null {
-  if (m.actualLcsPerOffice === undefined) return null;
+  if (m.actualLcsPerOffice === undefined) return scoreFallback(m);
   const th = METRIC_THRESHOLDS['Staff Adequacy Score'];
   const lcsPerOffice = m.actualLcsPerOffice;
   const score = m.normalizedScore;
@@ -115,7 +130,7 @@ export function evaluateStaffAdequacy(m: MetricMeasurement): Suggestion | null {
 }
 
 export function evaluateProductivity(m: MetricMeasurement): Suggestion | null {
-  if (m.avgDisbursement === undefined) return null;
+  if (m.avgDisbursement === undefined) return scoreFallback(m);
   const avg = m.avgDisbursement;
   const th = METRIC_THRESHOLDS['Productivity Achievement'];
 
@@ -139,7 +154,7 @@ export function evaluateProductivity(m: MetricMeasurement): Suggestion | null {
 
 export function evaluateVacancyImpact(m: MetricMeasurement): Suggestion | null {
   const vac = m.vacancies ?? 0;
-  if (vac === 0 && m.vacanciesPerOffice === undefined) return null;
+  if (vac === 0 && m.vacanciesPerOffice === undefined) return scoreFallback(m);
   const total = vac;
   const th = METRIC_THRESHOLDS['Vacancy Impact'];
 
@@ -162,7 +177,7 @@ export function evaluateVacancyImpact(m: MetricMeasurement): Suggestion | null {
 }
 
 export function evaluatePortfolioLoad(m: MetricMeasurement): Suggestion | null {
-  if (m.portfolioPerLc === undefined) return null;
+  if (m.portfolioPerLc === undefined) return scoreFallback(m);
   const val = m.portfolioPerLc;
   const th = METRIC_THRESHOLDS['Portfolio Load Balance'];
   const low = th.lowThreshold;
