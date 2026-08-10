@@ -13,12 +13,17 @@ export default function SessionExpiredModal() {
       setVisible(true);
     }
 
+    function hide() {
+      setVisible(false);
+    }
+
     if (pathname === "/signin") {
       return;
     }
 
-    // Listen for programmatic session expiry events
+    // Listen for programmatic session expiry and restore events
     window.addEventListener("session:expired", show as EventListener);
+    window.addEventListener("session:restored", hide as EventListener);
 
     // Poll localStorage expiry every 5 seconds
     const poll = setInterval(() => {
@@ -27,8 +32,10 @@ export default function SessionExpiredModal() {
       }
 
       const user = getUserData();
+      // Only show the modal if the user key is absent AND there is no
+      // recent restoration event. This avoids false positives during
+      // quick cross-tab updates when the user signs back in.
       if (!user) {
-        // If getUserData returned null, session expired or cleared
         setVisible(true);
       } else if (user.expiresAt && Date.now() > user.expiresAt) {
         // Clear stored user and show
@@ -39,6 +46,7 @@ export default function SessionExpiredModal() {
 
     return () => {
       window.removeEventListener("session:expired", show as EventListener);
+      window.removeEventListener("session:restored", hide as EventListener);
       clearInterval(poll);
     };
   }, []);

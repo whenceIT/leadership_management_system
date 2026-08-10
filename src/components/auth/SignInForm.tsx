@@ -56,6 +56,13 @@ export default function SignInForm() {
           'thisUser',
           JSON.stringify({ ...data.user, expiresAt: Date.now() + 60 * 60 * 1000 })
         );
+        
+          // Notify other tabs/components that a session was restored
+          try {
+            window.dispatchEvent(new Event('session:restored'));
+          } catch (e) {
+            // ignore
+          }
 
         setSuccess("Login successful! Redirecting...");
         setTimeout(() => {
@@ -71,7 +78,7 @@ export default function SignInForm() {
       } else {
         setError("An error occurred. Please try again.");
       }
-      console.error("Login error:", err);
+      
     } finally {
       clearTimeout(timeoutId);
       setLoading(false);
