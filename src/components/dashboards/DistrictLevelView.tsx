@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDistrict } from '@/hooks/useDistrict';
 import { useProvince } from '@/hooks/useProvince';
-import { calculateCashPositionScore } from './InstitutionalHealthSummary';
+import { calculateCashPositionScore, kpiConfigs, calculateProvinceInstitutionAvg } from './ProvinceInstitutionAvg';
 import { fetchDistrictStaffAdequacyPerformance } from '@/services/StaffAdequacyService';
 import { fetchDistrictProductivityAchievement } from '@/services/ProductivityAchievementService';
 import { fetchDistrictVolumeAchievement } from '@/services/VolumeAchievementService';
@@ -78,6 +78,57 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
       return scoreB - scoreA;
     });
   }, [districts, districtData, selectedKPI]);
+
+  // Calculate Province Average by averaging district scores
+  const calculateProvinceAvg = useMemo(() => {
+    if (!selectedKPI || districts.length === 0) return '--';
+    
+    let total = 0;
+    let count = 0;
+    
+    districts.forEach(district => {
+      const data = districtData[district.id];
+      if (!data) return;
+      
+      let score = 0;
+      switch(selectedKPI) {
+        case 'Staff Adequacy Score':
+        case 'Productivity Achievement Score':
+          score = parseFloat(data.average_normalized_score || '0');
+          break;
+        case 'Below-Threshold Risk':
+          score = parseFloat(data.average_score || '0');
+          break;
+        default:
+          score = parseFloat(data.average_score || '0');
+          break;
+      }
+      
+      if (!isNaN(score)) {
+        total += score;
+        count++;
+      }
+    });
+    
+    if (count === 0) return '--';
+    
+    const average = total / count;
+    
+    // Format based on KPI type
+    if (selectedKPI === 'Vacancy Impact') {
+      return `${average.toFixed(2)}%`;
+    } else if (selectedKPI === 'Portfolio Load Balance') {
+      return `${average.toFixed(2)}%`;
+    } else if (selectedKPI === 'Product distribution mix') {
+      return `${average.toFixed(3)}`;
+    } else if (selectedKPI === 'Vetting compliance' || selectedKPI === 'Product risk contribution') {
+      return `${average.toFixed(2)}`;
+    } else if (selectedKPI === 'Branch revenue') {
+      return `K${average.toLocaleString()}`;
+    } else {
+      return `${average.toFixed(2)}%`;
+    }
+  }, [selectedKPI, districts, districtData]);
 
   useEffect(() => {
     // Skip if no districts or no KPI selected
@@ -283,6 +334,9 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
         </button>
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Districts in {provinceName}</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Province Average: <span className="font-semibold text-blue-600 dark:text-blue-400">{calculateProvinceAvg}</span>
+          </p>
         </div>
         <button
           onClick={() => setShowKpiInfo(!showKpiInfo)}

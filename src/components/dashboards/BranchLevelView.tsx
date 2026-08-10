@@ -546,7 +546,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
             Branches in {districtName ? `${districtName}, ` : ''}{provinceName}
           </h3>
           <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Average Score: <span className="font-semibold text-blue-600 dark:text-blue-400">{provinceAvg}</span>
+            District Average: <span className="font-semibold text-blue-600 dark:text-blue-400">{provinceAvg}</span>
           </div>
         </div>
         <button

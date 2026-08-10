@@ -13,6 +13,7 @@ import {
 
 import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { useUserKPI } from '@/hooks/useUserKPI';
+import { useProvincialAverages } from '@/hooks/useProvincialAverages';
 import ProvincialDataService, { ProvincialPerformanceData } from '@/services/ProvincialDataService';
 
 // Institutional level API hooks
@@ -71,6 +72,10 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
   const { data: profitabilityContributionData } = useInstitutionalProfitabilityContribution();
   const { data: rollRateControlData } = useInstitutionalRollRateControl();
   const { data: cashPositionData } = useInstitutionalCashPosition();
+  
+  // Pre-fetch provincial averages for all headline KPIs
+  const { averages: provincialAverages, loading: isProvincialAveragesLoading } = useProvincialAverages();
+  
   // Fetch provincial performance data
   useEffect(() => {
     const fetchProvincialData = async () => {
@@ -366,7 +371,8 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
         revenueAchievementsData={revenueAchievementsData}
         profitabilityContributionData={profitabilityContributionData}
         cashPositionData={cashPositionData}
-        isLoading={isLoading || isKpiLoading}
+        isLoading={isLoading || isKpiLoading || isProvincialAveragesLoading}
+        provincialAverages={provincialAverages}
       />
     
     

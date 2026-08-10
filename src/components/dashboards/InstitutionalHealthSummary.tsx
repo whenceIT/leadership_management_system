@@ -518,6 +518,7 @@ interface InstitutionalHealthSummaryProps {
   profitabilityContributionData?: any;
   cashPositionData?: any;
   isLoading?: boolean;
+  provincialAverages?: Record<string, string>;
 }
 
 function getTrendColor(trend: '↑' | '↓' | '→', status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate') {
@@ -1346,9 +1347,10 @@ export function InstitutionalHealthSummary({
   yieldAchievementsData,
   revenueAchievementsData,
    profitabilityContributionData,
-   cashPositionData,
-   isLoading = false
-   }: InstitutionalHealthSummaryProps) {
+    cashPositionData,
+    isLoading = false,
+    provincialAverages
+    }: InstitutionalHealthSummaryProps) {
     const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
@@ -1564,10 +1566,11 @@ export function InstitutionalHealthSummary({
               setSelectedKPI={setSelectedKPI}
               setDrillLevel={setDrillLevel}
               setSelectedProvince={setSelectedProvince}
-              setSelectedDistrict={setSelectedDistrict}
-              setSelectedBranch={setSelectedBranch}
-userProvinceId={userProvinceId}
-            />
+               setSelectedDistrict={setSelectedDistrict}
+               setSelectedBranch={setSelectedBranch}
+ userProvinceId={userProvinceId}
+               provincialAverages={provincialAverages}
+             />
 
            <HealthAnalysisSections
             userLevel={userLevel}

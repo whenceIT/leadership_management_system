@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { DistrictLevelView } from './DistrictLevelView';
 import { BranchLevelView } from './BranchLevelView';
@@ -82,6 +82,8 @@ interface ParametersTableViewProps {
   userProvinceId?: number;
   drillDownKPI?: string | null;
   setDrillDownKPI?: (kpi: string | null) => void;
+  provincialAverages?: Record<string, string>;
+  onInstitutionAvgChange?: (avg: string) => void;
 }
 
 export function ParametersTableView({
@@ -126,7 +128,9 @@ export function ParametersTableView({
   setSelectedBranch,
   userProvinceId,
   drillDownKPI,
-  setDrillDownKPI
+  setDrillDownKPI,
+  onInstitutionAvgChange,
+  provincialAverages
 }: ParametersTableViewProps) {
   const levelLabel = {
     institution: 'Institutional',
@@ -135,6 +139,20 @@ export function ParametersTableView({
     branch: 'Branch',
     consultant: 'Personal'
   }[userLevel];
+
+  const [drillDownInstitutionAvg, setDrillDownInstitutionAvg] = useState<string | null>(null);
+
+  // Use pre-fetched provincial average for the selected KPI
+  const selectedKpiProvincialAvg = useMemo(() => {
+    if (!selectedKPI || !provincialAverages) return null;
+    return provincialAverages[selectedKPI] || null;
+  }, [selectedKPI, provincialAverages]);
+
+  // Helper to get provincial average for any KPI
+  const getProvincialAvgForKpi = (kpiName: string): string | null => {
+    if (!provincialAverages) return null;
+    return provincialAverages[kpiName] || null;
+  };
 
   const DEFAULT_INSTITUTIONAL_AVGS: Record<string, string> = {
     'Branch Structure & Staffing': '85%',
@@ -146,7 +164,52 @@ export function ParametersTableView({
   };
 
   function getHeadlineUserLevelAvg(param: ParameterSummary): string {
-    return param.userLevelAvg || '--';
+    if (!provincialAverages) return param.userLevelAvg || '--';
+    
+    const kpis = getParameterKPIs(
+      userLevel,
+      param.name,
+      staffAdequacyData,
+      productivityAchievementData,
+      vacancyImpactData,
+      volumeAchievementData,
+      loanPortfolioLoadData,
+      collectionEfficiencyData,
+      efficiencyRatioData,
+      growthTrajectoryData,
+      longTermDelinquencyData,
+      month1DefaultPerformanceData,
+      month3RecoveryAchievementsData,
+      portfolioQualityData,
+      productDiversificationData,
+      productRiskScoreData,
+      rollRateControlData,
+      yieldAchievementsData,
+      revenueAchievementsData,
+      profitabilityContributionData,
+      cashPositionData
+    );
+    
+    if (!kpis || kpis.length === 0) return param.userLevelAvg || '--';
+    
+    let total = 0;
+    let count = 0;
+    
+    kpis.forEach(kpi => {
+      const provincialAvg = provincialAverages[kpi.name];
+      if (provincialAvg) {
+        const num = parseFloat(provincialAvg.replace('%', '').replace(',', ''));
+        if (!isNaN(num)) {
+          total += num;
+          count++;
+        }
+      }
+    });
+    
+    if (count === 0) return param.userLevelAvg || '--';
+    
+    const avg = total / count;
+    return `${avg.toFixed(2)}%`;
   }
 
   function getHeadlineInstitutionalAvg(param: ParameterSummary): string {
@@ -356,11 +419,11 @@ export function ParametersTableView({
                                             onKpiClick?.(kpi.name);
                                           }}
                                         >
-                                          <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
-                                           <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(kpi.currentPeriod)}%</td>
-                                             <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                                  {kpi.institutionalAvg}
-                                            </td>
+                                           <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
+                                            <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(getProvincialAvgForKpi(kpi.name) || kpi.currentPeriod)}%</td>
+                                              <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                                                   {kpi.institutionalAvg}
+                                             </td>
                                             {param.name === 'Cash & Liquidity Management' && (
                                               <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
                                                  {kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` : '--'}
@@ -421,6 +484,9 @@ export function ParametersTableView({
                                     onProvinceClick={(provinceId) => {
                                       setSelectedProvince(provinceId);
                                       setDrillLevel('district');
+                                    }}
+                                    onInstitutionAvgChange={(avg) => {
+                                      setDrillDownInstitutionAvg(avg);
                                     }}
                                   />
                                 )}

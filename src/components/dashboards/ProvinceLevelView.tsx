@@ -1,303 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useProvincialData } from '@/hooks/useProvincialData';
-import { calculateCashPositionScore } from './InstitutionalHealthSummary';
+import { calculateCashPositionScore, kpiConfigs, calculateProvinceInstitutionAvg } from './ProvinceInstitutionAvg';
 
 interface ProvinceLevelViewProps {
   selectedKPI: string | null;
   onProvinceClick: (provinceId: number) => void;
+  onInstitutionAvgChange?: (avg: string) => void;
 }
-
-interface KPIConfig {
-  getValue: (data: any) => number;
-  getTarget: (data: any) => number;
-  formatValue: (value: number) => string;
-  formatVariance: (variance: number) => string;
-  formatInstitutionAvg: (value: number) => string;
-  isLowerBetter: boolean;
-  getTrend: (value: number, target: number) => '↑' | '↓' | '→';
-  getStatus: (value: number, target: number) => 'good' | 'warning' | 'critical';
-  displayTarget: (data: any) => string;
-}
-
-const kpiConfigs: Record<string, KPIConfig> = {
-   'Staff Adequacy Score': {
-     getValue: (data) => parseFloat(data.average_normalized_score || '0'),
-     getTarget: (data) => data.target || 100,
-     formatValue: (v) => `${v.toFixed(2)}%`,
-     formatVariance: (v) => `${v.toFixed(2)}%`,
-     formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-     isLowerBetter: false,
-     getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.8 ? '→' : '↓',
-     getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.8 ? 'warning' : 'critical',
-     displayTarget: () => '100%'
-   },
-  'Productivity Achievement': {
-    getValue: (data) => parseFloat(data.average_normalized_score || '0'),
-    getTarget: (data) => data.target || 90,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.8 ? '→' : '↓',
-    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.8 ? 'warning' : 'critical',
-    displayTarget: () => '90%'
-  },
-  'Vacancy Impact': {
-    getValue: (data) => parseFloat(data.average_normalized_score || '0'),
-    getTarget: (data) => data.target || 10,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.2 ? '→' : '↓',
-    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.2 ? 'warning' : 'critical',
-    displayTarget: () => '0%'
-  },
-  'Portfolio Load Balance': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: (data) => data.target || 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
-    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
-    displayTarget: () => '100%'
-  },
-  'Volume Achievement': {
-    getValue: (data) => parseFloat(data.average_normalized_score || '0'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t * 0.9 ? '↑' : v >= t * 0.7 ? '→' : '↓',
-    getStatus: (v, t) => v >= t * 0.9 ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
-    displayTarget: () => '100%'
-  },
-  'Portfolio quality': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 5,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v <= t ? '↑' : v <= t * 2 ? '→' : '↓',
-    getStatus: (v, t) => v <= t ? 'good' : v <= t * 2 ? 'warning' : 'critical',
-    displayTarget: () => '≤5%'
-  },
-  'Default contribution': {
-    getValue: (data) => parseFloat(data.average_month_1_default_rate || '0'),
-    getTarget: () => 15,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.33 ? '→' : '↓',
-    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.33 ? 'warning' : 'critical',
-    displayTarget: () => '≤15%'
-  },
-  'Default rate (branch, province, institutional)': {
-    getValue: (data) => parseFloat(data.average_month_1_default_rate || '0'),
-    getTarget: () => 15,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.33 ? '→' : '↓',
-    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.33 ? 'warning' : 'critical',
-    displayTarget: () => '≤15%'
-  },
-  'Collections efficiency': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 75,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.87 ? '→' : '↓',
-    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.87 ? 'warning' : 'critical',
-    displayTarget: () => '≥75%'
-  },
-  'Vetting compliance': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 1.0,
-    formatValue: (v) => `${v.toFixed(2)}`,
-    formatVariance: (v) => `${v.toFixed(2)}`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.5 ? '→' : '↓',
-    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.5 ? 'warning' : 'critical',
-    displayTarget: () => '≤1.0'
-  },
-  'Product risk contribution': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 1.0,
-    formatValue: (v) => `${v.toFixed(2)}`,
-    formatVariance: (v) => `${v.toFixed(2)}`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.5 ? '→' : '↓',
-    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.5 ? 'warning' : 'critical',
-    displayTarget: () => '≤1.0'
-  },
-  'Product distribution mix': {
-    getValue: (data) => parseFloat(data.average_HHI || '0'),
-    getTarget: () => 0.3,
-    formatValue: (v) => `${v.toFixed(3)}`,
-    formatVariance: (v) => `${v.toFixed(3)}`,
-    formatInstitutionAvg: (v) => `${v.toFixed(3)}`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v < t ? '↑' : v < t * 1.33 ? '→' : '↓',
-    getStatus: (v, t) => v < t ? 'good' : v < t * 1.33 ? 'warning' : 'critical',
-    displayTarget: () => 'HHI < 0.3'
-  },
-  'Revenue yield per product': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: (data) => parseFloat(data.target) || 38.2,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
-    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.9 ? 'warning' : 'critical',
-    displayTarget: (data) => data.target ? `≥${data.target}%` : '≥38.2%'
-  },
-  'Margin alignment with strategy': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: (data) => parseFloat(data.target) || 55,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.1 ? '→' : '↓',
-    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.1 ? 'warning' : 'critical',
-    displayTarget: (data) => data.target ? `≤${data.target}%` : '≤55%'
-  },
-  'Cost-to-income ratios': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: (data) => parseFloat(data.target) || 55,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.1 ? '→' : '↓',
-    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.1 ? 'warning' : 'critical',
-    displayTarget: (data) => data.target ? `≤${data.target}%` : '≤55%'
-  },
-  'Default aging analysis': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: (data) => parseFloat(data.target) || 43.95,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.1 ? '→' : '↓',
-    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.1 ? 'warning' : 'critical',
-    displayTarget: (data) => data.target ? `≤${data.target}%` : '≤43.95%'
-  },
-  'Recovery rate within 1 month': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
-    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.9 ? 'warning' : 'critical',
-    displayTarget: () => '≥100%'
-  },
-  'Recovery rate within 3 months': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
-    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.9 ? 'warning' : 'critical',
-    displayTarget: () => '≥100%'
-  },
-  'Risk migration trends': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 20,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: true,
-    getTrend: (v, t) => v <= t ? '↑' : v <= t * 1.5 ? '→' : '↓',
-    getStatus: (v, t) => v <= t ? 'good' : v <= t * 1.5 ? 'warning' : 'critical',
-    displayTarget: () => '≤20%'
-  },
-  'Branch revenue': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 2.5,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `K${v.toLocaleString()}`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t ? '↑' : v >= 0 ? '→' : '↓',
-    getStatus: (v, t) => v >= t ? 'good' : v >= 0 ? 'warning' : 'critical',
-    displayTarget: () => '≥2.5%'
-  },
-  'Growth trajectory alignment': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 2.5,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t ? '↑' : v >= 0 ? '→' : '↓',
-    getStatus: (v, t) => v >= t ? 'good' : v >= 0 ? 'warning' : 'critical',
-    displayTarget: () => '≥2.5%'
-  },
-  'Institutional average performance': {
-    getValue: (data) => parseFloat(data.average_normalized_score || '0'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
-    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.9 ? 'warning' : 'critical',
-    displayTarget: () => '≥100%'
-  },
-  'Revenue achievement': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
-    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.9 ? 'warning' : 'critical',
-    displayTarget: () => '≥100%'
-  },
-  'Profitability contribution': {
-    getValue: (data) => parseFloat(data.average_score || '0'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= 90 ? '↑' : v >= 70 ? '→' : '↓',
-    getStatus: (v, t) => v >= 90 ? 'good' : v >= 70 ? 'warning' : 'critical',
-    displayTarget: () => '≥ institutional avg'
-  },
-  'Cash Position Score': {
-    getValue: (data) => calculateCashPositionScore(parseFloat(data.totalCashBalance || data.average_score || '0'), 'province'),
-    getTarget: () => 100,
-    formatValue: (v) => `${v.toFixed(2)}%`,
-    formatVariance: (v) => `${v.toFixed(2)}%`,
-    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
-    isLowerBetter: false,
-    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.9 ? '→' : '↓',
-    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.7 ? 'warning' : 'critical',
-    displayTarget: () => 'K500,000'
-  },
-};
 
 function getBranchKPIValue(branchData: any, kpi: string): number {
   if (!branchData) return 0;
@@ -327,7 +38,7 @@ function calculateBranchSum(data: any, kpi: string): number {
   }, 0);
 }
 
-export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLevelViewProps) {
+export function ProvinceLevelView({ selectedKPI, onProvinceClick, onInstitutionAvgChange }: ProvinceLevelViewProps) {
   const { provincialData, provinces, loading, error } = useProvincialData(selectedKPI);
 
   function getTrendBadge(trend: '↑' | '↓' | '→') {
@@ -364,31 +75,6 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
     return config.isLowerBetter ? 100 - cleanValue : cleanValue;
   };
 
-  // Calculate Institution Avg by summing Province Avg values
-  const calculateInstitutionAvg = () => {
-    const config = kpiConfigs[selectedKPI || ''];
-    if (!config) return '--';
-
-    let total = 0;
-    let count = 0;
-
-    provinces.forEach(province => {
-      const data = provincialData[province.id];
-      if (data) {
-        const value = config.getValue(data);
-        if (!isNaN(value)) {
-          total += value;
-          count++;
-        }
-      }
-    });
-
-    if (count === 0) return '--';
-
-    const average = total / count;
-    return config.formatInstitutionAvg(average);
-  };
-
   // Sort provinces by current period value in descending order
   const sortedProvinces = [...provinces].sort((a, b) => {
     if (selectedKPI === 'Cash Position Score') {
@@ -399,7 +85,14 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
     return valueB - valueA;
   });
 
-  const institutionAvg = calculateInstitutionAvg();
+  const calculatedInstitutionAvg = calculateProvinceInstitutionAvg(selectedKPI, provincialData, provinces);
+
+  useEffect(() => {
+    if (onInstitutionAvgChange && calculatedInstitutionAvg && calculatedInstitutionAvg !== '--') {
+      onInstitutionAvgChange(calculatedInstitutionAvg);
+    }
+  }, [calculatedInstitutionAvg, onInstitutionAvgChange]);
+
   const [showKpiInfo, setShowKpiInfo] = useState<boolean>(false);
 
   return (
@@ -469,7 +162,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
         )}
       </div>
       <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-        Institution Average as at Today: <span className="font-semibold text-blue-600 dark:text-blue-400">{institutionAvg}</span>
+        Institution Average as at Today: <span className="font-semibold text-blue-600 dark:text-blue-400">{calculatedInstitutionAvg}</span>
       </div>
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">
@@ -485,18 +178,18 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick }: ProvinceLeve
         </div>
       ) : (
         <div className="overflow-x-auto">
-<table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-900">
-               <tr>
-                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Province</th>
-                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Offices Count</th>
-                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Staff</th>
-                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
-                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
-                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
-                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
-                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-               </tr>
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Province</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Offices Count</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Staff</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Trend</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {sortedProvinces.map((province, index) => {

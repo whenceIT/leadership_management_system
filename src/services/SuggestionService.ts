@@ -82,7 +82,7 @@ function scoreFallback(m: MetricMeasurement): Suggestion | null {
     metric: m.metric,
     target: `≥ ${KPI_SCORE_WARNING}% normalized score`,
     actual: `${m.normalizedScore.toFixed(0)}%`,
-    finding: `${m.metric} normalized score is ${m.normalizedScore.toFixed(0)}%, which is below the ${KPI_SCORE_WARNING}% (GOOD) threshold.`,
+    finding: `${m.metric} normalized score is ${m.normalizedScore.toFixed(0)}%, which is below the ${KPI_SCORE_WARNING}%.`,
     recommendation: `Investigate drivers of "${m.metric}" — score below target. Review root-cause at branch level.`,
     location: m.location,
   };
@@ -367,7 +367,7 @@ export function evaluateGenericMetric(name: string, data: any, location?: Sugges
       metric: name,
       target: `≥ ${KPI_SCORE_WARNING}% (GOOD threshold)`,
       actual: `${score.toFixed(0)}%`,
-      finding: `${name} score is ${score.toFixed(0)}%, which is below the ${KPI_SCORE_WARNING}% (GOOD) threshold.`,
+      finding: `${name} score is ${score.toFixed(0)}%, which is below the ${KPI_SCORE_WARNING}%.`,
       recommendation: `Investigation required for "${name}" — performance below target. Review data quality and root-cause drivers at branch level.`,
       location,
     };
