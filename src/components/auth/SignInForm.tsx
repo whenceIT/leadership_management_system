@@ -73,10 +73,11 @@ export default function SignInForm() {
         setError(data.message || "Login failed. Please try again.");
       }
     } catch (err: any) {
+      console.log(err);
       if (err.name === 'AbortError') {
         setError("The request timed out. Please try again.");
       } else {
-        setError("An error occurred. Please try again.");
+        setError("Please try again.");
       }
       
     } finally {

@@ -543,68 +543,12 @@ export default function KpiSettingsPage() {
     }
   }, [isInitialized]);
 
-  // Fetch KPIs from API when position changes (with caching)
+  // Load KPIs from local data when position changes
   useEffect(() => {
-    let isMounted = true;
-    
-    const fetchKpis = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch all KPIs (cached on server)
-        const response = await fetch('/api/kpi/all');
+    if (!isInitialized) return;
 
-        if (!isMounted) return;
-
-        const data = await response.json();
-
-        if (response.ok) {
-          // Filter KPIs by selected position_id on client side
-          const allKpis = Array.isArray(data) ? data : [];
-          
-          // Transform API data to KpiMetric format
-          const transformedKpis: KpiMetric[] = allKpis
-            .filter((kpi: any) => kpi.position_id === selectedPositionId)
-            .map((kpi: any, index: number) => ({
-              id: kpi.id?.toString() || `kpi-${index}`,
-              name: kpi.name || '',
-              description: kpi.description || '',
-              category: (kpi.category || 'operational') as any,
-              position: selectedPosition,
-              target: kpi.target?.toString() || '',
-              baseline: kpi.baseline?.toString() || '',
-              weight: parseInt(kpi.weight) || 0,
-              unit: 'percent',
-              frequency: 'monthly',
-              isActive: true,
-              lastUpdated: new Date().toISOString().split('T')[0],
-              createdBy: 'API',
-            }));
-          
-          setKpis(transformedKpis);
-        } else {
-          // Fallback to local KPIs if API fails
-          const localKpis = getKPIsByPosition(selectedPosition);
-          setKpis(localKpis);
-        }
-      } catch (error) {
-        console.error('Error fetching KPIs:', error);
-        // Fallback to local KPIs on error
-        const localKpis = getKPIsByPosition(selectedPosition);
-        setKpis(localKpis);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    if (isInitialized) {
-      fetchKpis();
-    }
-
-    return () => {
-      isMounted = false;
-    };
+    const localKpis = getKPIsByPosition(selectedPosition);
+    setKpis(localKpis);
   }, [selectedPositionId, selectedPosition, isInitialized]);
 
   // Show notification

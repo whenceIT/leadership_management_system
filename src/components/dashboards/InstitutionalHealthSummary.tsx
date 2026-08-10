@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useLoading } from '@/context/LoadingContext';
 import { KPIStatus, KPITrend, ParameterSummary, KPI } from '@/types/dashboard';
 import HealthAnalysisSections from './HealthAnalysisSections';
 import { ProvinceLevelView } from './ProvinceLevelView';
@@ -1349,9 +1348,8 @@ export function InstitutionalHealthSummary({
    profitabilityContributionData,
    cashPositionData,
    isLoading = false
-  }: InstitutionalHealthSummaryProps) {
-   const { setIsLoading } = useLoading();
-   const [expandedParam, setExpandedParam] = useState<string | null>(null);
+   }: InstitutionalHealthSummaryProps) {
+    const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
   const [drillDownKPI, setDrillDownKPI] = useState<string | null>(null);
@@ -1395,19 +1393,15 @@ export function InstitutionalHealthSummary({
    });
 
 
-   const levelLabel = {
-    institution: 'Institutional',
-    province: 'Provincial',
-    district: 'District',
-    branch: 'Branch',
-    consultant: 'Personal'
-  }[userLevel];
+  const levelLabel = {
+     institution: 'Institutional',
+     province: 'Provincial',
+     district: 'District',
+     branch: 'Branch',
+     consultant: 'Personal'
+   }[userLevel];
 
-  useEffect(() => {
-    setIsLoading(isLoading);
-  }, [isLoading, setIsLoading]);
-
-  return (
+   return (
     <div className="space-y-4">
       {/* Overall Health Banner */}
       {overallScore !== undefined && (

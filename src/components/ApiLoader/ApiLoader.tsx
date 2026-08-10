@@ -21,6 +21,10 @@ const ApiLoader: React.FC<ApiLoaderProps> = ({
 
   const hideLoader = useCallback(() => {
     if (!mountedRef.current) return;
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
     hideTimeoutRef.current = setTimeout(() => {
       if (countRef.current === 0 && !isLoading && mountedRef.current) {
         setVisible(false);

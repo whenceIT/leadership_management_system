@@ -9,6 +9,7 @@ import {
   getUserPosition 
 } from '@/hooks/useUserPosition';
 import { useUserKPI, ProcessedKPI } from '@/hooks/useUserKPI';
+import { getKPIsByPosition } from '@/data/role-cards-data';
 
 // Position type matching the system available positions
 type Position = PositionType;
@@ -1379,71 +1380,19 @@ export default function ReviewsPage() {
     }
   }, [config]);
 
-  // Fetch KPI options from API
-  const fetchKpis = async () => {
-    setIsLoadingKpis(true);
-    try {
-      const response = await fetch('/api/kpi/all');
-      
-      if (!response.ok) {
-        console.error('KPI API returned non-OK status:', response.status);
-        setKpiOptions([]);
-        return;
-      }
-      
-      const data = await response.json();
-      
-      // Handle error response
-      if (data.error) {
-        console.error('KPI API returned error:', data.error);
-        setKpiOptions([]);
-        return;
-      }
-      
-      // Handle array response directly (API returns array, not wrapped object)
-      if (Array.isArray(data) && data.length > 0) {
-        // Transform API data to KpiOption format
-        const options: KpiOption[] = data.map((kpi: any) => ({
-          id: String(kpi.id),
-          name: kpi.name || kpi.kpi_name || 'Unnamed KPI',
-          category: kpi.category || 'General',
-          target: kpi.target ? String(kpi.target) : 'N/A',
-        }));
-        setKpiOptions(options);
-        console.log('KPI options loaded:', options.length, 'items');
-      } else if (Array.isArray(data) && data.length === 0) {
-        // Empty array - no KPIs available
-        console.log('KPI API returned empty array');
-        setKpiOptions([]);
-      } else if (data.success && data.data && Array.isArray(data.data)) {
-        // Handle wrapped response format as fallback
-        const options: KpiOption[] = data.data.map((kpi: any) => ({
-          id: String(kpi.id),
-          name: kpi.name || kpi.kpi_name || 'Unnamed KPI',
-          category: kpi.category || 'General',
-          target: kpi.target ? String(kpi.target) : 'N/A',
-        }));
-        setKpiOptions(options);
-        console.log('KPI options loaded (wrapped format):', options.length, 'items');
-      } else {
-        // Unknown response format
-        console.warn('KPI API returned unexpected format:', typeof data, data);
-        setKpiOptions([]);
-      }
-    } catch (error) {
-      console.error('Error fetching KPIs:', error);
-      setKpiOptions([]);
-    } finally {
-      setIsLoadingKpis(false);
-    }
-  };
-
-  // Fetch KPIs when modal opens
+  // Load KPI options from local data when modal opens
   useEffect(() => {
-    if (isScheduleModalOpen) {
-      fetchKpis();
-    }
-  }, [isScheduleModalOpen]);
+    if (!isScheduleModalOpen) return;
+
+    const localKpis = getKPIsByPosition(rawPosition as PositionType);
+    const options: KpiOption[] = localKpis.map((kpi) => ({
+      id: String(kpi.id),
+      name: kpi.name || 'Unnamed KPI',
+      category: kpi.category || 'General',
+      target: kpi.target ? String(kpi.target) : 'N/A',
+    }));
+    setKpiOptions(options);
+  }, [isScheduleModalOpen, rawPosition]);
 
   // Open Edit Review Modal
   const openEditModal = (review: ScheduledReview) => {
