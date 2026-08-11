@@ -365,7 +365,7 @@ export function evaluateGenericMetric(name: string, data: any, location?: Sugges
       id: uid(`metric-${name}`),
       severity: sev,
       metric: name,
-      target: `≥ ${KPI_SCORE_WARNING}% (GOOD threshold)`,
+      target: `≥ ${KPI_SCORE_WARNING}%`,
       actual: `${score.toFixed(0)}%`,
       finding: `${name} score is ${score.toFixed(0)}%, which is below the ${KPI_SCORE_WARNING}%.`,
       recommendation: `Investigation required for "${name}" — performance below target. Review data quality and root-cause drivers at branch level.`,

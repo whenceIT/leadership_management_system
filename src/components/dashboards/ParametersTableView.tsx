@@ -20,6 +20,62 @@ function TooltipHeader({ children, tooltip }: TooltipHeaderProps) {
   );
 }
 
+const PARAMETER_DESCRIPTIONS: Record<string, { title: string; description: string; example: string }> = {
+  'Branch Structure & Staffing': {
+    title: 'BRANCH STRUCTURE & STAFFING',
+    description: 'Measures whether the branch has enough staff and a balanced workload to perform well.',
+    example: 'Example: Mary has 8 Loan Consultants, but the branch needs 10. The team is working hard, but they are stretched.'
+  },
+  'Loan Consultant Performance': {
+    title: 'LOAN CONSULTANT PERFORMANCE',
+    description: 'Measures how well Loan Consultants perform in terms of loan volume, quality, collections, and compliance.',
+    example: 'Example: John disbursed many loans this month, but Sarah\'s clients are paying better. LCPI looks at both results and quality.'
+  },
+  'Loan Products & Interest Rates': {
+    title: 'LOAN PRODUCTS & INTEREST RATES',
+    description: 'Measures whether the branch has a healthy, profitable, and well-balanced mix of loan products.',
+    example: 'Example: Peter\'s branch gives mostly one type of loan. It is doing well, but relying too much on one product can create risk.'
+  },
+  'Risk Management & Defaults': {
+    title: 'RISK MANAGEMENT & DEFAULTS',
+    description: 'Measures how well the branch prevents defaults, manages overdue loans, and recovers outstanding money.',
+    example: 'Example: Grace notices that several clients are starting to miss payments. Her team follows up early to prevent the problem from growing.'
+  },
+  'Revenue & Performance': {
+    title: 'REVENUE & PERFORMANCE METRICS INDEX (RPMI)',
+    description: 'Measures how well the branch generates income, manages costs, contributes to profit, and grows.',
+    example: 'Example: David\'s branch made good revenue this month while keeping its costs under control. This means the branch is performing efficiently.'
+  },
+  'Cash & Liquidity Management': {
+    title: 'CASH & LIQUIDITY MANAGEMENT',
+    description: 'Measures whether the branch is generating enough cash to cover defaults, mandatory costs, salaries, and other operating needs while maintaining a healthy cash position.',
+    example: 'Example: Peter\'s branch met its loan target and collected well, but after paying salaries and other costs, only K13,500 remained. The branch is healthy, but the small surplus means Peter needs to manage cash carefully.'
+  }
+};
+
+interface ParameterTooltipProps {
+  paramName: string;
+  children: React.ReactNode;
+}
+
+function ParameterTooltip({ paramName, children }: ParameterTooltipProps) {
+  const info = PARAMETER_DESCRIPTIONS[paramName];
+  if (!info) return <>{children}</>;
+
+  return (
+    <span className="group relative inline-flex items-center gap-1 cursor-help">
+      {children}
+      <span className="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 text-xs transition-colors">ⓘ</span>
+      <span className="invisible group-hover:visible absolute z-[9999] bottom-full left-0 mb-2 w-80 max-w-sm bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 text-left transform transition-all duration-200">
+        <h4 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">{info.title}</h4>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{info.description}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 italic">{info.example}</p>
+        <div className="absolute bottom-0 left-4 w-3 h-3 bg-white dark:bg-gray-800 border-b border-r border-gray-200 dark:border-gray-700 transform rotate-45 translate-y-1/2"></div>
+      </span>
+    </span>
+  );
+}
+
 interface ParametersTableViewProps {
   parameters: ParameterSummary[];
   userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant';
@@ -192,6 +248,29 @@ export function ParametersTableView({
     
     if (!kpis || kpis.length === 0) return param.userLevelAvg || '--';
     
+    // For Revenue & Performance, use simple arithmetic average of KPI province averages
+    if (param.name === 'Revenue & Performance') {
+      let total = 0;
+      let count = 0;
+      
+      kpis.forEach(kpi => {
+        const provincialAvg = provincialAverages[kpi.name];
+        if (provincialAvg) {
+          const num = parseFloat(provincialAvg.replace('%', '').replace(',', ''));
+          if (!isNaN(num)) {
+            total += num;
+            count++;
+          }
+        }
+      });
+      
+      if (count === 0) return param.userLevelAvg || '--';
+      
+      const avg = total / count;
+      return `${avg.toFixed(2)}%`;
+    }
+    
+    // For other parameters, use existing logic
     let total = 0;
     let count = 0;
     
@@ -231,7 +310,7 @@ export function ParametersTableView({
             <tr>
               <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Parameter</th>
               <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <TooltipHeader tooltip="Average performance score across all branches/units for this parameter">Current {levelLabel} Avg</TooltipHeader>
+                <TooltipHeader tooltip="Average performance score across all branches/units for this parameter">Current {levelLabel} Avg (L1)</TooltipHeader>
               </th>
               <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <TooltipHeader tooltip="Institutional benchmark/target average for comparison">Institution Avg (Benchmark)</TooltipHeader>
@@ -307,10 +386,12 @@ export function ParametersTableView({
                         <span className={`mr-2 transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
                           ▶
                         </span>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 dark:text-white">{param.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{param.shortName}</p>
-                        </div>
+                         <div>
+                           <ParameterTooltip paramName={param.name}>
+                             <p className="text-sm font-semibold text-gray-900 dark:text-white">{param.name}</p>
+                           </ParameterTooltip>
+                           <p className="text-xs text-gray-500 dark:text-gray-400">{param.shortName}</p>
+                         </div>
                       </div>
                     </td>
                     <td className="border px-4 py-3 text-center bg-black/5 dark:bg-white/10">
