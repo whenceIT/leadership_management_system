@@ -203,7 +203,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick, onInstitutionA
                 let variance = '0';
                 let trend: '↑' | '↓' | '→' = '→';
                 let status: 'good' | 'warning' | 'critical' = 'warning';
-                let actualLcs = data ? (data.total_staff || 0) : 0;
+                 let actualLcs = data ? (data.total_staff || data.actual_lcs || 0) : 0;
                 let officesCount = 0;
 
                  if (data) {

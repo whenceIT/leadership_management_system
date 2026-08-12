@@ -99,9 +99,6 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
               case 'Productivity Achievement Score':
                 data = await fetchProductivityAchievement(parseInt(branchId));
                 break;
-              case 'Productivity Achievement Score':
-                data = await fetchProductivityAchievement(parseInt(branchId));
-                break;
               case 'Volume Achievement':
                 data = await fetchVolumeAchievement(parseInt(branchId));
                 break;

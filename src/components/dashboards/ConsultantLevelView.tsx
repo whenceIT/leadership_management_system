@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { fetchOfficeUsers, OfficeUser, Loan } from '@/services/OfficeUserService';
 import { useOffice } from '@/hooks/useOffice';
 import { LoanConsultantMetricsService, LoanConsultantMetrics } from '@/services/LoanConsultantMetricsService';
+import { fetchVacancyImpact } from '@/services/VacancyImpactService';
+import { fetchLoanPortfolioLoad } from '@/services/LoanPortfolioLoadService';
 
 interface ConsultantLevelViewProps {
   officeId: number | string;
@@ -40,6 +42,8 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
   const [error, setError] = useState<string | null>(null);
   const [selectedMonthOffset, setSelectedMonthOffset] = useState(0); // 0 = current, 1 = last month, etc.
   const [managerCount, setManagerCount] = useState(0);
+  const [vacancyImpactData, setVacancyImpactData] = useState<any>(null);
+  const [portfolioLoadData, setPortfolioLoadData] = useState<any>(null);
 
   const LC_TARGET = 40000; // Benchmark from Operational Guidelines (K40,000)
 
@@ -149,6 +153,14 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
         const officeUsersData = await fetchOfficeUsers(officeId);
         setManagerCount(officeUsersData.manager_users?.length || 0);
 
+        // Fetch vacancy impact and portfolio load data for score calculation
+        const [vacancyImpact, portfolioLoad] = await Promise.all([
+          fetchVacancyImpact(Number(officeId)),
+          fetchLoanPortfolioLoad(Number(officeId))
+        ]);
+        setVacancyImpactData(vacancyImpact);
+        setPortfolioLoadData(portfolioLoad);
+
         // Enrich data with performance metrics
         const enriched = await Promise.all(officeUsersData.users.map(async user => {
           const currentMetric = currentMetricsMap.get(user.id);
@@ -248,14 +260,33 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
     };
   }, [users, LC_TARGET]);
 
+  const isRiskDefaultsKPI = ['Default rate (branch, province, institutional)', 'Default aging analysis', 'Recovery rate within 1 month', 'Recovery rate within 3 months', 'Risk migration trends'].includes(selectedKPI);
+  const isVacancyImpactKPI = selectedKPI === 'Vacancy Impact';
+  const isPortfolioLoadBalanceKPI = selectedKPI === 'Portfolio Load Balance';
+
   const branchScore = useMemo(() => {
     if (users.length === 0) return null;
     if (selectedKPI.includes('Productivity Achievement') || selectedKPI === 'Productivity Achievement Score') {
       return branchProductivity?.achievement ?? null;
     }
+    if (isVacancyImpactKPI && vacancyImpactData) {
+      const authorizedPositions = vacancyImpactData.authorized_positions || 1;
+      const vacancies = vacancyImpactData.vacancies || 0;
+      const vacancyRatio = vacancies / authorizedPositions;
+      return 100 * (1 - vacancyRatio);
+    }
+    if (isPortfolioLoadBalanceKPI && portfolioLoadData) {
+      const portfolioPerLC = parseFloat(portfolioLoadData.portfolio_per_lc || '0');
+      const optimalMid = (300000 + 380000) / 2;
+      if (portfolioPerLC >= 300000 && portfolioPerLC <= 380000) {
+        return 100;
+      }
+      const deviation = Math.abs(portfolioPerLC - optimalMid) / optimalMid * 100;
+      return Math.max(0, 100 - deviation * 0.5);
+    }
     const avgPerformance = users.reduce((sum, user) => sum + user.performance, 0) / users.length;
     return Math.min(avgPerformance, 100);
-  }, [users, selectedKPI, branchProductivity]);
+  }, [users, selectedKPI, branchProductivity, vacancyImpactData, portfolioLoadData, isVacancyImpactKPI, isPortfolioLoadBalanceKPI]);
 
   const avatarPalette = [
     'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
@@ -264,8 +295,6 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
     'bg-sky-50 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
     'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300',
   ];
-
-  const isRiskDefaultsKPI = ['Default rate (branch, province, institutional)', 'Default aging analysis', 'Recovery rate within 1 month', 'Recovery rate within 3 months', 'Risk migration trends'].includes(selectedKPI);
 
   return (
     <div className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-2">
@@ -461,16 +490,108 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
           </div>
         )}
 
-        {(selectedKPI === 'Productivity Achievement' || selectedKPI === 'Productivity Achievement Score') && (
-          <div className="mt-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-900 dark:bg-blue-900/20">
-            <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-xs text-blue-700 dark:text-blue-300">
-              The Avg Disbursement per LC is calculated from the total amount disbursed by all Loan Consultants (LCs), divided by the number of LCs.
-            </p>
-          </div>
-        )}
+         {(selectedKPI === 'Productivity Achievement' || selectedKPI === 'Productivity Achievement Score') && (
+           <div className="mt-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-900 dark:bg-blue-900/20">
+             <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+             <p className="text-xs text-blue-700 dark:text-blue-300">
+               The Avg Disbursement per LC is calculated from the total amount disbursed by all Loan Consultants (LCs), divided by the number of LCs.
+             </p>
+           </div>
+         )}
+
+         {isVacancyImpactKPI && branchScore !== null && (
+           <>
+             <div className={`mt-3 flex items-center gap-3 rounded-xl p-2 ${
+               branchScore >= 90
+                 ? 'border-l-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/10'
+                 : branchScore >= 75
+                   ? 'border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10'
+                   : 'border-l-rose-500 bg-rose-50/60 dark:bg-rose-900/10'
+             }`}>
+               <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                 branchScore >= 90 ? 'bg-emerald-100 dark:bg-emerald-900/40' : branchScore >= 75 ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-rose-100 dark:bg-rose-900/40'
+               }`}>
+                 {branchScore >= 90 ? (
+                   <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                   </svg>
+                 ) : branchScore >= 75 ? (
+                   <svg className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                   </svg>
+                 ) : (
+                   <svg className="h-5 w-5 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                   </svg>
+                 )}
+               </div>
+               <div className="text-sm">
+                 <span className={`font-bold ${branchScore >= 90 ? 'text-emerald-800 dark:text-emerald-300' : branchScore >= 75 ? 'text-amber-800 dark:text-amber-300' : 'text-rose-800 dark:text-rose-300'}`}>
+                   {branchScore >= 90 ? 'No vacancies' : branchScore >= 75 ? 'Low vacancies' : 'High vacancies'}
+                 </span>
+                 <span className="ml-1.5 text-gray-600 dark:text-gray-400">
+                   Vacancy Impact score is {branchScore.toFixed(1)}% (1 - Vacancies / Authorized Positions). Target: 0 vacancies.
+                 </span>
+               </div>
+             </div>
+             <div className="mt-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-900 dark:bg-blue-900/20">
+               <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+               </svg>
+               <p className="text-xs text-blue-700 dark:text-blue-300">
+                 Vacancy Impact: 1 - (Vacancies / Authorized Positions). 0 vacancies.
+               </p>
+             </div>
+           </>
+         )}
+
+         {isPortfolioLoadBalanceKPI && branchScore !== null && (
+           <>
+             <div className={`mt-3 flex items-center gap-3 rounded-xl p-2 ${
+               branchScore >= 100
+                 ? 'border-l-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/10'
+                 : branchScore >= 70
+                   ? 'border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10'
+                   : 'border-l-rose-500 bg-rose-50/60 dark:bg-rose-900/10'
+             }`}>
+               <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                 branchScore >= 100 ? 'bg-emerald-100 dark:bg-emerald-900/40' : branchScore >= 70 ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-rose-100 dark:bg-rose-900/40'
+               }`}>
+                 {branchScore >= 100 ? (
+                   <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                   </svg>
+                 ) : branchScore >= 70 ? (
+                   <svg className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                   </svg>
+                 ) : (
+                   <svg className="h-5 w-5 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                   </svg>
+                 )}
+               </div>
+               <div className="text-sm">
+                 <span className={`font-bold ${branchScore >= 100 ? 'text-emerald-800 dark:text-emerald-300' : branchScore >= 70 ? 'text-amber-800 dark:text-amber-300' : 'text-rose-800 dark:text-rose-300'}`}>
+                   {branchScore >= 100 ? 'Within optimal range' : branchScore >= 70 ? 'Near optimal range' : 'Outside optimal range'}
+                 </span>
+                 <span className="ml-1.5 text-gray-600 dark:text-gray-400">
+                   Portfolio Load Balance score is {branchScore.toFixed(1)}%. Optimal Range: K300k-K380k per LC.
+                 </span>
+               </div>
+             </div>
+             <div className="mt-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-900 dark:bg-blue-900/20">
+               <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+               </svg>
+               <p className="text-xs text-blue-700 dark:text-blue-300">
+                 Portfolio Load Balance: Optimal Range K300k-K380k per LC. Score based on deviation from optimal midpoint. Within range: 100%. If outside: 100% - (deviation%/optimal)×50.
+               </p>
+             </div>
+           </>
+         )}
   
         {loading ? (
         <div className="flex flex-col items-center justify-center py-24">
