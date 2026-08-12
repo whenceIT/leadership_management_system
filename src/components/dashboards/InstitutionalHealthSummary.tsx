@@ -1381,18 +1381,33 @@ export function InstitutionalHealthSummary({
        yieldAchievementsData, revenueAchievementsData, profitabilityContributionData]);
 
    const { suggestions } = useKPISuggestions({
-     userLevel,
-     userProvinceId,
-     selectedProvince,
-     selectedDistrict,
-     selectedBranch,
-     staffAdequacyData,
-     productivityAchievementData,
-     vacancyImpactData,
-     loanPortfolioLoadData,
-     otherMetrics,
-     enableDrillDown: true,
-   });
+      userLevel,
+      userProvinceId,
+      selectedProvince,
+      selectedDistrict,
+      selectedBranch,
+      staffAdequacyData,
+      productivityAchievementData,
+      vacancyImpactData,
+      loanPortfolioLoadData,
+      volumeAchievementData,
+      collectionEfficiencyData,
+      efficiencyRatioData,
+      growthTrajectoryData,
+      longTermDelinquencyData,
+      month1DefaultPerformanceData,
+      month3RecoveryAchievementsData,
+      portfolioQualityData,
+      productDiversificationData,
+      productRiskScoreData,
+      rollRateControlData,
+      yieldAchievementsData,
+      revenueAchievementsData,
+      profitabilityContributionData,
+      cashPositionData,
+      otherMetrics,
+      enableDrillDown: true,
+    });
 
 
   const levelLabel = {

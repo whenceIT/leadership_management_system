@@ -316,7 +316,7 @@ function buildPortfolioAttribution(
   return out.length ? out : undefined;
 }
 
-function buildConsultantAttribution(m: MetricMeasurement, metric: MetricKey, threshold: number): ConsultantAttribution[] | undefined {
+function buildConsultantAttribution(m: MetricMeasurement, metric: string, threshold: number): ConsultantAttribution[] | undefined {
   if (!m.officeUsers) return undefined;
   const out: ConsultantAttribution[] = [];
   for (const u of m.officeUsers) {
@@ -325,11 +325,13 @@ function buildConsultantAttribution(m: MetricMeasurement, metric: MetricKey, thr
       return sum + p;
     }, 0);
     const loanCount = (u.loans ?? []).length;
-    if (metric === 'Productivity Achievement') {
+    const fullName = `${u.first_name} ${u.last_name}`.trim();
+    const displayName = fullName || `LC ${u.id}`;
+    if (metric === 'Staff Adequacy Score') {
       if (loanCount > 0 && disbTotal > 0 && disbTotal < threshold) {
         out.push({
           consultantId: u.id,
-          consultantName: `${u.first_name} ${u.last_name}`,
+          consultantName: displayName,
           officeId: u.office_id,
           officeName: m.officeName,
           metric: 'Disbursement',
@@ -342,7 +344,7 @@ function buildConsultantAttribution(m: MetricMeasurement, metric: MetricKey, thr
       if (loanCount > 0 && disbTotal < threshold) {
         out.push({
           consultantId: u.id,
-          consultantName: `${u.first_name} ${u.last_name}`,
+          consultantName: displayName,
           officeId: u.office_id,
           officeName: m.officeName,
           metric: 'Portfolio per LC',
@@ -355,12 +357,13 @@ function buildConsultantAttribution(m: MetricMeasurement, metric: MetricKey, thr
   return out.length ? out : undefined;
 }
 
-export function evaluateGenericMetric(name: string, data: any, location?: SuggestionLocation): Suggestion | null {
+export function evaluateGenericMetric(name: string, data: any, location?: SuggestionLocation, officeUsers?: any[]): Suggestion | null {
   const score = resolveScore(data);
   if (score === null) return null;
 
   if (score < KPI_SCORE_WARNING) {
     const sev: SuggestionSeverity = score < KPI_SCORE_CRITICAL ? 'critical' : 'warning';
+    const consultantAttribution = officeUsers && officeUsers.length > 0 ? buildConsultantAttribution({ officeUsers, location } as any, name, (METRIC_THRESHOLDS as any)[name]?.target || KPI_SCORE_WARNING) : undefined;
     return {
       id: uid(`metric-${name}`),
       severity: sev,
@@ -370,9 +373,70 @@ export function evaluateGenericMetric(name: string, data: any, location?: Sugges
       finding: `${name} score is ${score.toFixed(0)}%, which is below the ${KPI_SCORE_WARNING}%.`,
       recommendation: `Investigation required for "${name}" — performance below target. Review data quality and root-cause drivers at branch level.`,
       location,
+      consultantAttribution,
     };
   }
 
+  return null;
+}
+
+export function evaluateVolumeAchievement(m: MetricMeasurement): Suggestion | null {
+  const score = resolveScore(m);
+  if (score === null) return null;
+  if (score < KPI_SCORE_WARNING) {
+    const sev: SuggestionSeverity = score < KPI_SCORE_CRITICAL ? 'critical' : 'warning';
+    return {
+      id: uid('volume'),
+      severity: sev,
+      metric: 'Volume Achievement',
+      target: `≥ ${KPI_SCORE_WARNING}%`,
+      actual: `${score.toFixed(0)}%`,
+      finding: `Volume Achievement score is ${score.toFixed(0)}%, below the ${KPI_SCORE_WARNING}% target.`,
+      recommendation: `Increase client acquisition and disbursement volume. Review pipeline and marketing efforts.`,
+      location: m.location,
+      attribution: buildProductivityAttribution(m, METRIC_THRESHOLDS['Productivity Achievement'].target),
+      consultantAttribution: buildConsultantAttribution(m, 'Volume Achievement', METRIC_THRESHOLDS['Productivity Achievement'].target),
+    };
+  }
+  return null;
+}
+
+export function evaluateCollectionsEfficiency(m: MetricMeasurement): Suggestion | null {
+  const score = resolveScore(m);
+  if (score === null) return null;
+  if (score < KPI_SCORE_WARNING) {
+    const sev: SuggestionSeverity = score < KPI_SCORE_CRITICAL ? 'critical' : 'warning';
+    return {
+      id: uid('collections'),
+      severity: sev,
+      metric: 'Collections efficiency',
+      target: `≥ ${KPI_SCORE_WARNING}%`,
+      actual: `${score.toFixed(0)}%`,
+      finding: `Collections efficiency is ${score.toFixed(0)}%, below the ${KPI_SCORE_WARNING}% target.`,
+      recommendation: `Strengthen collection processes, follow up on overdue accounts, and improve payment tracking.`,
+      location: m.location,
+      consultantAttribution: buildConsultantAttribution(m, 'Collections efficiency', KPI_SCORE_WARNING),
+    };
+  }
+  return null;
+}
+
+export function evaluateCashPosition(m: MetricMeasurement): Suggestion | null {
+  const score = resolveScore(m);
+  if (score === null) return null;
+  if (score < KPI_SCORE_WARNING) {
+    const sev: SuggestionSeverity = score < KPI_SCORE_CRITICAL ? 'critical' : 'warning';
+    return {
+      id: uid('cash'),
+      severity: sev,
+      metric: 'Cash Position Score',
+      target: `≥ ${KPI_SCORE_WARNING}%`,
+      actual: `${score.toFixed(0)}%`,
+      finding: `Cash Position Score is ${score.toFixed(0)}%, below the ${KPI_SCORE_WARNING}% target.`,
+      recommendation: `Improve cash collection, reduce unnecessary expenditures, and monitor liquidity closely.`,
+      location: m.location,
+    };
+  }
   return null;
 }
 
@@ -425,6 +489,9 @@ export const SuggestionService = {
   evaluateProductivity,
   evaluateVacancyImpact,
   evaluatePortfolioLoad,
+  evaluateVolumeAchievement,
+  evaluateCollectionsEfficiency,
+  evaluateCashPosition,
   evaluateGenericMetric,
   evaluateAll,
   resolveScore,

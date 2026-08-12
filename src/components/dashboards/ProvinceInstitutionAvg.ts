@@ -55,6 +55,17 @@ export const kpiConfigs: Record<string, KPIConfig> = {
     getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.8 ? 'warning' : 'critical',
     displayTarget: () => '90%'
   },
+  'Productivity Achievement Score': {
+    getValue: (data) => parseFloat(data.average_normalized_score || '0'),
+    getTarget: (data) => data.target || 90,
+    formatValue: (v) => `${v.toFixed(2)}%`,
+    formatVariance: (v) => `${v.toFixed(2)}%`,
+    formatInstitutionAvg: (v) => `${v.toFixed(2)}%`,
+    isLowerBetter: false,
+    getTrend: (v, t) => v >= t ? '↑' : v >= t * 0.8 ? '→' : '↓',
+    getStatus: (v, t) => v >= t ? 'good' : v >= t * 0.8 ? 'warning' : 'critical',
+    displayTarget: () => '90%'
+  },
   'Vacancy Impact': {
     getValue: (data) => parseFloat(data.average_normalized_score || '0'),
     getTarget: (data) => data.target || 10,

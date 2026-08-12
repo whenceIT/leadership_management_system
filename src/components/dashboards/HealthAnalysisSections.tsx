@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { Suggestion } from '@/lib/kpiThresholds';
+import SuggestionsCarousel from './SuggestionsCarousel';
 
 export interface RecommendedAction {
   timeframe: 'immediate' | '7days' | '30days';

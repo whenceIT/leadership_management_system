@@ -56,6 +56,7 @@ export function useProvincialAverages() {
           'Revenue yield per product': fetchProvincialYieldAchievements,
           'Product risk contribution': fetchProvincialProductRiskScore,
           'Margin alignment with strategy': fetchProvincialEfficiencyRatio,
+          'Efficiency Ratio (CIR)': fetchProvincialEfficiencyRatio,
           'Default rate (branch, province, institutional)': fetchProvincialMonth1DefaultPerformance,
           'Default aging analysis': fetchProvincialLongTermDelinquency,
           'Recovery rate within 1 month': fetchProvincialMonth3RecoveryAchievements,

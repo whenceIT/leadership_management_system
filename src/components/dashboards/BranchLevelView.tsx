@@ -95,6 +95,10 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
               case 'Staff Adequacy Score':
                 data = await fetchStaffAdequacyPerformance(parseInt(branchId));
                 break;
+              case 'Productivity Achievement':
+              case 'Productivity Achievement Score':
+                data = await fetchProductivityAchievement(parseInt(branchId));
+                break;
               case 'Productivity Achievement Score':
                 data = await fetchProductivityAchievement(parseInt(branchId));
                 break;
@@ -219,7 +223,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
         status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
       }
-    } else if (selectedKPI === 'Productivity Achievement') {
+    } else if (selectedKPI === 'Productivity Achievement' || selectedKPI === 'Productivity Achievement Score') {
       current = data.normalized_score ? `${parseFloat(data.normalized_score).toFixed(2)}%` : '--';
       target = '100%';
       if (data.normalized_score) {

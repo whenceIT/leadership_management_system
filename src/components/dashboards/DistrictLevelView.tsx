@@ -93,6 +93,7 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
       let score = 0;
       switch(selectedKPI) {
         case 'Staff Adequacy Score':
+        case 'Productivity Achievement':
         case 'Productivity Achievement Score':
           score = parseFloat(data.average_normalized_score || '0');
           break;
@@ -144,12 +145,13 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
           try {
             let data: any = null;
             switch(selectedKPI) {
-              case 'Staff Adequacy Score':
-                data = await fetchDistrictStaffAdequacyPerformance(district.id);
-                break;
-              case 'Productivity Achievement Score':
-                data = await fetchDistrictProductivityAchievement(district.id);
-                break;
+               case 'Staff Adequacy Score':
+                 data = await fetchDistrictStaffAdequacyPerformance(district.id);
+                 break;
+               case 'Productivity Achievement':
+               case 'Productivity Achievement Score':
+                 data = await fetchDistrictProductivityAchievement(district.id);
+                 break;
               case 'Volume Achievement':
                 data = await fetchDistrictVolumeAchievement(district.id);
                 break;
@@ -245,6 +247,7 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
   const tableHeaders = useMemo(() => {
     switch(selectedKPI) {
       case 'Staff Adequacy Score':
+      case 'Productivity Achievement Score':
         return ['District', 'Offices', 'Total Staff', 'Score', 'Target', 'Variance', 'Trend', 'Status'];
       case 'Vacancy Impact':
         return ['District', 'Offices', 'Actual LCs', 'Auth. Pos.', 'Vacancies', 'Score', 'Status'];
@@ -426,26 +429,28 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
 
               if (data) {
                 switch(selectedKPI) {
-                  case 'Staff Adequacy Score': {
-                    const officesCount = district.offices_count || 0;
-                    const totalStaff = data?.total_staff || data?.total_actual_lcs || data?.actual_lcs || 0;
-                    const score = parseFloat(data?.average_normalized_score || '0');
-                    const target = '100%';
-                    const varianceNum = score - 100;
-                    const variance = varianceNum >= 0 ? `+${varianceNum.toFixed(2)}%` : `${varianceNum.toFixed(2)}%`;
-                    const trend: '↑' | '↓' | '→' = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-                    status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                    rowData = [
-                      district.name,
-                      officesCount,
-                      totalStaff,
-                      `${score.toFixed(2)}%`,
-                      target,
-                      <span className={getVarianceColor(variance)}>{variance}</span>,
-                      <span className={getTrendBadge(trend)}>{trend}</span>
-                    ];
-                    break;
-                  }
+                   case 'Staff Adequacy Score':
+                   case 'Productivity Achievement':
+                   case 'Productivity Achievement Score': {
+                     const officesCount = district.offices_count || 0;
+                     const totalStaff = data?.total_staff || data?.total_actual_lcs || data?.actual_lcs || 0;
+                     const score = parseFloat(data?.average_normalized_score || '0');
+                     const target = '90%';
+                     const varianceNum = score - 90;
+                     const variance = varianceNum >= 0 ? `+${varianceNum.toFixed(2)}%` : `${varianceNum.toFixed(2)}%`;
+                     const trend: '↑' | '↓' | '→' = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
+                     status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                     rowData = [
+                       district.name,
+                       officesCount,
+                       totalStaff,
+                       `${score.toFixed(2)}%`,
+                       target,
+                       <span className={getVarianceColor(variance)}>{variance}</span>,
+                       <span className={getTrendBadge(trend)}>{trend}</span>
+                     ];
+                     break;
+                   }
                   case 'Vacancy Impact': {
                     const score = data.average_normalized_score || 0;
                     status = score >= 90 ? 'good' : score >= 75 ? 'warning' : 'critical';

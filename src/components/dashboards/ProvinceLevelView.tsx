@@ -183,7 +183,9 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick, onInstitutionA
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Province</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Offices Count</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Staff</th>
+                {selectedKPI !== 'Productivity Achievement' && selectedKPI !== 'Productivity Achievement Score' && (
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Staff</th>
+                )}
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Score</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Target</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Variance</th>
@@ -273,7 +275,9 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick, onInstitutionA
 
                        <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{province.name}</td>
                        <td className="px-4 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400">{officesCount}</td>
-                       <td className="px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400">{actualLcs}</td>
+                       {selectedKPI !== 'Productivity Achievement' && selectedKPI !== 'Productivity Achievement Score' && (
+                         <td className="px-4 py-2 text-sm font-semibold text-green-600 dark:text-green-400">{actualLcs}</td>
+                       )}
                        <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{provincialAvgSum}</td>
                        <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{target}</td>
                        <td className="px-4 py-2 text-sm">

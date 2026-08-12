@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getUserData, clearUserData } from "@/utils/userContext";
 
@@ -7,6 +7,16 @@ export default function SessionExpiredModal() {
   const [visible, setVisible] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  const visibleRef = useRef(visible);
+
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
+  useEffect(() => {
+    visibleRef.current = visible;
+  }, [visible]);
 
   useEffect(() => {
     function show() {
@@ -17,28 +27,22 @@ export default function SessionExpiredModal() {
       setVisible(false);
     }
 
-    if (pathname === "/signin") {
+    if (pathnameRef.current === "/signin") {
       return;
     }
 
-    // Listen for programmatic session expiry and restore events
     window.addEventListener("session:expired", show as EventListener);
     window.addEventListener("session:restored", hide as EventListener);
 
-    // Poll localStorage expiry every 5 seconds
     const poll = setInterval(() => {
-      if (pathname === "/signin") {
+      if (pathnameRef.current === "/signin") {
         return;
       }
 
       const user = getUserData();
-      // Only show the modal if the user key is absent AND there is no
-      // recent restoration event. This avoids false positives during
-      // quick cross-tab updates when the user signs back in.
       if (!user) {
         setVisible(true);
       } else if (user.expiresAt && Date.now() > user.expiresAt) {
-        // Clear stored user and show
         clearUserData();
         setVisible(true);
       }

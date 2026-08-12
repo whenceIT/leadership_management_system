@@ -33,6 +33,21 @@ export interface UseKPISuggestionsInput {
   productivityAchievementData?: any;
   vacancyImpactData?: any;
   loanPortfolioLoadData?: any;
+  volumeAchievementData?: any;
+  collectionEfficiencyData?: any;
+  efficiencyRatioData?: any;
+  growthTrajectoryData?: any;
+  longTermDelinquencyData?: any;
+  month1DefaultPerformanceData?: any;
+  month3RecoveryAchievementsData?: any;
+  portfolioQualityData?: any;
+  productDiversificationData?: any;
+  productRiskScoreData?: any;
+  rollRateControlData?: any;
+  yieldAchievementsData?: any;
+  revenueAchievementsData?: any;
+  profitabilityContributionData?: any;
+  cashPositionData?: any;
   otherMetrics?: Array<{ name: string; data: any }>;
 }
 
@@ -358,7 +373,25 @@ export function useKPISuggestions(input: UseKPISuggestionsInput): UseKPISuggesti
     if (mVac) withAttribution(mVac);
     if (mPort) withAttribution(mPort);
 
-    const otherMetrics = input.otherMetrics?.map((om) => ({ ...om, location }));
+    const otherMetrics: Array<{ name: string; data: any; location?: SuggestionLocation }> = [
+      ...(input.otherMetrics || []),
+    ];
+
+    if (input.volumeAchievementData) otherMetrics.push({ name: 'Volume Achievement', data: input.volumeAchievementData, location });
+    if (input.collectionEfficiencyData) otherMetrics.push({ name: 'Collections efficiency', data: input.collectionEfficiencyData, location });
+    if (input.efficiencyRatioData) otherMetrics.push({ name: 'Efficiency Ratio (CIR)', data: input.efficiencyRatioData, location });
+    if (input.growthTrajectoryData) otherMetrics.push({ name: 'Growth trajectory alignment', data: input.growthTrajectoryData, location });
+    if (input.longTermDelinquencyData) otherMetrics.push({ name: 'Long-Term Delinquency', data: input.longTermDelinquencyData, location });
+    if (input.month1DefaultPerformanceData) otherMetrics.push({ name: 'Month-1 Default Performance', data: input.month1DefaultPerformanceData, location });
+    if (input.month3RecoveryAchievementsData) otherMetrics.push({ name: '3-Month Recovery Achievements', data: input.month3RecoveryAchievementsData, location });
+    if (input.portfolioQualityData) otherMetrics.push({ name: 'Portfolio Quality', data: input.portfolioQualityData, location });
+    if (input.productDiversificationData) otherMetrics.push({ name: 'Product Diversification', data: input.productDiversificationData, location });
+    if (input.productRiskScoreData) otherMetrics.push({ name: 'Product Risk Score', data: input.productRiskScoreData, location });
+    if (input.rollRateControlData) otherMetrics.push({ name: 'Roll Rate Control', data: input.rollRateControlData, location });
+    if (input.yieldAchievementsData) otherMetrics.push({ name: 'Yield Achievements', data: input.yieldAchievementsData, location });
+    if (input.revenueAchievementsData) otherMetrics.push({ name: 'Revenue Achievements', data: input.revenueAchievementsData, location });
+    if (input.profitabilityContributionData) otherMetrics.push({ name: 'Profitability Contribution', data: input.profitabilityContributionData, location });
+    if (input.cashPositionData) otherMetrics.push({ name: 'Cash Position Score', data: input.cashPositionData, location });
 
     const evaluateInput: EvaluateInput = {
       measurements,
@@ -373,6 +406,10 @@ export function useKPISuggestions(input: UseKPISuggestionsInput): UseKPISuggesti
     return { suggestions, critical, warnings };
   }, [
     input.staffAdequacyData, input.productivityAchievementData, input.vacancyImpactData, input.loanPortfolioLoadData,
+    input.volumeAchievementData, input.collectionEfficiencyData, input.efficiencyRatioData, input.growthTrajectoryData,
+    input.longTermDelinquencyData, input.month1DefaultPerformanceData, input.month3RecoveryAchievementsData,
+    input.portfolioQualityData, input.productDiversificationData, input.productRiskScoreData, input.rollRateControlData,
+    input.yieldAchievementsData, input.revenueAchievementsData, input.profitabilityContributionData, input.cashPositionData,
     input.otherMetrics, input.userLevel, input.selectedBranch, input.selectedProvince, input.userProvinceId,
     branchPerformances, officesForCtx, officeUsers, officeName, provincesForCtx, input.enableDrillDown,
   ]);

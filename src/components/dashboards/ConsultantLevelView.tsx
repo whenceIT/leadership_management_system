@@ -12,10 +12,34 @@ interface ConsultantLevelViewProps {
 }
 
 export function ConsultantLevelView({ officeId, selectedKPI, onBack }: ConsultantLevelViewProps) {
-  const [users, setUsers] = useState<OfficeUser[]>([]);
+  interface EnrichedUser extends OfficeUser {
+    totalDisbursed: number;
+    defaultRate: number;
+    defaultedLoans: number;
+    totalLoans: number;
+    previousCycleUncollected: number;
+    metTarget40k: boolean;
+    metUncollectedTarget: boolean;
+    metBothTargets: boolean;
+    metBonus50k: boolean;
+    metBonus80k: boolean;
+    metBonus120k: boolean;
+    performance: number;
+    target_achievement: number;
+    productivityAchievement: number;
+    pdua?: any;
+    target_history: any[];
+    total_collected?: number;
+    total_uncollected?: number;
+    still_uncollected?: number;
+    carry_over?: number;
+  }
+
+  const [users, setUsers] = useState<EnrichedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedMonthOffset, setSelectedMonthOffset] = useState(0); // 0 = current, 1 = last month, etc.
+  const [managerCount, setManagerCount] = useState(0);
 
   const LC_TARGET = 40000; // Benchmark from Operational Guidelines (K40,000)
 
@@ -123,6 +147,7 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
 
         // Fetch users
         const officeUsersData = await fetchOfficeUsers(officeId);
+        setManagerCount(officeUsersData.manager_users?.length || 0);
 
         // Enrich data with performance metrics
         const enriched = await Promise.all(officeUsersData.users.map(async user => {
@@ -161,6 +186,7 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
           const metBonus120k = totalDisbursed >= 120000;
 
           const performance = (totalDisbursed / LC_TARGET) * 100;
+          const productivityAchievement = Math.min(performance, 150);
 
           return {
             ...user,
@@ -177,12 +203,13 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
             metBonus120k,
             performance,
             target_achievement: totalDisbursed,
+            productivityAchievement,
             // Add API fields
             pdua: currentMetric?.pdua,
             target_history: currentMetric?.target_history || [],
-            total_collected: currentMetric?.total_collected,
-            total_uncollected: currentMetric?.total_uncollected,
-            still_uncollected: currentMetric?.still_uncollected,
+            total_collected: currentMetric?.total_collected !== undefined ? parseFloat(currentMetric.total_collected) : undefined,
+            total_uncollected: currentMetric?.total_uncollected !== undefined ? parseFloat(currentMetric.total_uncollected) : undefined,
+            still_uncollected: currentMetric?.still_uncollected !== undefined ? parseFloat(currentMetric.still_uncollected) : undefined,
             carry_over: currentMetric?.carry_over
           };
         }));
@@ -202,272 +229,395 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
     loadUsers();
   }, [officeId, performancePeriod, previousCyclePeriod, metricsService]);
 
-  const getStatusColor = (performance: number) => {
-    if (performance >= 100) return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-    if (performance >= 80) return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-    return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+  // Tier badge: color + label driven off performance, single source of truth
+  const getTier = (performance: number) => {
+    if (performance >= 100) return { label: 'Elite', dot: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-900/30', ring: 'ring-emerald-600/20 dark:ring-emerald-400/20' };
+    if (performance >= 80) return { label: 'High', dot: 'bg-amber-500', text: 'text-amber-700 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-900/30', ring: 'ring-amber-600/20 dark:ring-amber-400/20' };
+    return { label: 'Low', dot: 'bg-rose-500', text: 'text-rose-700 dark:text-rose-300', bg: 'bg-rose-50 dark:bg-rose-900/30', ring: 'ring-rose-600/20 dark:ring-rose-400/20' };
   };
 
+  const branchProductivity = useMemo(() => {
+    if (users.length === 0) return null;
+    const totalDisbursedSum = users.reduce((sum, user) => sum + user.totalDisbursed, 0);
+    const avgDisbursedPerLC = totalDisbursedSum / users.length;
+    const achievement = (avgDisbursedPerLC / LC_TARGET) * 100;
+    return {
+      avgDisbursedPerLC,
+      achievement: Math.min(achievement, 150),
+      meetsTarget: achievement >= 100
+    };
+  }, [users, LC_TARGET]);
+
+  const branchScore = useMemo(() => {
+    if (users.length === 0) return null;
+    if (selectedKPI.includes('Productivity Achievement') || selectedKPI === 'Productivity Achievement Score') {
+      return branchProductivity?.achievement ?? null;
+    }
+    const avgPerformance = users.reduce((sum, user) => sum + user.performance, 0) / users.length;
+    return Math.min(avgPerformance, 100);
+  }, [users, selectedKPI, branchProductivity]);
+
+  const avatarPalette = [
+    'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+    'bg-teal-50 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
+    'bg-violet-50 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+    'bg-sky-50 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',
+    'bg-fuchsia-50 text-fuchsia-700 dark:bg-fuchsia-900/40 dark:text-fuchsia-300',
+  ];
+
+  const isRiskDefaultsKPI = ['Default rate (branch, province, institutional)', 'Default aging analysis', 'Recovery rate within 1 month', 'Recovery rate within 3 months', 'Risk migration trends'].includes(selectedKPI);
+
   return (
-    <div className="bg-white dark:bg-gray-800">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center">
+    <div className="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 p-2">
+      {/* Header */}
+      <div className="flex flex-col gap-4 border-b border-gray-200 dark:border-gray-800 pb-5 mb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
           <button
             onClick={onBack}
-            className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mr-4 p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200 transform hover:scale-105"
+            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
             title="Back"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Loan Consultant Performance {officeName && <span className="text-blue-600 dark:text-blue-400">| {officeName}</span>}
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+              Consultant Performance
+            </p>
+            <h2 className="text-xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">
+              {officeName || 'Branch'}
             </h2>
-            <div className="flex items-center mt-1 gap-2">
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                Performance Period: {performancePeriod.label}
-              </span>
-              <select
-                value={selectedMonthOffset}
-                onChange={(e) => setSelectedMonthOffset(parseInt(e.target.value))}
-                className="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-1"
-              >
-                <option value={0}>Current Month</option>
-                <option value={1}>Last Month</option>
-                <option value={2}>2 Months Ago</option>
-                <option value={3}>3 Months Ago</option>
-                <option value={4}>4 Months Ago</option>
-                <option value={5}>5 Months Ago</option>
-              </select>
-            </div>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            Monthly Target: <span className="font-semibold text-gray-900 dark:text-white">K{LC_TARGET.toLocaleString()}</span>
+
+        <div className="flex items-center gap-2 sm:pl-12">
+          <select
+            value={selectedMonthOffset}
+            onChange={(e) => setSelectedMonthOffset(parseInt(e.target.value))}
+            className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-gray-600"
+          >
+            <option value={0}>Current Month</option>
+            <option value={1}>Last Month</option>
+            <option value={2}>2 Months Ago</option>
+            <option value={3}>3 Months Ago</option>
+            <option value={4}>4 Months Ago</option>
+            <option value={5}>5 Months Ago</option>
+          </select>
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-right dark:border-indigo-900 dark:bg-indigo-900/20">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-indigo-500 dark:text-indigo-400">Monthly Target</div>
+            <div className="font-mono text-sm font-bold tabular-nums text-indigo-900 dark:text-indigo-200">K{LC_TARGET.toLocaleString()}</div>
           </div>
         </div>
       </div>
 
       {/* Branch Info Strip */}
-      <div className="grid grid-cols-4 gap-3 mb-6 p-4 bg-gray-50 dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-700">
-        {/* Actual LCs */}
-        <div className="flex flex-col">
-          <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Loan Consultants</span>
-          <div className="flex items-end gap-2">
-            <span className="text-2xl font-black text-gray-900 dark:text-white">
-              {actualLCs}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">LCs</span>
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {/* Loan Consultants */}
+        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Loan Consultants</span>
+          <div className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="font-mono text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{actualLCs}</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">active</span>
           </div>
-          <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            {actualLCs >= 10 ? 'Optimal' : actualLCs >= 8 ? 'Adequate' : 'Understaffed'}
+          <span className="mt-1 inline-block text-xs font-medium text-gray-500 dark:text-gray-400">
+            {actualLCs >= 10 ? 'Optimal headcount' : actualLCs >= 8 ? 'Adequate headcount' : 'Understaffed'}
           </span>
         </div>
 
-        {/* Branch Capacity */}
-        <div className="flex flex-col">
-          <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Branch Capacity</span>
-          <div className="flex items-end gap-2">
-            <span className="text-2xl font-black text-gray-900 dark:text-white">
-              {branchCapacity !== null ? branchCapacity : '--'}
+        {/* Branch Capacity + staffing bar */}
+        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Branch Capacity</span>
+          <div className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="font-mono text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
+              {branchCapacity !== null ? branchCapacity : '—'}
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">workspaces</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">workspaces</span>
           </div>
           {staffingAdequacy !== null && (
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Staff Adequacy</span>
-              <div className="flex items-center mt-1 gap-1.5">
-                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                  <div
-                    className={`h-1.5 rounded-full ${
-                      staffingStatus === 'good' ? 'bg-green-500'
-                      : staffingStatus === 'warning' ? 'bg-yellow-500'
-                      : 'bg-red-500'
-                    }`}
-                    style={{ width: `${Math.min(staffingAdequacy, 100)}%` }}
-                  />
-                </div>
-                <span className={`text-xs font-bold ${
-                  staffingStatus === 'good' ? 'text-green-600 dark:text-green-400'
-                  : staffingStatus === 'warning' ? 'text-yellow-600 dark:text-yellow-400'
-                  : 'text-red-600 dark:text-red-400'
-                }`}>{Math.min(staffingAdequacy, 100)}%</span>
+            <div className="mt-2.5 flex items-center gap-2">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    staffingStatus === 'good' ? 'bg-emerald-500'
+                    : staffingStatus === 'warning' ? 'bg-amber-500'
+                    : 'bg-rose-500'
+                  }`}
+                  style={{ width: `${Math.min(staffingAdequacy, 100)}%` }}
+                />
               </div>
+              <span className={`font-mono text-xs font-bold tabular-nums ${
+                staffingStatus === 'good' ? 'text-emerald-600 dark:text-emerald-400'
+                : staffingStatus === 'warning' ? 'text-amber-600 dark:text-amber-400'
+                : 'text-rose-600 dark:text-rose-400'
+              }`}>{Math.min(staffingAdequacy, 100)}%</span>
             </div>
           )}
         </div>
 
         {/* Performance Period */}
-        <div className="flex flex-col border-x border-gray-200 dark:border-gray-700 px-3">
-          <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Performance Period</span>
-          <span className="text-sm font-bold text-gray-900 dark:text-white leading-snug">{performancePeriod.label}</span>
-          <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">24th–24th Monthly Cycle</span>
+        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Performance Period</span>
+          <div className="mt-1.5 text-sm font-semibold leading-snug text-gray-900 dark:text-white">{performancePeriod.label}</div>
+          <span className="mt-1 inline-block text-xs font-medium text-gray-500 dark:text-gray-400">24th–24th monthly cycle</span>
         </div>
 
         {/* Branch Age */}
-        <div className="flex flex-col pl-1">
-          <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Branch Age</span>
-          <span className="text-2xl font-black text-gray-900 dark:text-white">{branchAge ?? '--'}</span>
+        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Branch Age</span>
+          <div className="mt-1.5 font-mono text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{branchAge ?? '—'}</div>
           {office?.createdAt && (
-            <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <span className="mt-1 inline-block text-xs font-medium text-gray-500 dark:text-gray-400">
               Est. {new Date(office.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
             </span>
           )}
         </div>
+
+        {/* Managers */}
+        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Managers</span>
+          <div className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="font-mono text-2xl font-bold tabular-nums text-gray-900 dark:text-white">{managerCount}</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">assigned</span>
+          </div>
+        </div>
+
+        {/* Score */}
+        <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Score</span>
+          <div className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="font-mono text-2xl font-bold tabular-nums text-gray-900 dark:text-white">
+              {branchScore !== null ? `${branchScore.toFixed(1)}%` : '—'}
+            </span>
+          </div>
+          <span className="mt-1 inline-block text-xs text-gray-500 dark:text-gray-400">
+            {selectedKPI.includes('Productivity Achievement') || selectedKPI === 'Productivity Achievement Score'
+              ? 'Productivity Achievement'
+              : 'Avg. Target Achievement'}
+          </span>
+        </div>
       </div>
 
       {/* Verdict Strip */}
-      {branchCapacity !== null && (
-        <div className={`mb-6 p-4 rounded-xl border ${
-          branchCapacity >= actualLCs 
-            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+      {branchCapacity !== null && selectedKPI === 'Staff Adequacy Score' && (
+        <div className={`mb-3 flex items-center gap-3 rounded-xl p-2 ${
+          branchCapacity >= actualLCs
+            ? 'border-l-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/10'
+            : 'border-l-rose-500 bg-rose-50/60 dark:bg-rose-900/10'
         }`}>
-          <div className="flex items-center gap-3">
+          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+            branchCapacity >= actualLCs ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-rose-100 dark:bg-rose-900/40'
+          }`}>
             {branchCapacity >= actualLCs ? (
-              <svg className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             ) : (
-              <svg className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5 text-rose-600 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             )}
+          </div>
+          <div className="text-sm">
+            <span className={`font-bold ${branchCapacity >= actualLCs ? 'text-emerald-800 dark:text-emerald-300' : 'text-rose-800 dark:text-rose-300'}`}>
+              {branchCapacity >= actualLCs ? 'Adequate workspaces' : 'Insufficient workspaces'}
+            </span>
+            <span className="ml-1.5 text-gray-600 dark:text-gray-400">
+              {branchCapacity >= actualLCs
+                ? `Branch capacity (${branchCapacity}) accommodates all ${actualLCs} LCs, with ${branchCapacity - actualLCs} workspace${branchCapacity - actualLCs !== 1 ? 's' : ''} to spare.`
+                : `Branch capacity (${branchCapacity}) falls short for ${actualLCs} LCs — ${actualLCs - branchCapacity} LC${actualLCs - branchCapacity !== 1 ? 's' : ''} lack${actualLCs - branchCapacity === 1 ? 's' : ''} a proper workspace.`}
+            </span>
+          </div>
+        </div>
+       )}
+ 
+       {branchProductivity && (
+         <div className={`mb-3 flex items-center gap-3 rounded-xl p-2 ${
+           branchProductivity.meetsTarget
+             ? 'border-l-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/10'
+             : 'border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10'
+         }`}>
+           <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+             branchProductivity.meetsTarget ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-amber-100 dark:bg-amber-900/40'
+           }`}>
+             {branchProductivity.meetsTarget ? (
+               <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 0 0118 0z" />
+               </svg>
+             ) : (
+               <svg className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+               </svg>
+             )}
+           </div>
             <div className="text-sm">
-              <span className={`font-bold ${
-                branchCapacity >= actualLCs 
-                  ? 'text-green-800 dark:text-green-300' 
-                  : 'text-red-800 dark:text-red-300'
-              }`}>
-                VERDICT: {branchCapacity >= actualLCs ? 'ADEQUATE WORKSPACES' : 'INSUFFICIENT WORKSPACES'}
+              <span className={`font-bold ${branchProductivity.meetsTarget ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>
+                {branchProductivity.meetsTarget ? 'Productivity target achieved' : 'Below productivity target'}
               </span>
-              <span className={`ml-2 ${
-                branchCapacity >= actualLCs 
-                  ? 'text-green-700 dark:text-green-400' 
-                  : 'text-red-700 dark:text-red-400'
-              }`}>
-                {branchCapacity >= actualLCs 
-                  ? `Branch capacity (${branchCapacity}) accommodates all ${actualLCs} LCs with ${branchCapacity - actualLCs} workspace${branchCapacity - actualLCs !== 1 ? 's' : ''} available.`
-                  : `Branch capacity (${branchCapacity}) is insufficient for ${actualLCs} LCs. ${actualLCs - branchCapacity} LC${actualLCs - branchCapacity !== 1 ? 's' : ''} lack${actualLCs - branchCapacity === 1 ? 's' : ''} proper workspace/station.`}
+              <span className="ml-1.5 text-gray-600 dark:text-gray-400">
+                Average disbursement per LC is K{Math.round(branchProductivity.avgDisbursedPerLC).toLocaleString()} ({branchProductivity.achievement.toFixed(1)}% of K40,000 target).
               </span>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Analyzing consultant performance...</p>
+        {(selectedKPI === 'Productivity Achievement' || selectedKPI === 'Productivity Achievement Score') && (
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-900 dark:bg-blue-900/20">
+            <svg className="mt-0.5 h-4 w-4 shrink-0 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-xs text-blue-700 dark:text-blue-300">
+              The Avg Disbursement per LC is calculated from the total amount disbursed by all Loan Consultants (LCs), divided by the number of LCs.
+            </p>
+          </div>
+        )}
+  
+        {loading ? (
+        <div className="flex flex-col items-center justify-center py-24">
+          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-indigo-600 dark:border-gray-800 dark:border-t-indigo-400"></div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Analyzing consultant performance…</p>
         </div>
       ) : error ? (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400">
-          <p className="font-semibold text-center">{error}</p>
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-center dark:border-rose-900 dark:bg-rose-900/20">
+          <p className="font-semibold text-rose-700 dark:text-rose-400">{error}</p>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 p-10 text-center dark:border-gray-700">
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No loan consultants found for this branch and period.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Consultant</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Clients</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Disbursed</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Target Achievement</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Default Rate</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">No. Targets Met</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {users.map((user: any) => (
-                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
-                        {user.first_name[0]}{user.last_name[0]}
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {user.first_name} {user.last_name}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {user.email}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                    {user.clients?.length || 0}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-white">
-                    K{user.totalDisbursed.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 max-w-[100px]">
-                      <div 
-                        className={`h-2.5 rounded-full ${user.performance >= 70 ? 'bg-green-500' : user.performance >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`} 
-                        style={{ width: `${Math.min(user.performance, 100)}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs font-medium ml-2 text-gray-700 dark:text-gray-300">
-                      {Math.min(user.performance, 100).toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {user.totalLoans > 0 ? (
-                      <div className="flex flex-col">
-                        <span className={`text-sm font-bold ${
-                          user.defaultRate <= 10 ? 'text-green-600 dark:text-green-400'
-                          : user.defaultRate <= 28 ? 'text-yellow-600 dark:text-yellow-400'
-                          : 'text-red-600 dark:text-red-400'
-                        }`}>
-                          {user.defaultRate.toFixed(1)}%
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {user.defaultedLoans}/{user.totalLoans} loans
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-400">--</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col gap-1">
-                      <span className={`text-xs font-medium ${user.metTarget40k ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {user.metTarget40k ? '✓' : '✗'} K40k Disbursed
-                      </span>
-                      {/* <span className={`text-xs font-medium ${user.metUncollectedTarget ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                        {user.metUncollectedTarget ? '✓' : '✗'} &lt;K5k Uncollected
-                      </span> */}
-                      {user.metBonus50k && (
-                        <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
-                          ★ K50k+ Bonus
-                        </span>
-                      )}
-                      {user.metBonus80k && (
-                        <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
-                          ★★ K80k+ Bonus
-                        </span>
-                      )}
-                      {user.metBonus120k && (
-                        <span className="text-xs font-medium text-purple-600 dark:text-purple-400">
-                          ★★★ K120k+ Bonus
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(user.performance)}`}>
-                      {user.performance >= 100 ? 'ELITE' : user.performance >= 80 ? 'HIGH' : 'LOW'}
-                    </span>
-                  </td>
+        <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+              <thead className="bg-gray-50 dark:bg-gray-900/60">
+                <tr>
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Consultant</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Clients</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Disbursed</th>
+                  {selectedKPI === 'Productivity Achievement' ? (
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Productivity Achievement Score</th>
+                  ) : (
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Target Achievement</th>
+                  )}
+                  {isRiskDefaultsKPI && (
+                    <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Default Rate</th>
+                  )}
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Targets Met</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
+                {users.map((user: any, idx: number) => {
+                  const tier = getTier(user.performance);
+                  const avatarClasses = avatarPalette[idx % avatarPalette.length];
+                  return (
+                    <tr key={user.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-900/40">
+                      <td className="whitespace-nowrap px-5 py-4">
+                        <div className="flex items-center">
+                          <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold ${avatarClasses}`}>
+                            {user.first_name[0]}{user.last_name[0]}
+                          </div>
+                          <div className="ml-3">
+                            <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                              {user.first_name} {user.last_name}
+                            </div>
+                            <div className="text-xs text-gray-400 dark:text-gray-500">{user.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 font-mono text-sm tabular-nums text-gray-600 dark:text-gray-300">
+                        {user.clients?.length || 0}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 font-mono text-sm font-semibold tabular-nums text-gray-900 dark:text-white">
+                        K{user.totalDisbursed.toLocaleString()}
+                      </td>
+                  {(selectedKPI === 'Productivity Achievement' || selectedKPI === 'Productivity Achievement Score') ? (
+                        <td className="whitespace-nowrap px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-24 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                              <div
+                                className={`h-full rounded-full ${user.productivityAchievement >= 100 ? 'bg-emerald-500' : user.productivityAchievement >= 70 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                                style={{ width: `${Math.min((user.productivityAchievement / 150) * 100, 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className="font-mono text-xs font-semibold tabular-nums text-gray-600 dark:text-gray-300">
+                              {user.productivityAchievement.toFixed(1)}%
+                            </span>
+                          </div>
+                        </td>
+                      ) : (
+                        <td className="whitespace-nowrap px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 w-24 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                              <div
+                                className={`h-full rounded-full ${user.performance >= 70 ? 'bg-emerald-500' : user.performance >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                                style={{ width: `${Math.min(user.performance, 100)}%` }}
+                              ></div>
+                            </div>
+                            <span className="font-mono text-xs font-semibold tabular-nums text-gray-600 dark:text-gray-300">
+                              {Math.min(user.performance, 100).toFixed(1)}%
+                            </span>
+                          </div>
+                        </td>
+                      )}
+                      {isRiskDefaultsKPI && (
+                        <td className="whitespace-nowrap px-5 py-4">
+                          {user.totalLoans > 0 ? (
+                           <div className="flex flex-col">
+                             <span className={`font-mono text-sm font-bold tabular-nums ${
+                               user.defaultRate <= 10 ? 'text-emerald-600 dark:text-emerald-400'
+                               : user.defaultRate <= 28 ? 'text-amber-600 dark:text-amber-400'
+                               : 'text-rose-600 dark:text-rose-400'
+                             }`}>
+                               {user.defaultRate.toFixed(1)}%
+                             </span>
+                             <span className="text-xs text-gray-400 dark:text-gray-500">
+                               {user.defaultedLoans}/{user.totalLoans} loans
+                             </span>
+                           </div>
+                         ) : (
+                           <span className="text-sm text-gray-300 dark:text-gray-600">—</span>
+                         )}
+                        </td>
+                      )}
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium ${
+                            user.metTarget40k
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                              : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                          }`}>
+                            {user.metTarget40k ? '✓' : '·'} K40k
+                          </span>
+                          {user.metBonus50k && (
+                            <span className="inline-flex items-center rounded-md bg-violet-50 px-1.5 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                              ★ K50k
+                            </span>
+                          )}
+                          {user.metBonus80k && (
+                            <span className="inline-flex items-center rounded-md bg-violet-50 px-1.5 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                              ★★ K80k
+                            </span>
+                          )}
+                          {user.metBonus120k && (
+                            <span className="inline-flex items-center rounded-md bg-violet-50 px-1.5 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                              ★★★ K120k
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4">
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${tier.bg} ${tier.text} ${tier.ring}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${tier.dot}`}></span>
+                          {tier.label.toUpperCase()}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
