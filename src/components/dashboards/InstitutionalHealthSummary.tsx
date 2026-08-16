@@ -169,7 +169,8 @@ function formatAvg(value: any, suffix = '%'): string {
   if (str.includes('K') || str.includes('HHI') || str.includes('avg') || str.includes('MoM')) return str;
   const num = typeof value === 'number' ? value : parseFloat(str.replace(/,/g, '').replace(/[^0-9.\-]/g, ''));
   if (isNaN(num) || !isFinite(num)) return '--';
-  return `${num.toFixed(2)}${suffix}`;
+  const capped = Math.min(Math.max(num, 0), 100);
+  return `${capped.toFixed(2)}${suffix}`;
 }
 
 function getKpiInstitutionalAvg(data: any, kpiName: string, suffix = '%'): string {
@@ -651,9 +652,9 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     return isNaN(num) ? null : num;
   }).filter((v): v is number => v !== null);
 
-  const overallUserScore = userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0;
+  const overallUserScore = Math.min(100, Math.max(0, userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0));
   const overallInstScore = instAvgValues.length > 0 ? Math.round(instAvgValues.reduce((a, b) => a + b, 0) / instAvgValues.length) : parseInt(DEFAULT_INST_AVG);
-  const finalInstScore = overallInstScore === 0 ? parseInt(DEFAULT_INST_AVG) : overallInstScore;
+  const finalInstScore = Math.min(100, Math.max(0, overallInstScore === 0 ? parseInt(DEFAULT_INST_AVG) : overallInstScore));
 
   const target = 100;
   const variance = overallUserScore - target;
@@ -719,9 +720,9 @@ function aggregateLoanConsultantPerformanceKPIs(
     return isNaN(num) ? null : num;
   }).filter((v): v is number => v !== null);
 
-  const overallUserScore = userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0;
+  const overallUserScore = Math.min(100, Math.max(0, userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0));
   const overallInstScore = instAvgValues.length > 0 ? Math.round(instAvgValues.reduce((a, b) => a + b, 0) / instAvgValues.length) : parseInt(DEFAULT_INST_AVG);
-  const finalInstScore = overallInstScore === 0 ? parseInt(DEFAULT_INST_AVG) : overallInstScore;
+  const finalInstScore = Math.min(100, Math.max(0, overallInstScore === 0 ? parseInt(DEFAULT_INST_AVG) : overallInstScore));
 
   const target = 80;
   const variance = overallUserScore - target;
@@ -788,9 +789,9 @@ function aggregateLoanProductsKPIs(
     return isNaN(num) ? null : num;
   }).filter((v): v is number => v !== null);
 
-  const overallUserScore = userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0;
+  const overallUserScore = Math.min(100, Math.max(0, userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0));
   const overallInstScore = instAvgValues.length > 0 ? Math.round(instAvgValues.reduce((a, b) => a + b, 0) / instAvgValues.length) : parseInt(DEFAULT_INST_AVG);
-  const finalInstScore = overallInstScore === 0 ? parseInt(DEFAULT_INST_AVG) : overallInstScore;
+  const finalInstScore = Math.min(100, Math.max(0, overallInstScore === 0 ? parseInt(DEFAULT_INST_AVG) : overallInstScore));
 
   const target = 80;
   const variance = overallUserScore - target;
@@ -854,9 +855,9 @@ function aggregateRiskManagementKPIs(
     return isNaN(num) ? null : num;
   }).filter((v): v is number => v !== null);
 
-  const overallUserScore = userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0;
+  const overallUserScore = Math.min(100, Math.max(0, userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0));
   const overallInstScore = instAvgValues.length > 0 ? Math.round(instAvgValues.reduce((a, b) => a + b, 0) / instAvgValues.length) : parseInt(DEFAULT_INST_AVG);
-  const finalInstScore = overallInstScore === 0 ? parseInt(DEFAULT_INST_AVG) : overallInstScore;
+  const finalInstScore = Math.min(100, Math.max(0, overallInstScore === 0 ? parseInt(DEFAULT_INST_AVG) : overallInstScore));
 
   const target = 75;
   const variance = overallUserScore - target;
@@ -965,9 +966,9 @@ function aggregateRevenuePerformanceKPIs(
     return isNaN(num) ? null : num;
   }).filter((v): v is number => v !== null);
 
-  const overallUserScore = userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0;
+  const overallUserScore = Math.min(100, Math.max(0, userLevelValues.length > 0 ? Math.round(userLevelValues.reduce((a, b) => a + b, 0) / userLevelValues.length) : 0));
   const overallInstScore = instAvgValues.length > 0 ? Math.round(instAvgValues.reduce((a, b) => a + b, 0) / instAvgValues.length) : parseInt(DEFAULT_INST_AVG);
-  const finalInstScore = overallInstScore === 0 ? parseInt(DEFAULT_INST_AVG) : overallInstScore;
+  const finalInstScore = Math.min(100, Math.max(0, overallInstScore === 0 ? parseInt(DEFAULT_INST_AVG) : overallInstScore));
 
   const target = 75;
   const variance = overallUserScore - target;

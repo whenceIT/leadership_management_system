@@ -267,7 +267,8 @@ export function ParametersTableView({
       if (count === 0) return param.userLevelAvg || '--';
       
       const avg = total / count;
-      return `${avg.toFixed(2)}%`;
+      const capped = Math.min(100, Math.max(0, avg));
+      return `${capped.toFixed(2)}%`;
     }
     
     // For other parameters, use existing logic
@@ -288,11 +289,17 @@ export function ParametersTableView({
     if (count === 0) return param.userLevelAvg || '--';
     
     const avg = total / count;
-    return `${avg.toFixed(2)}%`;
+    const capped = Math.min(100, Math.max(0, avg));
+    return `${capped.toFixed(2)}%`;
   }
 
   function getHeadlineInstitutionalAvg(param: ParameterSummary): string {
-    return DEFAULT_INSTITUTIONAL_AVGS[param.name] || param.institutionalAvg || '--';
+    const raw = DEFAULT_INSTITUTIONAL_AVGS[param.name] || param.institutionalAvg || '--';
+    if (raw === '--') return raw;
+    const num = parseFloat(raw.replace('%', ''));
+    if (isNaN(num)) return raw;
+    const capped = Math.min(100, Math.max(0, num));
+    return `${capped.toFixed(2)}%`;
   }
 
   return (
@@ -501,7 +508,12 @@ export function ParametersTableView({
                                           }}
                                         >
                                            <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
-                                            <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{parseFloat(getProvincialAvgForKpi(kpi.name) || kpi.currentPeriod)}%</td>
+                                            <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{(() => {
+                                              const raw = getProvincialAvgForKpi(kpi.name) || kpi.currentPeriod;
+                                              const num = parseFloat(String(raw));
+                                              if (isNaN(num)) return raw;
+                                              return Math.min(100, Math.max(0, num));
+                                            })()}%</td>
                                               <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
                                                    {kpi.institutionalAvg}
                                              </td>
