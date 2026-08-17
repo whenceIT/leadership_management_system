@@ -437,21 +437,9 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
     }
   ];
 
-  // Calculate overall score by averaging the five headline parameters
-  const overallScore = Math.round(
-    baseParameters.reduce((sum, param) => {
-      const score = parseFloat(param.userLevelAvg.replace('%', ''));
-      return sum + (isNaN(score) ? 0 : score);
-    }, 0) / baseParameters.length
-  );
-
-  // Calculate overall institutional average from headline parameter institutional averages
-  const overallInstAvg = Math.round(
-    baseParameters.reduce((sum, param) => {
-      const score = parseFloat(param.institutionalAvg.replace('%', ''));
-      return sum + (isNaN(score) ? 0 : score);
-    }, 0) / baseParameters.length
-  );
+  const instAvgValuesForOverall = baseParameters.map(param => parseInstitutionalAvg(param.institutionalAvg)).filter((v): v is number => v !== null);
+  const overallScore = instAvgValuesForOverall.length === 6 ? Number((instAvgValuesForOverall.reduce((a, b) => a + b, 0) / instAvgValuesForOverall.length).toFixed(2)) : 0;
+  const overallInstAvg = overallScore;
 
   // Calculate overall target (assuming target is ≥90% for all parameters)
   const overallTarget = 90;
@@ -1551,8 +1539,9 @@ export function InstitutionalHealthSummary({
               yieldAchievementsData={yieldAchievementsData}
               revenueAchievementsData={revenueAchievementsData}
               profitabilityContributionData={profitabilityContributionData}
-              cashPositionData={cashPositionData}
-              onKpiClick={(kpiName) => {
+               cashPositionData={cashPositionData}
+               isLoading={isLoading}
+               onKpiClick={(kpiName) => {
                 if (selectedKPI === kpiName) {
                   setSelectedKPI(null);
                   setDrillDownKPI(null);

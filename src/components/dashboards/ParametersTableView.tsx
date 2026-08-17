@@ -140,6 +140,7 @@ interface ParametersTableViewProps {
   setDrillDownKPI?: (kpi: string | null) => void;
   provincialAverages?: Record<string, string>;
   onInstitutionAvgChange?: (avg: string) => void;
+  isLoading?: boolean;
 }
 
 export function ParametersTableView({
@@ -186,7 +187,8 @@ export function ParametersTableView({
   drillDownKPI,
   setDrillDownKPI,
   onInstitutionAvgChange,
-  provincialAverages
+  provincialAverages,
+  isLoading
 }: ParametersTableViewProps) {
   const levelLabel = {
     institution: 'Institutional',
@@ -248,30 +250,6 @@ export function ParametersTableView({
     
     if (!kpis || kpis.length === 0) return param.userLevelAvg || '--';
     
-    // For Revenue & Performance, use simple arithmetic average of KPI province averages
-    if (param.name === 'Revenue & Performance') {
-      let total = 0;
-      let count = 0;
-      
-      kpis.forEach(kpi => {
-        const provincialAvg = provincialAverages[kpi.name];
-        if (provincialAvg) {
-          const num = parseFloat(provincialAvg.replace('%', '').replace(',', ''));
-          if (!isNaN(num)) {
-            total += num;
-            count++;
-          }
-        }
-      });
-      
-      if (count === 0) return param.userLevelAvg || '--';
-      
-      const avg = total / count;
-      const capped = Math.min(100, Math.max(0, avg));
-      return `${capped.toFixed(2)}%`;
-    }
-    
-    // For other parameters, use existing logic
     let total = 0;
     let count = 0;
     
@@ -403,15 +381,15 @@ export function ParametersTableView({
                     </td>
                     <td className="border px-4 py-3 text-center bg-black/5 dark:bg-white/10">
                       <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {getHeadlineUserLevelAvg(param)}
+                        {isLoading ? 'calc..' : getHeadlineUserLevelAvg(param)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
-                          {getHeadlineInstitutionalAvg(param)}
+                          {isLoading ? 'calc..' : getHeadlineInstitutionalAvg(param)}
                         </span>
-                        {getHeadlineUserLevelAvg(param) !== '--' && getHeadlineInstitutionalAvg(param) !== '--' && (() => {
+                        {!isLoading && getHeadlineUserLevelAvg(param) !== '--' && getHeadlineInstitutionalAvg(param) !== '--' && (() => {
                           const userVal = parseFloat(getHeadlineUserLevelAvg(param).replace('%', ''));
                           const instVal = parseFloat(getHeadlineInstitutionalAvg(param).replace('%', ''));
                           return (
@@ -431,36 +409,61 @@ export function ParametersTableView({
                       ) : param.target}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={`text-sm ${getVarianceColor(param.variance)}`}>
-                        {param.variance}
-                      </span>
-                      <span className="text-xs text-gray-400 ml-1">({param.varianceAbs})</span>
+                      {isLoading ? (
+                        <span className="text-sm text-gray-400">calc..</span>
+                      ) : (
+                        <>
+                          <span className={`text-sm ${getVarianceColor(param.variance)}`}>
+                            {param.variance}
+                          </span>
+                          <span className="text-xs text-gray-400 ml-1">({param.varianceAbs})</span>
+                        </>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className={getTrendBadge(param.trend)}>{param.trend}</span>
+                      {isLoading ? (
+                        <span className={getTrendBadge('→')}>calc..</span>
+                      ) : (
+                        <span className={getTrendBadge(param.trend)}>{param.trend}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-center">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${userLevelScore >= 76 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                          userLevelScore >= 60 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                          'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'} mb-2 inline-block`}>
-                          {userLevelScore >= 76 ? 'GOOD' : userLevelScore >= 60 ? 'WARNING' : 'CRITICAL'}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full transition-all duration-300 ${userLevelScore >= 76 ? 'bg-green-500' :
-                                userLevelScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                                }`}
-                              style={{ width: `${progress}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 min-w-[40px] text-center">
-                            {userLevelScore}%
+                        {isLoading ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 mb-2 inline-block">
+                            calc..
                           </span>
-                        </div>
+                        ) : (
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${userLevelScore >= 76 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                            userLevelScore >= 60 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'} mb-2 inline-block`}>
+                            {userLevelScore >= 76 ? 'GOOD' : userLevelScore >= 60 ? 'WARNING' : 'CRITICAL'}
+                          </span>
+                        )}
+                        {isLoading ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div className="h-2 rounded-full bg-gray-400 animate-pulse" style={{ width: '50%' }} />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-400 min-w-[40px] text-center">calc..</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all duration-300 ${userLevelScore >= 76 ? 'bg-green-500' :
+                                  userLevelScore >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 min-w-[40px] text-center">
+                              {userLevelScore}%
+                            </span>
+                          </div>
+                        )}
                         <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          {`${Math.round(100 - progress)}% to target`}
+                          {isLoading ? 'calc..' : `${Math.round(100 - progress)}% to target`}
                         </div>
                       </div>
                     </td>
@@ -498,52 +501,65 @@ export function ParametersTableView({
                                         </tr>
                                       </thead>
                                     <tbody className="divide-y divide-blue-200 dark:divide-blue-900/20">
-                                      {kpis.map((kpi, kpiIndex) => (
-                                        <tr
-                                          key={kpiIndex}
-                                          className="hover:bg-blue-100 dark:hover:bg-blue-900/20 cursor-pointer"
-                                          onClick={() => {
-                                            setDrillDownKPI?.(kpi.name);
-                                            onKpiClick?.(kpi.name);
-                                          }}
-                                        >
-                                           <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
-                                            <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{(() => {
-                                              const raw = getProvincialAvgForKpi(kpi.name) || kpi.currentPeriod;
-                                              const num = parseFloat(String(raw));
-                                              if (isNaN(num)) return raw;
-                                              return Math.min(100, Math.max(0, num));
-                                            })()}%</td>
-                                              <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
-                                                   {kpi.institutionalAvg}
+                                       {kpis.map((kpi, kpiIndex) => (
+                                         <tr
+                                           key={kpiIndex}
+                                           className="hover:bg-blue-100 dark:hover:bg-blue-900/20 cursor-pointer"
+                                           onClick={() => {
+                                             setDrillDownKPI?.(kpi.name);
+                                             onKpiClick?.(kpi.name);
+                                           }}
+                                         >
+                                            <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
+                                             <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{isLoading ? 'calc..' : (() => {
+                                               const raw = getProvincialAvgForKpi(kpi.name) || kpi.currentPeriod;
+                                               const num = parseFloat(String(raw));
+                                               if (isNaN(num)) return raw;
+                                               return Math.min(100, Math.max(0, num));
+                                             })()}%</td>
+                                               <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
+                                                    {isLoading ? 'calc..' : kpi.institutionalAvg}
+                                              </td>
+                                             {param.name === 'Cash & Liquidity Management' && (
+                                               <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
+                                                  {isLoading ? 'calc..' : (kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` : '--')}
+                                               </td>
+                                             )}
+                                               <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">
+                                                  {isLoading ? 'calc..' : (kpi.name === 'Cash Position Score' && (typeof kpi.target === 'number' || /^\d+$/.test(String(kpi.target)))
+                                                    ? new Intl.NumberFormat('en-ZM', { style: 'currency', currency: 'ZMW', maximumFractionDigits: 0 }).format(typeof kpi.target === 'number' ? kpi.target : parseInt(String(kpi.target)))
+                                                    : kpi.name === 'Cash Position Score' && typeof kpi.target === 'object'
+                                                      ? `K${kpi.target.min.toLocaleString()} to K${kpi.target.max.toLocaleString()}`
+                                                      : typeof kpi.target === 'object'
+                                                        ? '--'
+                                                        : kpi.target)}
+                                               </td>
+                                           <td className="px-4 py-2 text-center">
+                                             {isLoading ? (
+                                               <div className="flex items-center justify-center gap-1">
+                                                 <span className={getTrendBadge('→')}>calc..</span>
+                                                 <span className="text-sm text-gray-400">calc..</span>
+                                               </div>
+                                             ) : (
+                                               <div className="flex items-center justify-center gap-1">
+                                                 <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
+                                                 <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
+                                               </div>
+                                             )}
+                                           </td>
+                                             <td className="px-4 py-2 text-center">
+                                               {isLoading ? (
+                                                 <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                                                   calc..
+                                                 </span>
+                                               ) : (
+                                                 <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>
+                                                   {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : kpi.status === 'excellent' ? 'EXCELLENT' : kpi.status === 'moderate' ? 'MODERATE' : kpi.status === 'bad' ? 'BAD' : 'CRITICAL'}
+                                                 </span>
+                                               )}
                                              </td>
-                                            {param.name === 'Cash & Liquidity Management' && (
-                                              <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
-                                                 {kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` : '--'}
-                                              </td>
-                                            )}
-                                              <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">
-                                                 {kpi.name === 'Cash Position Score' && (typeof kpi.target === 'number' || /^\d+$/.test(String(kpi.target)))
-                                                   ? new Intl.NumberFormat('en-ZM', { style: 'currency', currency: 'ZMW', maximumFractionDigits: 0 }).format(typeof kpi.target === 'number' ? kpi.target : parseInt(String(kpi.target)))
-                                                   : kpi.name === 'Cash Position Score' && typeof kpi.target === 'object'
-                                                     ? `K${kpi.target.min.toLocaleString()} to K${kpi.target.max.toLocaleString()}`
-                                                     : typeof kpi.target === 'object'
-                                                       ? '--'
-                                                       : kpi.target}
-                                              </td>
-                                          <td className="px-4 py-2 text-center">
-                                            <div className="flex items-center justify-center gap-1">
-                                              <span className={getTrendBadge(kpi.trend)}>{kpi.trend}</span>
-                                              <span className={`text-sm ${getVarianceColor(kpi.variance)}`}>{kpi.variance}</span>
-                                            </div>
-                                          </td>
-                                            <td className="px-4 py-2 text-center">
-                                              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getStatusBadge(kpi.status)}`}>
-                                                {kpi.status === 'good' ? 'GOOD' : kpi.status === 'warning' ? 'WARNING' : kpi.status === 'excellent' ? 'EXCELLENT' : kpi.status === 'moderate' ? 'MODERATE' : kpi.status === 'bad' ? 'BAD' : 'CRITICAL'}
-                                              </span>
-                                            </td>
-                                        </tr>
-                                      ))}
+                                         </tr>
+                                       ))}
                                     </tbody>
                                   </table>
                                 </div>
