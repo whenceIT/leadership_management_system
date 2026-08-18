@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useDistrict } from '@/hooks/useDistrict';
 import { useProvince } from '@/hooks/useProvince';
+import { useOffice } from '@/hooks/useOffice';
 import { calculateCashPositionScore, kpiConfigs, calculateProvinceInstitutionAvg } from './ProvinceInstitutionAvg';
 import { fetchDistrictStaffAdequacyPerformance } from '@/services/StaffAdequacyService';
 import { fetchDistrictProductivityAchievement } from '@/services/ProductivityAchievementService';
@@ -35,6 +36,7 @@ interface DistrictLevelViewProps {
 export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictClick, onBack }: DistrictLevelViewProps) {
   const { getDistrictsByProvince, loading: districtsLoading, error: districtsError } = useDistrict();
   const { getProvinceName } = useProvince();
+  const { offices } = useOffice();
   
   const provinceName = getProvinceName(selectedProvince);
   const districts = useMemo(() => getDistrictsByProvince(selectedProvince), [selectedProvince, getDistrictsByProvince]);
@@ -282,7 +284,7 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
       case 'Profitability Contribution':
         return ['District', 'Offices', 'Period', 'Co. Net Contrib', 'Avg Score', 'Weight', 'PP', 'Status'];
       case 'Portfolio Load Balance':
-        return ['District', 'Offices', 'Score', 'Target', 'Variance', 'Trend', 'Status'];
+        return ['District', 'Offices', 'Total Staff', 'Score', 'Target', 'Variance', 'Trend', 'Status'];
       case 'Growth Trajectory':
       case 'Cash Position Score':
         return ['District', 'Offices', 'Avg Score', 'PP', 'Status'];
@@ -447,51 +449,51 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                      const variance = varianceNum >= 0 ? `+${varianceNum.toFixed(2)}%` : `${varianceNum.toFixed(2)}%`;
                      const trend: '↑' | '↓' | '→' = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                     rowData = [
-                       district.name,
-                       officesCount,
-                       totalStaff,
-                       `${score.toFixed(2)}%`,
-                       target,
-                       <span className={getVarianceColor(variance)}>{variance}</span>,
-                       <span className={getTrendBadge(trend)}>{trend}</span>
-                     ];
-                     break;
-                   }
-                   case 'Vacancy Impact': {
-                     const score = parseFloat(data.average_normalized_score || '0') * 100;
-                     status = score <= 10 ? 'good' : score <= 20 ? 'warning' : 'critical';
-                     const target = '0%';
-                     const varianceNum = score - 0;
-                     const variance = `${varianceNum.toFixed(2)}%`;
-                     const trend: '↑' | '↓' | '→' = score <= 10 ? '↑' : score <= 20 ? '→' : '↓';
-                     rowData = [
-                       district.name,
-                       district.offices_count || 0,
-                       `${score.toFixed(2)}%`,
-                       target,
-                       <span className={getVarianceColor(variance)}>{variance}</span>,
-                       <span className={getTrendBadge(trend)}>{trend}</span>
-                     ];
-                     break;
-                   }
-                   case 'Portfolio Load Balance': {
-                     const score = parseFloat(data.average_score || '0');
-                     status = score >= 100 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                     const target = '100%';
-                     const varianceNum = score - 100;
-                     const variance = `${varianceNum >= 0 ? '+' : ''}${varianceNum.toFixed(2)}%`;
-                     const trend: '↑' | '↓' | '→' = score >= 100 ? '↑' : score >= 70 ? '→' : '↓';
-                     rowData = [
-                       district.name,
-                       district.offices_count || 0,
-                       `${score.toFixed(2)}%`,
-                       target,
-                       <span className={getVarianceColor(variance)}>{variance}</span>,
-                       <span className={getTrendBadge(trend)}>{trend}</span>
-                     ];
-                     break;
-                   }
+                      rowData = [
+                        district.name,
+                        officesCount,
+                        totalStaff,
+                        `${score.toFixed(2)}%`,
+                        target,
+                        <span key="variance" className={getVarianceColor(variance)}>{variance}</span>,
+                        <span key="trend" className={getTrendBadge(trend)}>{trend}</span>
+                      ];
+                      break;
+                    }
+                    case 'Vacancy Impact': {
+                      const score = parseFloat(data.average_normalized_score || '0') * 100;
+                      status = score <= 10 ? 'good' : score <= 20 ? 'warning' : 'critical';
+                      const target = '0%';
+                      const varianceNum = score - 0;
+                      const variance = `${varianceNum.toFixed(2)}%`;
+                      const trend: '↑' | '↓' | '→' = score <= 10 ? '↑' : score <= 20 ? '→' : '↓';
+                      rowData = [
+                        district.name,
+                        district.offices_count || 0,
+                        `${score.toFixed(2)}%`,
+                        target,
+                        <span key="variance" className={getVarianceColor(variance)}>{variance}</span>,
+                        <span key="trend" className={getTrendBadge(trend)}>{trend}</span>
+                      ];
+                      break;
+                    }
+                    case 'Portfolio Load Balance': {
+                      const score = parseFloat(data.average_score || '0');
+                      status = score >= 100 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                      const target = '100%';
+                      const varianceNum = score - 100;
+                      const variance = `${varianceNum >= 0 ? '+' : ''}${varianceNum.toFixed(2)}%`;
+                      const trend: '↑' | '↓' | '→' = score >= 100 ? '↑' : score >= 70 ? '→' : '↓';
+                      rowData = [
+                        district.name,
+                        district.offices_count || 0,
+                        `${score.toFixed(2)}%`,
+                        target,
+                        <span key="variance" className={getVarianceColor(variance)}>{variance}</span>,
+                        <span key="trend" className={getTrendBadge(trend)}>{trend}</span>
+                      ];
+                      break;
+                    }
                   case 'Volume Achievement': {
                     const score = parseFloat(data.average_normalized_score || '0');
                     status = score >= 100 ? 'good' : score >= 80 ? 'warning' : 'critical';
@@ -651,23 +653,26 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                       ];
                      break;
                     }
-                   case 'Portfolio Load Balance': {
-                     const score = parseFloat(data.average_score || '0');
-                     status = score >= 100 ? 'good' : score >= 70 ? 'warning' : 'critical';
-                     const target = 'K300k-K380k';
-                     const varianceNum = score - 100;
-                     const variance = `${varianceNum >= 0 ? '+' : ''}${varianceNum.toFixed(2)}%`;
-                     const trend: '↑' | '↓' | '→' = score >= 100 ? '↑' : score >= 70 ? '→' : '↓';
-                     rowData = [
-                       district.name,
-                       district.offices_count || 0,
-                       `${score.toFixed(2)}%`,
-                       target,
-                       <span className={getVarianceColor(variance)}>{variance}</span>,
-                       <span className={getTrendBadge(trend)}>{trend}</span>
-                     ];
-                     break;
-                   }
+                    case 'Portfolio Load Balance': {
+                      const districtOffices = offices.filter(o => String(o.districtId) === String(district.id));
+                      const totalStaff = districtOffices.reduce((sum, office) => sum + (office.user_count || 0), 0);
+                      const score = data?.average_score ? parseFloat(data.average_score) : 0;
+                      status = score >= 100 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                      const target = 'K300k-K380k';
+                      const varianceNum = score - 100;
+                      const variance = `${varianceNum >= 0 ? '+' : ''}${varianceNum.toFixed(2)}%`;
+                      const trend: '↑' | '↓' | '→' = score >= 100 ? '↑' : score >= 70 ? '→' : '↓';
+                       rowData = [
+                         district.name,
+                         district.offices_count || 0,
+                         totalStaff,
+                         `${score.toFixed(2)}%`,
+                         target,
+                         <span key="variance" className={getVarianceColor(variance)}>{variance}</span>,
+                         <span key="trend" className={getTrendBadge(trend)}>{trend}</span>
+                       ];
+                       break;
+                     }
                   default:
                     rowData = [district.name, 'No Data', '--'];
                 }

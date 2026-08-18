@@ -247,6 +247,20 @@ function calculateSimpleAverage(values: (number | null)[]): number | null {
   return valid.reduce((sum, v) => sum + v, 0) / valid.length;
 }
 
+function calculateHeadlineCurrentAverage(parameters: ParameterSummary[]): number {
+  const values = parameters.map(param => parseInstitutionalAvg(param.institutionalAvg)).filter((v): v is number => v !== null);
+  
+  console.log("Institutional Avg values:", values);
+  const avg = calculateSimpleAverage(values);
+  return avg !== null ? Number(avg.toFixed(2)) : 0;
+}
+
+function calculateHeadlineUserLevelAverage(parameters: ParameterSummary[]): number {
+  const values = parameters.map(param => parseInstitutionalAvg(param.userLevelAvg)).filter((v): v is number => v !== null);
+  const avg = calculateSimpleAverage(values);
+  return avg !== null ? Number(avg.toFixed(2)) : 0;
+}
+
 export function getInstitutionalSummaryData(userLevel: 'institution' | 'province' | 'district' | 'branch' | 'consultant', userLevelLabel: string,
   staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, loanPortfolioLoadData?: any,
   volumeAchievementData?: any, collectionEfficiencyData?: any, efficiencyRatioData?: any, growthTrajectoryData?: any,
@@ -437,9 +451,8 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
     }
   ];
 
-  const instAvgValuesForOverall = baseParameters.map(param => parseInstitutionalAvg(param.institutionalAvg)).filter((v): v is number => v !== null);
-  const overallScore = instAvgValuesForOverall.length === 6 ? Number((instAvgValuesForOverall.reduce((a, b) => a + b, 0) / instAvgValuesForOverall.length).toFixed(2)) : 0;
-  const overallInstAvg = overallScore;
+  const overallScore = calculateHeadlineCurrentAverage(baseParameters);
+  const overallInstAvg = calculateHeadlineUserLevelAverage(baseParameters);
 
   // Calculate overall target (assuming target is ≥90% for all parameters)
   const overallTarget = 90;
@@ -1418,84 +1431,110 @@ export function InstitutionalHealthSummary({
               <p className="text-white font-semibold mt-0.5">{userLevelLabel}</p>
             </div>
             <div className="text-right">
-              <div className="flex items-center justify-end gap-3 mb-1">
-                {prevMonthScores && prevMonthScores.length === 3 && (
-                  <>
-                    <span className="text-2xl font-bold text-gray-400 opacity-40">
-                      {prevMonthScores[0].score}%
-                    </span>
-                    <span className="text-xs text-gray-500 opacity-40">{prevMonthScores[0].label}</span>
-                    <span className="text-2xl font-bold text-gray-400 opacity-50">
-                      {prevMonthScores[1].score}%
-                    </span>
-                    <span className="text-xs text-gray-500 opacity-50">{prevMonthScores[1].label}</span>
-                    <span className="text-3xl font-bold text-gray-400 opacity-60">
-                      {prevMonthScores[2].score}%
-                    </span>
-                    <span className="text-xs text-gray-500 opacity-60">{prevMonthScores[2].label}</span>
-                  </>
-                )}
-                <span className={`text-xs font-medium ${
-                  overallScore >= (prevMonthScores?.[2]?.score ?? 0)
-                    ? 'text-green-400'
-                    : 'text-red-400'
-                }`}>
-                  {overallScore >= (prevMonthScores?.[2]?.score ?? 0) ? '▲' : '▼'}
-                  {Math.abs(overallScore - (prevMonthScores?.[2]?.score ?? 0))}%
-                </span>
-                <span className="text-4xl font-black text-white">{overallScore}%</span>
-              </div>
-              <p className="text-gray-400 text-xs">Overall Health Score</p>
-              {prevMonthScores && prevMonthScores.length === 3 && (
-                <p className="text-xs text-gray-500 opacity-60">
-                  Previous: {prevMonthScores[2].score}% ({prevMonthScores[2].label}) · Avg: {Math.round((prevMonthScores[0].score + prevMonthScores[1].score + prevMonthScores[2].score) / 3)}% (3-month)
-                </p>
-              )}
+               <div className="flex items-center justify-end gap-3 mb-1">
+                 {prevMonthScores && prevMonthScores.length === 3 && (
+                   <>
+                     <span className="text-2xl font-bold text-gray-400 opacity-40">
+                       {prevMonthScores[0].score}%
+                     </span>
+                     <span className="text-xs text-gray-500 opacity-40">{prevMonthScores[0].label}</span>
+                     <span className="text-2xl font-bold text-gray-400 opacity-50">
+                       {prevMonthScores[1].score}%
+                     </span>
+                     <span className="text-xs text-gray-500 opacity-50">{prevMonthScores[1].label}</span>
+                     <span className="text-3xl font-bold text-gray-400 opacity-60">
+                       {prevMonthScores[2].score}%
+                     </span>
+                     <span className="text-xs text-gray-500 opacity-60">{prevMonthScores[2].label}</span>
+                   </>
+                 )}
+                 {isLoading ? (
+                   <span className="text-xs font-medium text-gray-400">calc..</span>
+                 ) : (
+                   <span className={`text-xs font-medium ${
+                     overallScore >= (prevMonthScores?.[2]?.score ?? 0)
+                       ? 'text-green-400'
+                       : 'text-red-400'
+                   }`}>
+                     {overallScore >= (prevMonthScores?.[2]?.score ?? 0) ? '▲' : '▼'}
+                     {Math.abs(overallScore - (prevMonthScores?.[2]?.score ?? 0))}%
+                   </span>
+                 )}
+                 {isLoading ? (
+                   <span className="text-4xl font-black text-white animate-pulse">calc..</span>
+                 ) : (
+                   <span className="text-4xl font-black text-white">{overallScore}%</span>
+                 )}
+               </div>
+               <p className="text-gray-400 text-xs">{isLoading ? 'Calculating...' : 'Overall Health Score'}</p>
+               {!isLoading && prevMonthScores && prevMonthScores.length === 3 && (
+                 <p className="text-xs text-gray-500 opacity-60">
+                   Previous: {prevMonthScores[2].score}% ({prevMonthScores[2].label}) · Avg: {Math.round((prevMonthScores[0].score + prevMonthScores[1].score + prevMonthScores[2].score) / 3)}% (3-month)
+                 </p>
+               )}
             </div>
           </div>
           {overallInstAvg !== undefined && overallTarget !== undefined && (
             <div className="grid grid-cols-3 gap-4 text-center mt-3 pt-3 border-t border-gray-700">
               <div>
                 <p className="text-gray-400 text-xs">Current Average</p>
-                <p className="text-white font-bold">{overallScore}%</p>
-                {/* Indicator for comparison with Institutional Avg */}
-                <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${overallScore >= overallInstAvg
-                  ? 'bg-green-900/50 text-green-300'
-                  : 'bg-red-900/50 text-red-300'
-                  }`}>
-                  <span className="mr-1">{overallScore >= overallInstAvg ? '▲' : '▼'}</span>
-                  <span>
-                    {overallScore >= overallInstAvg
-                      ? `+${overallScore - overallInstAvg}%`
-                      : `${overallScore - overallInstAvg}%`}
-                  </span>
-                </div>
+                {isLoading ? (
+                  <p className="text-white font-bold animate-pulse">calc..</p>
+                ) : (
+                  <>
+                    <p className="text-white font-bold">{overallScore}%</p>
+                    {/* Indicator for comparison with Institutional Avg */}
+                    <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${overallScore >= overallInstAvg
+                      ? 'bg-green-900/50 text-green-300'
+                      : 'bg-red-900/50 text-red-300'
+                      }`}>
+                      <span className="mr-1">{overallScore >= overallInstAvg ? '▲' : '▼'}</span>
+                      <span>
+                        {overallScore >= overallInstAvg
+                          ? `+${overallScore - overallInstAvg}%`
+                          : `${overallScore - overallInstAvg}%`}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
               <div>
                 <p className="text-gray-400 text-xs">Institutional Operating Average<br/>(Benchmark)</p>
-                <p className={`font-bold ${overallScore >= overallInstAvg ? 'text-green-400' : 'text-red-400'}`}>{overallInstAvg}%</p>
+                {isLoading ? (
+                  <p className="text-white font-bold animate-pulse">calc..</p>
+                ) : (
+                  <p className={`font-bold ${overallScore >= overallInstAvg ? 'text-green-400' : 'text-red-400'}`}>{overallInstAvg}%</p>
+                )}
                 {/* Show variance */}
-                <p className="text-xs text-gray-500 mt-1">
-                  {overallScore >= overallInstAvg
-                    ? `+${overallScore - overallInstAvg}% above`
-                    : `${overallScore - overallInstAvg}% below`}
-                </p>
+                {!isLoading && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {overallScore >= overallInstAvg
+                      ? `+${overallScore - overallInstAvg}% above`
+                      : `${overallScore - overallInstAvg}% below`}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="text-gray-400 text-xs">Target</p>
-                <p className="text-gray-300 font-bold">{overallTarget}%</p>
+                {isLoading ? (
+                  <p className="text-white font-bold animate-pulse">calc..</p>
+                ) : (
+                  <p className="text-gray-300 font-bold">{overallTarget}%</p>
+                )}
                 {/* Indicator for comparison with Target */}
-                <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${overallScore >= overallTarget
-                  ? 'bg-green-900/50 text-green-300'
-                  : 'bg-yellow-900/50 text-yellow-300'
-                  }`}>
-                  <span className="mr-1">{overallScore >= overallTarget ? '▲' : '▼'}</span>
-                  <span>
-                    {overallScore >= overallTarget
-                      ? `+${overallScore - overallTarget}%`
-                      : `${overallScore - overallTarget}%`}
-                  </span>
-                </div>
+                {!isLoading && (
+                  <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${overallScore >= overallTarget
+                    ? 'bg-green-900/50 text-green-300'
+                    : 'bg-yellow-900/50 text-yellow-300'
+                    }`}>
+                    <span className="mr-1">{overallScore >= overallTarget ? '▲' : '▼'}</span>
+                    <span>
+                      {overallScore >= overallTarget
+                        ? `+${overallScore - overallTarget}%`
+                        : `${overallScore - overallTarget}%`}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1603,9 +1642,10 @@ export function InstitutionalHealthSummary({
              yieldAchievementsData={yieldAchievementsData}
              revenueAchievementsData={revenueAchievementsData}
              profitabilityContributionData={profitabilityContributionData}
-            cashPositionData={cashPositionData}
-            suggestions={suggestions}
-            />
+             cashPositionData={cashPositionData}
+             suggestions={suggestions}
+             isLoading={isLoading}
+              />
      </div>
     
   );

@@ -203,37 +203,46 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick, onInstitutionA
                 let variance = '0';
                 let trend: '↑' | '↓' | '→' = '→';
                 let status: 'good' | 'warning' | 'critical' = 'warning';
-                 let actualLcs = data ? (data.total_staff || data.actual_lcs || 0) : 0;
-                let officesCount = 0;
-
+                 let actualLcs = 0;
                  if (data) {
-                    officesCount = data.offices_count || 0;
+                   if (selectedKPI === 'Vacancy Impact') {
+                     const authorizedPositions = data.authorized_positions || data.authorized_positions_per_office || 0;
+                     const officesCount = data.offices_count || 0;
+                     const totalAuthorized = authorizedPositions > 0 ? authorizedPositions : (officesCount * (data.authorized_positions_per_office || 0));
+                     const vacancies = typeof data.vacancies === 'number' ? data.vacancies : 0;
+                     actualLcs = Math.max(0, totalAuthorized - vacancies);
+                   }
+                   
+                   if (!actualLcs) {
+                     actualLcs = data.total_staff || data.actual_lcs || data.total_actual_lcs || 0;
+                   }
+                   
+                   if (!actualLcs) {
+                     if (Array.isArray(data)) {
+                       actualLcs = data.reduce((sum: number, branch: any) => sum + (branch.actual_lcs || branch.total_staff || 0), 0);
+                     } else if (data.branches) {
+                       actualLcs = data.branches.reduce((sum: number, branch: any) => sum + (branch.actual_lcs || branch.total_staff || 0), 0);
+                     }
+                   }
+                 }
+                  let officesCount = 0;
 
-                    if (!actualLcs) {
-                      if (Array.isArray(data)) {
-                        actualLcs = data.reduce((sum: number, branch: any) => sum + (branch.actual_lcs || 0), 0);
-                      } else if (data.branches) {
-                        actualLcs = data.branches.reduce((sum: number, branch: any) => sum + (branch.actual_lcs || 0), 0);
-                      } else if (data.total_actual_lcs) {
-                        actualLcs = data.total_actual_lcs;
-                      } else if (data.actual_lcs) {
-                        actualLcs = data.actual_lcs;
-                      }
-                    }
+                  if (data) {
+                     officesCount = data.offices_count || 0;
 
-                    const config = kpiConfigs[selectedKPI || ''];
-                    if (config) {
-                      const rawValue = config.getValue(data);
-                      if (!isNaN(rawValue)) {
-                        const targetValue = config.getTarget(data);
-                        currentPeriod = config.formatValue(rawValue);
-                        variance = config.formatVariance(rawValue - targetValue);
-                        trend = config.getTrend(rawValue, targetValue);
-                        status = config.getStatus(rawValue, targetValue);
-                      }
-                      target = config.displayTarget(data);
-                    } else {
-                      currentPeriod = '0';
+                     const config = kpiConfigs[selectedKPI || ''];
+                     if (config) {
+                       const rawValue = config.getValue(data);
+                       if (!isNaN(rawValue)) {
+                         const targetValue = config.getTarget(data);
+                         currentPeriod = config.formatValue(rawValue);
+                         variance = config.formatVariance(rawValue - targetValue);
+                         trend = config.getTrend(rawValue, targetValue);
+                         status = config.getStatus(rawValue, targetValue);
+                       }
+                       target = config.displayTarget(data);
+                     } else {
+                       currentPeriod = '0';
                       target = '100%';
                       variance = '0';
                       trend = '→';

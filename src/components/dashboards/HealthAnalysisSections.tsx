@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react';
 import { Suggestion } from '@/lib/kpiThresholds';
-import SuggestionsCarousel from './SuggestionsCarousel';
 
 export interface RecommendedAction {
   timeframe: 'immediate' | '7days' | '30days';
@@ -40,6 +39,7 @@ interface HealthAnalysisSectionsProps {
   belowThresholdRiskData?: any;
   approvedExceptionRatioData?: any;
   suggestions?: Suggestion[];
+  isLoading?: boolean;
 }
 
 const SEVERITY_RANK: Record<Suggestion['severity'], number> = {
@@ -80,6 +80,7 @@ function HealthAnalysisSections({
   belowThresholdRiskData,
   approvedExceptionRatioData,
   suggestions = [],
+  isLoading = false,
 }: HealthAnalysisSectionsProps) {
   // Derive recommended actions automatically from the centralised suggestions engine.
   // This covers every headline + supporting KPI with no hardcoded figures.
@@ -115,6 +116,27 @@ function HealthAnalysisSections({
 
   // Render KPI threshold-based suggestions (fully automatic across all headline + supporting metrics)
   const renderKPISuggestions = () => {
+    if (isLoading) {
+      return (
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-purple-200 dark:border-purple-800 md:col-span-2">
+          <h4 className="text-sm font-semibold text-purple-600 dark:text-purple-400 mb-3">
+            🎯 KPI THRESHOLD SUGGESTIONS
+          </h4>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-3 rounded-lg border-l-4 border-gray-200 dark:border-gray-700">
+                <div className="animate-pulse space-y-2">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     const critical = suggestions.filter((s) => s.severity === 'critical');
     const warnings = suggestions.filter((s) => s.severity === 'warning');
     const infos = suggestions.filter((s) => s.severity === 'info');

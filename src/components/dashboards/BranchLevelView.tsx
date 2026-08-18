@@ -702,7 +702,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                          <>
                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
                            <td className="px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white">{kpiValue.current}</td>
-                           <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{selectedKPI === 'Staff Adequacy Score' ? (kpiValue.totalStaff || kpiValue.actualLcs || '--') : (branch.user_count > 0 ? branch.user_count : '--')}</td>
+                            <td className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400">{selectedKPI === 'Staff Adequacy Score' || selectedKPI === 'Portfolio Load Balance' ? (kpiValue.totalStaff || kpiValue.actualLcs || '--') : (branch.user_count > 0 ? branch.user_count : '--')}</td>
                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{kpiValue.target}</td>
                            <td className="px-4 py-2 text-sm">
                              <span className={`${getVarianceColor(kpiValue.variance)}`}>{kpiValue.variance}</span>

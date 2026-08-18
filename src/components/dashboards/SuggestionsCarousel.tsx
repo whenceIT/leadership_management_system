@@ -6,9 +6,10 @@ import { Suggestion } from '@/lib/kpiThresholds';
 interface SuggestionsCarouselProps {
   suggestions: Suggestion[];
   autoSlideInterval?: number;
+  isLoading?: boolean;
 }
 
-export default function SuggestionsCarousel({ suggestions, autoSlideInterval = 4000 }: SuggestionsCarouselProps) {
+export default function SuggestionsCarousel({ suggestions, autoSlideInterval = 4000, isLoading = false }: SuggestionsCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -34,7 +35,7 @@ export default function SuggestionsCarousel({ suggestions, autoSlideInterval = 4
     return () => clearInterval(timer);
   }, [visibleSuggestions.length, isPaused, autoSlideInterval, goNext]);
 
-  if (visibleSuggestions.length === 0) return null;
+  if (visibleSuggestions.length === 0 && !isLoading) return null;
 
   const current = visibleSuggestions[currentIndex];
 
@@ -49,6 +50,30 @@ export default function SuggestionsCarousel({ suggestions, autoSlideInterval = 4
     warning: '🟠',
     info: '🔵',
   };
+
+  if (isLoading) {
+    return (
+      <div
+        className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-purple-200 dark:border-purple-800"
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold text-purple-600 dark:text-purple-400">
+            🎯 KPI THRESHOLD SUGGESTIONS
+          </h4>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 dark:text-gray-400">calc..</span>
+          </div>
+        </div>
+        <div className="p-3 rounded-lg border-l-4 border-gray-200 dark:border-gray-700">
+          <div className="animate-pulse space-y-2">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

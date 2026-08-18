@@ -310,14 +310,14 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-              Consultant Performance
-            </p>
-            <h2 className="text-xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">
-              {officeName || 'Branch'}
-            </h2>
-          </div>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+                {selectedKPI === 'Vacancy Impact' ? 'Vacancy Impact - Score' : 'Consultant Performance'}
+              </p>
+              <h2 className="text-xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">
+                {officeName || 'Branch'}
+              </h2>
+            </div>
         </div>
 
         <div className="flex items-center gap-2 sm:pl-12">
@@ -420,9 +420,13 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
             </span>
           </div>
           <span className="mt-1 inline-block text-xs text-gray-500 dark:text-gray-400">
-            {selectedKPI.includes('Productivity Achievement') || selectedKPI === 'Productivity Achievement Score'
-              ? 'Productivity Achievement'
-              : 'Avg. Target Achievement'}
+            {selectedKPI === 'Vacancy Impact'
+              ? 'Vacancy Impact Score'
+              : selectedKPI === 'Portfolio Load Balance'
+                ? 'Portfolio Load Balance Score'
+                : selectedKPI.includes('Productivity Achievement') || selectedKPI === 'Productivity Achievement Score'
+                  ? 'Productivity Achievement'
+                  : 'Avg. Target Achievement'}
           </span>
         </div>
       </div>
@@ -460,35 +464,35 @@ export function ConsultantLevelView({ officeId, selectedKPI, onBack }: Consultan
         </div>
        )}
  
-       {branchProductivity && (
-         <div className={`mb-3 flex items-center gap-3 rounded-xl p-2 ${
-           branchProductivity.meetsTarget
-             ? 'border-l-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/10'
-             : 'border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10'
-         }`}>
-           <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-             branchProductivity.meetsTarget ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-amber-100 dark:bg-amber-900/40'
-           }`}>
-             {branchProductivity.meetsTarget ? (
-               <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 0 0118 0z" />
-               </svg>
-             ) : (
-               <svg className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-               </svg>
-             )}
-           </div>
-            <div className="text-sm">
-              <span className={`font-bold ${branchProductivity.meetsTarget ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>
-                {branchProductivity.meetsTarget ? 'Productivity target achieved' : 'Below productivity target'}
-              </span>
-              <span className="ml-1.5 text-gray-600 dark:text-gray-400">
-                Average disbursement per LC is K{Math.round(branchProductivity.avgDisbursedPerLC).toLocaleString()} ({branchProductivity.achievement.toFixed(1)}% of K40,000 target).
-              </span>
+        {(selectedKPI === 'Productivity Achievement' || selectedKPI === 'Productivity Achievement Score') && branchProductivity && (
+          <div className={`mb-3 flex items-center gap-3 rounded-xl p-2 ${
+            branchProductivity.meetsTarget
+              ? 'border-l-emerald-500 bg-emerald-50/60 dark:bg-emerald-900/10'
+              : 'border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10'
+          }`}>
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+              branchProductivity.meetsTarget ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-amber-100 dark:bg-amber-900/40'
+            }`}>
+              {branchProductivity.meetsTarget ? (
+                <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              )}
             </div>
-          </div>
-        )}
+             <div className="text-sm">
+               <span className={`font-bold ${branchProductivity.meetsTarget ? 'text-emerald-800 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-300'}`}>
+                 {branchProductivity.meetsTarget ? 'Productivity target achieved' : 'Below productivity target'}
+               </span>
+               <span className="ml-1.5 text-gray-600 dark:text-gray-400">
+                 Average disbursement per LC is K{Math.round(branchProductivity.avgDisbursedPerLC).toLocaleString()} ({branchProductivity.achievement.toFixed(1)}% of K40,000 target).
+               </span>
+             </div>
+           </div>
+         )}
 
          {(selectedKPI === 'Productivity Achievement' || selectedKPI === 'Productivity Achievement Score') && (
            <div className="mt-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-900 dark:bg-blue-900/20">
