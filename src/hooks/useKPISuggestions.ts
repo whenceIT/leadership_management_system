@@ -377,21 +377,27 @@ export function useKPISuggestions(input: UseKPISuggestionsInput): UseKPISuggesti
       ...(input.otherMetrics || []),
     ];
 
-    if (input.volumeAchievementData) otherMetrics.push({ name: 'Volume Achievement', data: input.volumeAchievementData, location });
-    if (input.collectionEfficiencyData) otherMetrics.push({ name: 'Collections efficiency', data: input.collectionEfficiencyData, location });
-    if (input.efficiencyRatioData) otherMetrics.push({ name: 'Efficiency Ratio (CIR)', data: input.efficiencyRatioData, location });
-    if (input.growthTrajectoryData) otherMetrics.push({ name: 'Growth trajectory alignment', data: input.growthTrajectoryData, location });
-    if (input.longTermDelinquencyData) otherMetrics.push({ name: 'Long-Term Delinquency', data: input.longTermDelinquencyData, location });
-    if (input.month1DefaultPerformanceData) otherMetrics.push({ name: 'Month-1 Default Performance', data: input.month1DefaultPerformanceData, location });
-    if (input.month3RecoveryAchievementsData) otherMetrics.push({ name: '3-Month Recovery Achievements', data: input.month3RecoveryAchievementsData, location });
-    if (input.portfolioQualityData) otherMetrics.push({ name: 'Portfolio Quality', data: input.portfolioQualityData, location });
-    if (input.productDiversificationData) otherMetrics.push({ name: 'Product Diversification', data: input.productDiversificationData, location });
-    if (input.productRiskScoreData) otherMetrics.push({ name: 'Product Risk Score', data: input.productRiskScoreData, location });
-    if (input.rollRateControlData) otherMetrics.push({ name: 'Roll Rate Control', data: input.rollRateControlData, location });
-    if (input.yieldAchievementsData) otherMetrics.push({ name: 'Yield Achievements', data: input.yieldAchievementsData, location });
-    if (input.revenueAchievementsData) otherMetrics.push({ name: 'Revenue Achievements', data: input.revenueAchievementsData, location });
-    if (input.profitabilityContributionData) otherMetrics.push({ name: 'Profitability Contribution', data: input.profitabilityContributionData, location });
-    if (input.cashPositionData) otherMetrics.push({ name: 'Cash Position Score', data: input.cashPositionData, location });
+    const addIfMissing = (name: string, data: any, location?: SuggestionLocation) => {
+      if (!otherMetrics.find((m) => m.name === name)) {
+        otherMetrics.push({ name, data, location });
+      }
+    };
+
+    if (input.volumeAchievementData) addIfMissing('Volume Achievement', input.volumeAchievementData, location);
+    if (input.collectionEfficiencyData) addIfMissing('Collections efficiency', input.collectionEfficiencyData, location);
+    if (input.efficiencyRatioData) addIfMissing('Efficiency Ratio (CIR)', input.efficiencyRatioData, location);
+    if (input.growthTrajectoryData) addIfMissing('Growth trajectory alignment', input.growthTrajectoryData, location);
+    if (input.longTermDelinquencyData) addIfMissing('Long-Term Delinquency', input.longTermDelinquencyData, location);
+    if (input.month1DefaultPerformanceData) addIfMissing('Month-1 Default Performance', input.month1DefaultPerformanceData, location);
+    if (input.month3RecoveryAchievementsData) addIfMissing('3-Month Recovery Achievements', input.month3RecoveryAchievementsData, location);
+    if (input.portfolioQualityData) addIfMissing('Portfolio Quality', input.portfolioQualityData, location);
+    if (input.productDiversificationData) addIfMissing('Product Diversification', input.productDiversificationData, location);
+    if (input.productRiskScoreData) addIfMissing('Product Risk Score', input.productRiskScoreData, location);
+    if (input.rollRateControlData) addIfMissing('Roll Rate Control', input.rollRateControlData, location);
+    if (input.yieldAchievementsData) addIfMissing('Yield Achievements', input.yieldAchievementsData, location);
+    if (input.revenueAchievementsData) addIfMissing('Revenue Achievements', input.revenueAchievementsData, location);
+    if (input.profitabilityContributionData) addIfMissing('Profitability Contribution', input.profitabilityContributionData, location);
+    if (input.cashPositionData) addIfMissing('Cash Position Score', input.cashPositionData, location);
 
     const evaluateInput: EvaluateInput = {
       measurements,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { KPIStatus, KPITrend, ParameterSummary, KPI } from '@/types/dashboard';
 import HealthAnalysisSections from './HealthAnalysisSections';
 import { ProvinceLevelView } from './ProvinceLevelView';
@@ -248,15 +248,25 @@ function calculateSimpleAverage(values: (number | null)[]): number | null {
 }
 
 function calculateHeadlineCurrentAverage(parameters: ParameterSummary[]): number {
-  const values = parameters.map(param => parseInstitutionalAvg(param.institutionalAvg)).filter((v): v is number => v !== null);
-  
-  console.log("Institutional Avg values:", values);
+  const values = parameters.map(param => {
+    const raw = param.institutionalAvg || '--';
+    if (raw === '--') return null;
+    const num = parseFloat(raw.replace('%', ''));
+    if (isNaN(num)) return null;
+    return Math.min(100, Math.max(0, num));
+  }).filter((v): v is number => v !== null);
   const avg = calculateSimpleAverage(values);
   return avg !== null ? Number(avg.toFixed(2)) : 0;
 }
 
-function calculateHeadlineUserLevelAverage(parameters: ParameterSummary[]): number {
-  const values = parameters.map(param => parseInstitutionalAvg(param.userLevelAvg)).filter((v): v is number => v !== null);
+function calculateHeadlineInstitutionalAverage(parameters: ParameterSummary[]): number {
+  const values = parameters.map(param => {
+    const raw = param.userLevelAvg || '--';
+    if (raw === '--') return null;
+    const num = parseFloat(raw.replace('%', ''));
+    if (isNaN(num)) return null;
+    return Math.min(100, Math.max(0, num));
+  }).filter((v): v is number => v !== null);
   const avg = calculateSimpleAverage(values);
   return avg !== null ? Number(avg.toFixed(2)) : 0;
 }
@@ -452,7 +462,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
   ];
 
   const overallScore = calculateHeadlineCurrentAverage(baseParameters);
-  const overallInstAvg = calculateHeadlineUserLevelAverage(baseParameters);
+  const overallInstAvg = calculateHeadlineInstitutionalAverage(baseParameters);
 
   // Calculate overall target (assuming target is ≥90% for all parameters)
   const overallTarget = 90;
@@ -1352,7 +1362,7 @@ export function InstitutionalHealthSummary({
     cashPositionData,
     isLoading = false,
     provincialAverages
-    }: InstitutionalHealthSummaryProps) {
+   }: InstitutionalHealthSummaryProps) {
     const [expandedParam, setExpandedParam] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'composite' | 'metrics'>('metrics');
   const [selectedKPI, setSelectedKPI] = useState<string | null>(null);
@@ -1361,6 +1371,33 @@ export function InstitutionalHealthSummary({
   const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<number | null>(null);
    const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
+   const [delayedOverallScore, setDelayedOverallScore] = useState<number | null>(null);
+   const [delayedOverallInstAvg, setDelayedOverallInstAvg] = useState<number | null>(null);
+   const calcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+   const isCalculating = !isLoading && delayedOverallScore === null;
+
+   useEffect(() => {
+     if (calcTimerRef.current) {
+       clearTimeout(calcTimerRef.current);
+       calcTimerRef.current = null;
+     }
+
+     if (!isLoading) {
+       calcTimerRef.current = setTimeout(() => {
+         setDelayedOverallScore(calculateHeadlineCurrentAverage(parameters));
+         setDelayedOverallInstAvg(calculateHeadlineInstitutionalAverage(parameters));
+         calcTimerRef.current = null;
+       }, 3000);
+     }
+
+     return () => {
+       if (calcTimerRef.current) {
+         clearTimeout(calcTimerRef.current);
+         calcTimerRef.current = null;
+       }
+     };
+   }, [isLoading, parameters]);
 
    const otherMetrics = useMemo(() => [
      { name: 'Volume Achievement', data: volumeAchievementData },
@@ -1448,51 +1485,51 @@ export function InstitutionalHealthSummary({
                      <span className="text-xs text-gray-500 opacity-60">{prevMonthScores[2].label}</span>
                    </>
                  )}
-                 {isLoading ? (
-                   <span className="text-xs font-medium text-gray-400">calc..</span>
-                 ) : (
-                   <span className={`text-xs font-medium ${
-                     overallScore >= (prevMonthScores?.[2]?.score ?? 0)
-                       ? 'text-green-400'
-                       : 'text-red-400'
-                   }`}>
-                     {overallScore >= (prevMonthScores?.[2]?.score ?? 0) ? '▲' : '▼'}
-                     {Math.abs(overallScore - (prevMonthScores?.[2]?.score ?? 0))}%
-                   </span>
-                 )}
-                 {isLoading ? (
-                   <span className="text-4xl font-black text-white animate-pulse">calc..</span>
-                 ) : (
-                   <span className="text-4xl font-black text-white">{overallScore}%</span>
-                 )}
-               </div>
-               <p className="text-gray-400 text-xs">{isLoading ? 'Calculating...' : 'Overall Health Score'}</p>
-               {!isLoading && prevMonthScores && prevMonthScores.length === 3 && (
-                 <p className="text-xs text-gray-500 opacity-60">
-                   Previous: {prevMonthScores[2].score}% ({prevMonthScores[2].label}) · Avg: {Math.round((prevMonthScores[0].score + prevMonthScores[1].score + prevMonthScores[2].score) / 3)}% (3-month)
-                 </p>
-               )}
+                  {isLoading || isCalculating ? (
+                    <span className="text-xs font-medium text-gray-400">calc..</span>
+                  ) : (
+                    <span className={`text-xs font-medium ${
+                      (delayedOverallScore ?? overallScore) >= (prevMonthScores?.[2]?.score ?? 0)
+                        ? 'text-green-400'
+                        : 'text-red-400'
+                    }`}>
+                      {(delayedOverallScore ?? overallScore) >= (prevMonthScores?.[2]?.score ?? 0) ? '▲' : '▼'}
+                      {Math.abs((delayedOverallScore ?? overallScore) - (prevMonthScores?.[2]?.score ?? 0))}%
+                    </span>
+                  )}
+                  {isLoading || isCalculating ? (
+                    <span className="text-4xl font-black text-white animate-pulse">calc..</span>
+                  ) : (
+                    <span className="text-4xl font-black text-white">{delayedOverallScore ?? overallScore}%</span>
+                  )}
+                </div>
+                <p className="text-gray-400 text-xs">{isLoading || isCalculating ? 'Calculating...' : 'Overall Health Score'}</p>
+                {!isLoading && !isCalculating && prevMonthScores && prevMonthScores.length === 3 && (
+                  <p className="text-xs text-gray-500 opacity-60">
+                    Previous: {prevMonthScores[2].score}% ({prevMonthScores[2].label}) · Avg: {Math.round((prevMonthScores[0].score + prevMonthScores[1].score + prevMonthScores[2].score) / 3)}% (3-month)
+                  </p>
+                )}
             </div>
           </div>
           {overallInstAvg !== undefined && overallTarget !== undefined && (
-            <div className="grid grid-cols-3 gap-4 text-center mt-3 pt-3 border-t border-gray-700">
+             <div className="grid grid-cols-3 gap-4 text-center mt-3 pt-3 border-t border-gray-700">
               <div>
                 <p className="text-gray-400 text-xs">Current Average</p>
-                {isLoading ? (
+                {isLoading || isCalculating ? (
                   <p className="text-white font-bold animate-pulse">calc..</p>
                 ) : (
                   <>
-                    <p className="text-white font-bold">{overallScore}%</p>
+                    <p className="text-white font-bold">{(delayedOverallScore ?? overallScore)}%</p>
                     {/* Indicator for comparison with Institutional Avg */}
-                    <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${overallScore >= overallInstAvg
+                    <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg)
                       ? 'bg-green-900/50 text-green-300'
                       : 'bg-red-900/50 text-red-300'
                       }`}>
-                      <span className="mr-1">{overallScore >= overallInstAvg ? '▲' : '▼'}</span>
+                      <span className="mr-1">{(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg) ? '▲' : '▼'}</span>
                       <span>
-                        {overallScore >= overallInstAvg
-                          ? `+${overallScore - overallInstAvg}%`
-                          : `${overallScore - overallInstAvg}%`}
+                        {(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg)
+                          ? `+${(delayedOverallScore ?? overallScore) - (delayedOverallInstAvg ?? overallInstAvg)}%`
+                          : `${(delayedOverallScore ?? overallScore) - (delayedOverallInstAvg ?? overallInstAvg)}%`}
                       </span>
                     </div>
                   </>
@@ -1500,38 +1537,38 @@ export function InstitutionalHealthSummary({
               </div>
               <div>
                 <p className="text-gray-400 text-xs">Institutional Operating Average<br/>(Benchmark)</p>
-                {isLoading ? (
+                {isLoading || isCalculating ? (
                   <p className="text-white font-bold animate-pulse">calc..</p>
                 ) : (
-                  <p className={`font-bold ${overallScore >= overallInstAvg ? 'text-green-400' : 'text-red-400'}`}>{overallInstAvg}%</p>
+                  <p className={`font-bold ${(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg) ? 'text-green-400' : 'text-red-400'}`}>{(delayedOverallInstAvg ?? overallInstAvg)}%</p>
                 )}
                 {/* Show variance */}
-                {!isLoading && (
+                {!isLoading && !isCalculating && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {overallScore >= overallInstAvg
-                      ? `+${overallScore - overallInstAvg}% above`
-                      : `${overallScore - overallInstAvg}% below`}
+                    {(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg)
+                      ? `+${(delayedOverallScore ?? overallScore) - (delayedOverallInstAvg ?? overallInstAvg)}% above`
+                      : `${(delayedOverallScore ?? overallScore) - (delayedOverallInstAvg ?? overallInstAvg)}% below`}
                   </p>
                 )}
               </div>
               <div>
                 <p className="text-gray-400 text-xs">Target</p>
-                {isLoading ? (
+                {isLoading || isCalculating ? (
                   <p className="text-white font-bold animate-pulse">calc..</p>
                 ) : (
                   <p className="text-gray-300 font-bold">{overallTarget}%</p>
                 )}
                 {/* Indicator for comparison with Target */}
-                {!isLoading && (
-                  <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${overallScore >= overallTarget
+                {!isLoading && !isCalculating && (
+                  <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${(delayedOverallScore ?? overallScore) >= overallTarget
                     ? 'bg-green-900/50 text-green-300'
                     : 'bg-yellow-900/50 text-yellow-300'
                     }`}>
-                    <span className="mr-1">{overallScore >= overallTarget ? '▲' : '▼'}</span>
+                    <span className="mr-1">{(delayedOverallScore ?? overallScore) >= overallTarget ? '▲' : '▼'}</span>
                     <span>
-                      {overallScore >= overallTarget
-                        ? `+${overallScore - overallTarget}%`
-                        : `${overallScore - overallTarget}%`}
+                      {(delayedOverallScore ?? overallScore) >= overallTarget
+                        ? `+${(delayedOverallScore ?? overallScore) - overallTarget}%`
+                        : `${(delayedOverallScore ?? overallScore) - overallTarget}%`}
                     </span>
                   </div>
                 )}

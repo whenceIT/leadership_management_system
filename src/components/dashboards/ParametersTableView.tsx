@@ -272,7 +272,7 @@ export function ParametersTableView({
   }
 
   function getHeadlineInstitutionalAvg(param: ParameterSummary): string {
-    const raw = DEFAULT_INSTITUTIONAL_AVGS[param.name] || param.institutionalAvg || '--';
+    const raw = param.institutionalAvg || '--';
     if (raw === '--') return raw;
     const num = parseFloat(raw.replace('%', ''));
     if (isNaN(num)) return raw;
