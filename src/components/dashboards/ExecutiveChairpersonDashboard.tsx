@@ -321,7 +321,8 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
     yieldAchievementData,
     revenueAchievementsData,
     profitabilityContributionData,
-    cashPositionData
+    cashPositionData,
+    provincialAverages
   );
 
   // Institution metrics

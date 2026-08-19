@@ -249,7 +249,7 @@ function calculateSimpleAverage(values: (number | null)[]): number | null {
 
 function calculateHeadlineCurrentAverage(parameters: ParameterSummary[]): number {
   const values = parameters.map(param => {
-    const raw = param.institutionalAvg || '--';
+    const raw = param.userLevelAvg || '--';
     if (raw === '--') return null;
     const num = parseFloat(raw.replace('%', ''));
     if (isNaN(num)) return null;
@@ -261,7 +261,7 @@ function calculateHeadlineCurrentAverage(parameters: ParameterSummary[]): number
 
 function calculateHeadlineInstitutionalAverage(parameters: ParameterSummary[]): number {
   const values = parameters.map(param => {
-    const raw = param.userLevelAvg || '--';
+    const raw = param.institutionalAvg || '--';
     if (raw === '--') return null;
     const num = parseFloat(raw.replace('%', ''));
     if (isNaN(num)) return null;
@@ -277,7 +277,7 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
   longTermDelinquencyData?: any, month1DefaultPerformanceData?: any, month3RecoveryAchievementsData?: any,
   portfolioQualityData?: any, productDiversificationData?: any, productRiskScoreData?: any, rollRateControlData?: any,
   yieldAchievementsData?: any, revenueAchievementsData?: any, profitabilityContributionData?: any,
-  cashPositionData?: any): InstitutionalSummaryData {
+  cashPositionData?: any, provincialAverages?: Record<string, string>): InstitutionalSummaryData {
   const branchStructureAggregated = aggregateBranchStructureKPIs(staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData);
   const lcPerformanceAggregated = aggregateLoanConsultantPerformanceKPIs(volumeAchievementData, collectionEfficiencyData, portfolioQualityData, month1DefaultPerformanceData, productRiskScoreData);
   const loanProductsAggregated = aggregateLoanProductsKPIs(productDiversificationData, yieldAchievementsData, productRiskScoreData, efficiencyRatioData);
@@ -360,6 +360,42 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       contribution: cashLiquidityAggregated.contribution || '--'
     }
   ];
+
+  if (provincialAverages) {
+    baseParameters.forEach(param => {
+      const kpis = getParameterKPIs(
+        userLevel, param.name,
+        staffAdequacyData, productivityAchievementData, vacancyImpactData,
+        loanPortfolioLoadData, volumeAchievementData, collectionEfficiencyData,
+        efficiencyRatioData, growthTrajectoryData, longTermDelinquencyData,
+        month1DefaultPerformanceData, month3RecoveryAchievementsData,
+        portfolioQualityData, productDiversificationData, productRiskScoreData,
+        rollRateControlData, yieldAchievementsData, revenueAchievementsData,
+        profitabilityContributionData, cashPositionData
+      );
+
+      if (!kpis || kpis.length === 0) return;
+
+      let total = 0;
+      let count = 0;
+
+      kpis.forEach(kpi => {
+        const provincialAvg = provincialAverages[kpi.name];
+        if (provincialAvg) {
+          const num = parseFloat(provincialAvg.replace('%', '').replace(',', ''));
+          if (!isNaN(num)) {
+            total += num;
+            count++;
+          }
+        }
+      });
+
+      if (count === 0) return;
+      const avg = total / count;
+      const capped = Math.min(100, Math.max(0, avg));
+      param.userLevelAvg = `${capped.toFixed(2)}%`;
+    });
+  }
 
   const baseKeyMetrics: KeyMetric[] = [
     {

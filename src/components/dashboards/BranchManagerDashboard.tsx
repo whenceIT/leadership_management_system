@@ -165,7 +165,8 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       yieldAchievementsData,
       revenueAchievementsData,
       profitabilityContributionData,
-      cashPositionData
+      cashPositionData,
+      undefined
     );
     let updatedData = { ...baseData };
 

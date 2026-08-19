@@ -318,7 +318,7 @@ export default function ProvincialManagerDashboard() {
    const { data: rollRateControlData } = useProvincialRollRateControl(provinceId);
    const { data: cashPositionData } = useProvincialCashPosition(provinceId);
 
-   const summaryData = getInstitutionalSummaryData('province', 'Provincial View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData, undefined, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData, longTermDelinquencyData, undefined, month3RecoveryAchievementsData, portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData, yieldAchievementsData, revenueAchievementsData, profitabilityContributionData, cashPositionData);
+    const summaryData = getInstitutionalSummaryData('province', 'Provincial View', staffAdequacyData, productivityAchievementData, vacancyImpactData, loanPortfolioLoadData, undefined, collectionEfficiencyData, efficiencyRatioData, growthTrajectoryData, longTermDelinquencyData, undefined, month3RecoveryAchievementsData, portfolioQualityData, productDiversificationData, productRiskScoreData, rollRateControlData, yieldAchievementsData, revenueAchievementsData, profitabilityContributionData, cashPositionData, undefined);
 
   return (
     <DashboardBase
