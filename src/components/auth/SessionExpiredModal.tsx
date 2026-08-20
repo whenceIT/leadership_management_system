@@ -68,7 +68,7 @@ export default function SessionExpiredModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[100001] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div className="relative z-10 w-full max-w-md mx-4 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg text-center">
         <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Session expired</h2>
