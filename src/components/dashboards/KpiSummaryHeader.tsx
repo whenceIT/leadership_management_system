@@ -1,6 +1,14 @@
 import { getKpiSummary } from '@/lib/kpiSummaries';
 
-export function KpiSummaryHeader({ kpi }: { kpi: string | null }) {
+export function KpiSummaryHeader({
+  kpi,
+  onInfoClick,
+  showInfo,
+}: {
+  kpi: string | null;
+  onInfoClick?: () => void;
+  showInfo?: boolean;
+}) {
   const info = getKpiSummary(kpi);
 
   const directionBadge =
@@ -27,6 +35,22 @@ export function KpiSummaryHeader({ kpi }: { kpi: string | null }) {
           <span className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
             Target: {info.target}
           </span>
+          {onInfoClick && (
+            <button
+              onClick={onInfoClick}
+              title="KPI Information"
+              className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 transition-all duration-200 ${
+                showInfo
+                  ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300'
+                  : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
+              }`}
+            >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M3.5 11.5a3.5 3.5 0 1 1 3.163-5H14L15.5 8 14 9.5l-1-1-1 1-1-1-1 1-1-1-1 1-1-1-1 1H6.663a3.5 3.5 0 0 1-3.163 2M2.5 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2" />
+              </svg>
+              <span className="text-xs font-medium">Key</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

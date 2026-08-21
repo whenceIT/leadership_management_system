@@ -101,18 +101,8 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick, onInstitutionA
       <div className="flex items-center mb-4">
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Executive Institution Overview - Country Wide Zambia</h3>
-          <KpiSummaryHeader kpi={selectedKPI} />
+          <KpiSummaryHeader kpi={selectedKPI} onInfoClick={() => setShowKpiInfo(!showKpiInfo)} showInfo={showKpiInfo} />
         </div>
-        <button
-          onClick={() => setShowKpiInfo(!showKpiInfo)}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
-          title="KPI Information"
-        >
-          <svg className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-1" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M3.5 11.5a3.5 3.5 0 1 1 3.163-5H14L15.5 8 14 9.5l-1-1-1 1-1-1-1 1-1-1-1 1-1-1-1 1H6.663a3.5 3.5 0 0 1-3.163 2M2.5 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/>
-          </svg>
-          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Key</span>
-        </button>
                  {showKpiInfo && (
           <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 mt-2 w-80 max-w-sm bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4 z-[100] transform transition-all duration-200">
             <div className="flex items-start">
