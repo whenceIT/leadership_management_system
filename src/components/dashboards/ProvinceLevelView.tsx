@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useProvincialData } from '@/hooks/useProvincialData';
 import { calculateCashPositionScore, kpiConfigs, calculateProvinceInstitutionAvg } from './ProvinceInstitutionAvg';
+import { KpiSummaryHeader } from './KpiSummaryHeader';
 
 interface ProvinceLevelViewProps {
   selectedKPI: string | null;
@@ -100,6 +101,7 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick, onInstitutionA
       <div className="flex items-center mb-4">
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Executive Institution Overview - Country Wide Zambia</h3>
+          <KpiSummaryHeader kpi={selectedKPI} />
         </div>
         <button
           onClick={() => setShowKpiInfo(!showKpiInfo)}

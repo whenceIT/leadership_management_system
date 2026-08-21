@@ -5,6 +5,7 @@ import { useDistrict } from '@/hooks/useDistrict';
 import { useProvince } from '@/hooks/useProvince';
 import { useOffice } from '@/hooks/useOffice';
 import { calculateCashPositionScore, kpiConfigs, calculateProvinceInstitutionAvg } from './ProvinceInstitutionAvg';
+import { KpiSummaryHeader } from './KpiSummaryHeader';
 import { fetchDistrictStaffAdequacyPerformance } from '@/services/StaffAdequacyService';
 import { fetchDistrictProductivityAchievement } from '@/services/ProductivityAchievementService';
 import { fetchDistrictVolumeAchievement } from '@/services/VolumeAchievementService';
@@ -349,6 +350,7 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Province Average: <span className="font-semibold text-blue-600 dark:text-blue-400">{calculateProvinceAvg}</span>
           </p>
+          <KpiSummaryHeader kpi={selectedKPI} />
         </div>
         <button
           onClick={() => setShowKpiInfo(!showKpiInfo)}

@@ -29,6 +29,7 @@ import { fetchRevenueAchievements } from '@/services/RevenueAchievementsService'
 import { fetchProfitabilityContribution } from '@/services/ProfitabilityContributionService';
 import { fetchCashPosition } from '@/services/CashPositionService';
 import { ConsultantLevelView } from './ConsultantLevelView';
+import { KpiSummaryHeader } from './KpiSummaryHeader';
 
 interface BranchLevelViewProps {
   selectedKPI: string;
@@ -549,6 +550,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
           <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             District Average: <span className="font-semibold text-blue-600 dark:text-blue-400">{provinceAvg}</span>
           </div>
+          <KpiSummaryHeader kpi={selectedKPI} />
         </div>
         <button
           onClick={() => setShowKpiInfo(!showKpiInfo)}
