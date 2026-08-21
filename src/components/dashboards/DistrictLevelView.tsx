@@ -6,6 +6,7 @@ import { useProvince } from '@/hooks/useProvince';
 import { useOffice } from '@/hooks/useOffice';
 import { calculateCashPositionScore, kpiConfigs, calculateProvinceInstitutionAvg } from './ProvinceInstitutionAvg';
 import { KpiSummaryHeader } from './KpiSummaryHeader';
+import { getActualLCs } from '@/lib/staffing';
 import { fetchDistrictStaffAdequacyPerformance } from '@/services/StaffAdequacyService';
 import { fetchDistrictProductivityAchievement } from '@/services/ProductivityAchievementService';
 import { fetchDistrictVolumeAchievement } from '@/services/VolumeAchievementService';
@@ -258,7 +259,7 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
       case 'Productivity Achievement Score':
         return ['District', 'Offices', 'Total Staff', 'Score', 'Target', 'Variance', 'Trend', 'Status'];
       case 'Vacancy Impact':
-        return ['District', 'Offices', 'Score', 'Target', 'Variance', 'Trend', 'Status'];
+        return ['District', 'Offices', 'Total Staff', 'Score', 'Target', 'Variance', 'Trend', 'Status'];
       case 'Volume Achievement':
         return ['District', 'Offices', 'Total Disbursed', 'Target', 'Score', 'Status'];
       case 'Portfolio Quality Score':
@@ -434,7 +435,7 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                    case 'Productivity Achievement':
                    case 'Productivity Achievement Score': {
                      const officesCount = district.offices_count || 0;
-                     const totalStaff = data?.total_staff || data?.total_actual_lcs || data?.actual_lcs || 0;
+                      const totalStaff = getActualLCs(data);
                      const score = parseFloat(data?.average_normalized_score || '0');
                      const target = '90%';
                      const varianceNum = score - 90;
@@ -462,6 +463,7 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                       rowData = [
                         district.name,
                         district.offices_count || 0,
+                        getActualLCs(data),
                         `${score.toFixed(2)}%`,
                         target,
                         <span key="variance" className={getVarianceColor(variance)}>{variance}</span>,

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useProvincialData } from '@/hooks/useProvincialData';
 import { calculateCashPositionScore, kpiConfigs, calculateProvinceInstitutionAvg } from './ProvinceInstitutionAvg';
 import { KpiSummaryHeader } from './KpiSummaryHeader';
+import { getActualLCs } from '@/lib/staffing';
 
 interface ProvinceLevelViewProps {
   selectedKPI: string | null;
@@ -189,58 +190,42 @@ export function ProvinceLevelView({ selectedKPI, onProvinceClick, onInstitutionA
               {sortedProvinces.map((province, index) => {
                 const data = provincialData[province.id];
                 
-                let institutionalAvg = '0';
-                let currentPeriod = '0';
-                let target = '100%';
-                let variance = '0';
-                let trend: '↑' | '↓' | '→' = '→';
-                let status: 'good' | 'warning' | 'critical' = 'warning';
+                 let institutionalAvg = '0';
+                 let currentPeriod = '0';
+                 let target = '100%';
+                 let variance = '0';
+                 let trend: '↑' | '↓' | '→' = '→';
+                 let status: 'good' | 'warning' | 'critical' = 'warning';
+                 let officesCount = 0;
                  let actualLcs = 0;
+
                  if (data) {
-                   if (selectedKPI === 'Vacancy Impact') {
-                     const authorizedPositions = data.authorized_positions || data.authorized_positions_per_office || 0;
-                     const officesCount = data.offices_count || 0;
-                     const totalAuthorized = authorizedPositions > 0 ? authorizedPositions : (officesCount * (data.authorized_positions_per_office || 0));
-                     const vacancies = typeof data.vacancies === 'number' ? data.vacancies : 0;
-                     actualLcs = Math.max(0, totalAuthorized - vacancies);
-                   }
-                   
-                   if (!actualLcs) {
-                     actualLcs = data.total_staff || data.actual_lcs || data.total_actual_lcs || 0;
-                   }
-                   
-                   if (!actualLcs) {
-                     if (Array.isArray(data)) {
-                       actualLcs = data.reduce((sum: number, branch: any) => sum + (branch.actual_lcs || branch.total_staff || 0), 0);
-                     } else if (data.branches) {
-                       actualLcs = data.branches.reduce((sum: number, branch: any) => sum + (branch.actual_lcs || branch.total_staff || 0), 0);
-                     }
-                   }
-                 }
-                  let officesCount = 0;
-
-                  if (data) {
-                     officesCount = data.offices_count || 0;
-
-                     const config = kpiConfigs[selectedKPI || ''];
-                     if (config) {
-                       const rawValue = config.getValue(data);
-                       if (!isNaN(rawValue)) {
-                         const targetValue = config.getTarget(data);
-                         currentPeriod = config.formatValue(rawValue);
-                         variance = config.formatVariance(rawValue - targetValue);
-                         trend = config.getTrend(rawValue, targetValue);
-                         status = config.getStatus(rawValue, targetValue);
-                       }
-                       target = config.displayTarget(data);
-                     } else {
-                       currentPeriod = '0';
-                      target = '100%';
-                      variance = '0';
-                      trend = '→';
-                      status = 'warning';
-                    }
+                    officesCount = data.offices_count || 0;
+                    // Actual Loan Consultants (filled positions) — same source for every KPI,
+                    // so Staff Adequacy Score and Vacancy Impact show an identical count.
+                    actualLcs = getActualLCs(data);
                   }
+
+                      if (data) {
+                        const config = kpiConfigs[selectedKPI || ''];
+                        if (config) {
+                          const rawValue = config.getValue(data);
+                          if (!isNaN(rawValue)) {
+                            const targetValue = config.getTarget(data);
+                            currentPeriod = config.formatValue(rawValue);
+                            variance = config.formatVariance(rawValue - targetValue);
+                            trend = config.getTrend(rawValue, targetValue);
+                            status = config.getStatus(rawValue, targetValue);
+                          }
+                          target = config.displayTarget(data);
+                        } else {
+                          currentPeriod = '0';
+                          target = '100%';
+                          variance = '0';
+                          trend = '→';
+                          status = 'warning';
+                        }
+                      }
 
                   // Determine background color based on threshold bands for Cash Position Score or ranking for others
                   let bgColor = '';
