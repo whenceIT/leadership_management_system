@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { DashboardLoading } from '@/components/dashboards/DashboardBase';
 import { useUserPosition, IMPERSONATION_STARTED_EVENT, IMPERSONATION_ENDED_EVENT } from '@/hooks/useUserPosition';
 import { getPositionNameByIdStatic } from '@/hooks/useUserPosition';
+import ManagerGuidanceSheet from '@/components/ManagerGuidanceSheet';
 
 // Define dashboard components map
 const DASHBOARD_COMPONENTS: Record<string, React.ComponentType<any>> = {
@@ -157,5 +158,10 @@ export default function DashboardWrapper() {
     return <DashboardLoading />;
   }
 
-  return <DashboardComponent key={forceUpdateKey} position={positionName} userTier={userTier} />;
+  return (
+    <>
+      <DashboardComponent key={forceUpdateKey} position={positionName} userTier={userTier} />
+      <ManagerGuidanceSheet />
+    </>
+  );
 }

@@ -33,6 +33,9 @@ const ApiLoader: React.FC<ApiLoaderProps> = ({
   }, [isLoading]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if ((window as any).__apiLoaderProxyInstalled) return;
+    
     const originalFetch = window.fetch;
     
     const fetchProxy = async (url: RequestInfo | URL, options?: RequestInit) => {
@@ -54,9 +57,11 @@ const ApiLoader: React.FC<ApiLoaderProps> = ({
       }
     };
     
+    (window as any).__apiLoaderProxyInstalled = true;
     window.fetch = fetchProxy as any;
     
     return () => {
+      (window as any).__apiLoaderProxyInstalled = false;
       window.fetch = originalFetch;
     };
   }, []);

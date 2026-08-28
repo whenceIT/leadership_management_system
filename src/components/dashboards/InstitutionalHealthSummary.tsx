@@ -73,6 +73,17 @@ export interface InstitutionalSummaryData {
   overallTarget: number;
 }
 
+function getScore(data: any, field1: string, field2?: string): number {
+  if (!data) return 0;
+  let value = data[field1];
+  if ((value === undefined || value === null || isNaN(value)) && field2) {
+    value = data[field2];
+  }
+  if (value === undefined || value === null || isNaN(value)) return 0;
+  const num = typeof value === 'string' ? parseFloat(value) : (typeof value === 'number' ? value : 0);
+  return isNaN(num) || !isFinite(num) ? 0 : num;
+}
+
 function getAggregateScore(data: any, paramName: string, kpiName: string): number {
   if (!data) return 0;
 
@@ -635,38 +646,11 @@ function getCashPositionTrend(score: number): '↑' | '↓' | '→' {
 function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchievementData?: any, vacancyImpactData?: any, loanPortfolioLoadData?: any): Partial<ParameterSummary> {
   const DEFAULT_INST_AVG = '85%';
 
-  // Check if we're dealing with provincial data (has average_normalized_score instead of normalized_score)
-  const isProvincialData = staffAdequacyData?.average_normalized_score !== undefined;
-
-  if (isProvincialData && staffAdequacyData) {
-    // For provincial data, we have a single aggregated score from the API
-    const overallScore = Math.round(staffAdequacyData.average_normalized_score);
-    const target = 100;
-    const variance = overallScore - target;
-    const varianceStr = variance >= 0 ? `+${variance}%` : `${variance}%`;
-    const varianceAbs = `${Math.abs(variance)}pp`;
-
-    const trend = overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓';
-    const status: 'good' | 'warning' | 'critical' = overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical';
-
-    return {
-      institutionalAvg: `${overallScore}%`,
-      userLevelAvg: `${overallScore}%`,
-      target: '100%',
-      variance: varianceStr,
-      varianceAbs,
-      trend,
-      status,
-      contribution: `${overallScore.toFixed(2)} of 100pp`
-    };
-  }
-
-  // For branch-level data, compute headline averages from KPI values
   const kpiDataList = [
-    { data: staffAdequacyData, scoreField: 'normalized_score', avgField: 'instAvg' },
-    { data: productivityAchievementData, scoreField: 'normalized_score', avgField: 'instAvg' },
-    { data: vacancyImpactData, scoreField: 'normalized_score', avgField: 'instAvg', multiplier: 100 },
-    { data: loanPortfolioLoadData, scoreField: 'score', avgField: 'instAvg' }
+    { data: staffAdequacyData, extract: (d: any) => getScore(d, 'normalized_score', 'average_normalized_score') },
+    { data: productivityAchievementData, extract: (d: any) => getScore(d, 'normalized_score', 'average_normalized_score') },
+    { data: vacancyImpactData, extract: (d: any) => getScore(d, 'normalized_score', 'average_normalized_score') * 100 },
+    { data: loanPortfolioLoadData, extract: (d: any) => getScore(d, 'score', 'average_score') }
   ].filter(item => item.data);
 
   if (kpiDataList.length === 0) {
@@ -682,15 +666,9 @@ function aggregateBranchStructureKPIs(staffAdequacyData?: any, productivityAchie
     };
   }
 
-  const userLevelValues = kpiDataList.map(item => {
-    const raw = item.data[item.scoreField] ?? item.data.average_normalized_score ?? item.data.average_score ?? '0';
-    let num = parseFloat(String(raw));
-    if (item.multiplier) num = num * item.multiplier;
-    return isNaN(num) ? 0 : num;
-  });
-
+  const userLevelValues = kpiDataList.map(item => item.extract(item.data));
   const instAvgValues = kpiDataList.map(item => {
-    const raw = item.data[item.avgField] || item.data.average_normalized_score || item.data.average_score;
+    const raw = item.data.instAvg || item.data.average_normalized_score || item.data.average_score;
     if (!raw || raw === '--') return null;
     const str = String(raw);
     if (str.includes('K') || str.includes('HHI') || str.includes('avg') || str.includes('MoM')) return null;
@@ -753,8 +731,20 @@ function aggregateLoanConsultantPerformanceKPIs(
   }
 
   const userLevelValues = kpiDataList.map(item => {
-    const raw = item.data[item.scoreField] ?? item.data.average_normalized_score ?? item.data.average_score ?? '0';
-    return parseFloat(String(raw));
+    switch (item.scoreField) {
+      case 'normalized_score':
+        return getScore(item.data, 'normalized_score', 'average_normalized_score');
+      case 'benchmark':
+        return getScore(item.data, 'benchmark', 'average_score');
+      case 'PAR':
+        return getScore(item.data, 'PAR', 'average_score');
+      case 'month_1_default_rate':
+        return parseFloat(item.data.month_1_default_rate || '0');
+      case 'defaulted_rate':
+        return getScore(item.data, 'defaulted_rate', 'average_score');
+      default:
+        return getScore(item.data, item.scoreField, item.avgField);
+    }
   }).filter(v => !isNaN(v));
 
   const instAvgValues = kpiDataList.map(item => {
@@ -819,10 +809,18 @@ function aggregateLoanProductsKPIs(
   }
 
   const userLevelValues = kpiDataList.map(item => {
-    const raw = item.data[item.scoreField] ?? item.data.average_score ?? '0';
-    let num = parseFloat(String(raw));
-    if (item.multiplier) num = num * item.multiplier;
-    return isNaN(num) ? 0 : num;
+    switch (item.scoreField) {
+      case 'HHI':
+        return getScore(item.data, 'HHI', 'average_HHI');
+      case 'effective_interest_rate':
+        return getScore(item.data, 'effective_interest_rate', 'average_score');
+      case 'defaulted_rate':
+        return getScore(item.data, 'defaulted_rate', 'average_score');
+      case 'CIR':
+        return getScore(item.data, 'CIR', 'average_score') * 100;
+      default:
+        return getScore(item.data, item.scoreField, item.avgField);
+    }
   });
 
   const instAvgValues = kpiDataList.map(item => {
@@ -888,8 +886,12 @@ function aggregateRiskManagementKPIs(
   }
 
   const userLevelValues = kpiDataList.map(item => {
-    const raw = item.data[item.scoreField] ?? item.data.average_normalized_score ?? '0';
-    return parseFloat(String(raw));
+    switch (item.scoreField) {
+      case 'average_score':
+        return getScore(item.data, 'average_score', 'average_normalized_score');
+      default:
+        return getScore(item.data, item.scoreField, item.avgField);
+    }
   }).filter(v => !isNaN(v));
 
   const instAvgValues = kpiDataList.map(item => {
@@ -997,10 +999,20 @@ function aggregateRevenuePerformanceKPIs(
   }
 
   const userLevelValues = kpiDataList.map(item => {
-    const raw = item.data[item.scoreField] ?? item.data[item.fallbackField || ''] ?? item.data.average_normalized_score ?? item.data.average_score ?? '0';
-    let num = parseFloat(String(raw));
-    if (item.multiplier) num = num * item.multiplier;
-    return isNaN(num) ? 0 : num;
+    switch (item.scoreField) {
+      case 'mom_revenue':
+        return getScore(item.data, 'mom_revenue', 'average_score') * 100;
+      case 'CIR':
+        return getScore(item.data, 'CIR', 'average_score') * 100;
+      case 'normalized_score':
+        return getScore(item.data, 'normalized_score', 'average_normalized_score');
+      case 'average_score':
+        return getScore(item.data, 'average_score', 'average_normalized_score');
+      case 'score':
+        return parseFloat((item.data.score || item.data.average_score || '0').replace('%', ''));
+      default:
+        return getScore(item.data, item.scoreField, item.fallbackField || item.avgField);
+    }
   });
 
   const instAvgValues = kpiDataList.map(item => {
