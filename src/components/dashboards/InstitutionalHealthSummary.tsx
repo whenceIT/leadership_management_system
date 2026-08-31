@@ -9,6 +9,7 @@ import { DistrictLevelView } from './DistrictLevelView';
 import { ConsultantLevelView } from './ConsultantLevelView';
 import { ParametersTableView } from './ParametersTableView';
 import { useKPISuggestions } from '@/hooks/useKPISuggestions';
+import { saveOverallScoreCheckpoint } from '@/services/OverallScoreCheckpointService';
 
 interface ParameterKPIs {
   [key: string]: KPI[];
@@ -1425,27 +1426,32 @@ export function InstitutionalHealthSummary({
 
    const isCalculating = !isLoading && delayedOverallScore === null;
 
-   useEffect(() => {
-     if (calcTimerRef.current) {
-       clearTimeout(calcTimerRef.current);
-       calcTimerRef.current = null;
-     }
+    useEffect(() => {
+      if (calcTimerRef.current) {
+        clearTimeout(calcTimerRef.current);
+        calcTimerRef.current = null;
+      }
 
-     if (!isLoading) {
-       calcTimerRef.current = setTimeout(() => {
-         setDelayedOverallScore(calculateHeadlineCurrentAverage(parameters));
-         setDelayedOverallInstAvg(calculateHeadlineInstitutionalAverage(parameters));
-         calcTimerRef.current = null;
-       }, 3000);
-     }
+      if (!isLoading) {
+        calcTimerRef.current = setTimeout(() => {
+          setDelayedOverallScore(calculateHeadlineCurrentAverage(parameters));
+          setDelayedOverallInstAvg(calculateHeadlineInstitutionalAverage(parameters));
+          calcTimerRef.current = null;
+        }, 3000);
+      }
 
-     return () => {
-       if (calcTimerRef.current) {
-         clearTimeout(calcTimerRef.current);
-         calcTimerRef.current = null;
-       }
-     };
-   }, [isLoading, parameters]);
+      return () => {
+        if (calcTimerRef.current) {
+          clearTimeout(calcTimerRef.current);
+          calcTimerRef.current = null;
+        }
+      };
+    }, [isLoading, parameters]);
+
+    useEffect(() => {
+      if (delayedOverallScore === null || isLoading) return;
+      saveOverallScoreCheckpoint(delayedOverallScore).catch(() => {});
+    }, [delayedOverallScore, isLoading]);
 
    const otherMetrics = useMemo(() => [
      { name: 'Volume Achievement', data: volumeAchievementData },
