@@ -18,6 +18,17 @@ const ApiLoader: React.FC<ApiLoaderProps> = ({
   const countRef = useRef(0);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
+  const rafRef = useRef<number | null>(null);
+
+  const scheduleUpdate = useCallback(() => {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      if (mountedRef.current) {
+        setRequestCount(countRef.current);
+      }
+    });
+  }, []);
 
   const hideLoader = useCallback(() => {
     if (!mountedRef.current) return;
@@ -34,37 +45,48 @@ const ApiLoader: React.FC<ApiLoaderProps> = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if ((window as any).__apiLoaderProxyInstalled) return;
     
-    const originalFetch = window.fetch;
-    
-    const fetchProxy = async (url: RequestInfo | URL, options?: RequestInit) => {
-      countRef.current += 1;
-      if (mountedRef.current) {
-        setRequestCount(countRef.current);
-      }
+    const installProxy = () => {
+      if ((window as any).__apiLoaderProxyInstalled) return;
       
-      try {
-        const response = await originalFetch(url, options);
-        return response;
-      } catch (error) {
-        throw error;
-      } finally {
-        countRef.current -= 1;
-        if (mountedRef.current) {
-          setRequestCount(countRef.current);
+      const originalFetch = window.fetch;
+      
+      const fetchProxy = async (url: RequestInfo | URL, options?: RequestInit) => {
+        countRef.current += 1;
+        scheduleUpdate();
+        
+        try {
+          const response = await originalFetch(url, options);
+          return response;
+        } catch (error) {
+          throw error;
+        } finally {
+          countRef.current -= 1;
+          scheduleUpdate();
         }
-      }
+      };
+      
+      (window as any).__apiLoaderProxyInstalled = true;
+      window.fetch = fetchProxy as any;
+      
+      return () => {
+        (window as any).__apiLoaderProxyInstalled = false;
+        window.fetch = originalFetch;
+      };
     };
     
-    (window as any).__apiLoaderProxyInstalled = true;
-    window.fetch = fetchProxy as any;
+    const cleanup = installProxy();
     
     return () => {
-      (window as any).__apiLoaderProxyInstalled = false;
-      window.fetch = originalFetch;
+      if (typeof cleanup === 'function') {
+        cleanup();
+      }
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
-  }, []);
+  }, [scheduleUpdate]);
 
   useEffect(() => {
     if (isLoading || requestCount > 0) {
@@ -83,6 +105,10 @@ const ApiLoader: React.FC<ApiLoaderProps> = ({
       mountedRef.current = false;
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
+      }
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
       }
     };
   }, []);
