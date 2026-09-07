@@ -9,7 +9,7 @@ import { DistrictLevelView } from './DistrictLevelView';
 import { ConsultantLevelView } from './ConsultantLevelView';
 import { ParametersTableView } from './ParametersTableView';
 import { useKPISuggestions } from '@/hooks/useKPISuggestions';
-import { saveOverallScoreCheckpoint } from '@/services/OverallScoreCheckpointService';
+import { saveOverallScoreCheckpoint, fetchScoreHistory } from '@/services/OverallScoreCheckpointService';
 
 interface ParameterKPIs {
   [key: string]: KPI[];
@@ -1420,11 +1420,27 @@ export function InstitutionalHealthSummary({
   const [selectedProvince, setSelectedProvince] = useState<number | null>(null);
   const [selectedDistrict, setSelectedDistrict] = useState<number | null>(null);
    const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
-   const [delayedOverallScore, setDelayedOverallScore] = useState<number | null>(null);
-   const [delayedOverallInstAvg, setDelayedOverallInstAvg] = useState<number | null>(null);
-   const calcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [delayedOverallScore, setDelayedOverallScore] = useState<number | null>(null);
+    const [delayedOverallInstAvg, setDelayedOverallInstAvg] = useState<number | null>(null);
+    const [checkpointStatus, setCheckpointStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const [fetchedPrevMonthScores, setFetchedPrevMonthScores] = useState<{ label: string; score: number }[]>([]);
+    const calcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
    const isCalculating = !isLoading && delayedOverallScore === null;
+
+   const handleSaveCheckpoint = async () => {
+     const score = delayedOverallScore ?? overallScore;
+     if (score === null || score === undefined) return;
+     setCheckpointStatus('saving');
+     try {
+       await saveOverallScoreCheckpoint(score);
+       setCheckpointStatus('saved');
+       setTimeout(() => setCheckpointStatus('idle'), 3000);
+     } catch {
+       setCheckpointStatus('error');
+       setTimeout(() => setCheckpointStatus('idle'), 3000);
+     }
+   };
 
     useEffect(() => {
       if (calcTimerRef.current) {
@@ -1449,9 +1465,24 @@ export function InstitutionalHealthSummary({
     }, [isLoading, parameters]);
 
     useEffect(() => {
-      if (delayedOverallScore === null || isLoading) return;
-      saveOverallScoreCheckpoint(delayedOverallScore).catch(() => {});
-    }, [delayedOverallScore, isLoading]);
+      let cancelled = false;
+      fetchScoreHistory('executive')
+        .then((res) => {
+          if (cancelled) return;
+          const sorted = [...res.data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          const mapped = sorted.slice(0, 3).map((item) => ({
+            label: new Date(item.created_at).toLocaleString('default', { month: 'long' }),
+            score: parseFloat(item.score),
+          }));
+          setFetchedPrevMonthScores(mapped);
+        })
+        .catch(() => {
+          if (!cancelled) setFetchedPrevMonthScores([]);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }, []);
 
    const otherMetrics = useMemo(() => [
      { name: 'Volume Achievement', data: volumeAchievementData },
@@ -1522,33 +1553,33 @@ export function InstitutionalHealthSummary({
               <p className="text-white font-semibold mt-0.5">{userLevelLabel}</p>
             </div>
             <div className="text-right">
-               <div className="flex items-center justify-end gap-3 mb-1">
-                 {prevMonthScores && prevMonthScores.length === 3 && (
+                <div className="flex items-center justify-end gap-3 mb-1">
+                 {fetchedPrevMonthScores.length === 3 && (
                    <>
                      <span className="text-2xl font-bold text-gray-400 opacity-40">
-                       {prevMonthScores[0].score}%
+                       {fetchedPrevMonthScores[0].score}%
                      </span>
-                     <span className="text-xs text-gray-500 opacity-40">{prevMonthScores[0].label}</span>
+                     <span className="text-xs text-gray-500 opacity-40">{fetchedPrevMonthScores[0].label}</span>
                      <span className="text-2xl font-bold text-gray-400 opacity-50">
-                       {prevMonthScores[1].score}%
+                       {fetchedPrevMonthScores[1].score}%
                      </span>
-                     <span className="text-xs text-gray-500 opacity-50">{prevMonthScores[1].label}</span>
+                     <span className="text-xs text-gray-500 opacity-50">{fetchedPrevMonthScores[1].label}</span>
                      <span className="text-3xl font-bold text-gray-400 opacity-60">
-                       {prevMonthScores[2].score}%
+                       {fetchedPrevMonthScores[2].score}%
                      </span>
-                     <span className="text-xs text-gray-500 opacity-60">{prevMonthScores[2].label}</span>
+                     <span className="text-xs text-gray-500 opacity-60">{fetchedPrevMonthScores[2].label}</span>
                    </>
                  )}
                   {isLoading || isCalculating ? (
                     <span className="text-xs font-medium text-gray-400">calc..</span>
                   ) : (
                     <span className={`text-xs font-medium ${
-                      (delayedOverallScore ?? overallScore) >= (prevMonthScores?.[2]?.score ?? 0)
+                      (delayedOverallScore ?? overallScore) >= (fetchedPrevMonthScores[2]?.score ?? 0)
                         ? 'text-green-400'
                         : 'text-red-400'
                     }`}>
-                      {(delayedOverallScore ?? overallScore) >= (prevMonthScores?.[2]?.score ?? 0) ? '▲' : '▼'}
-                      {Math.abs((delayedOverallScore ?? overallScore) - (prevMonthScores?.[2]?.score ?? 0))}%
+                      {(delayedOverallScore ?? overallScore) >= (fetchedPrevMonthScores[2]?.score ?? 0) ? '▲' : '▼'}
+                      {Math.abs((delayedOverallScore ?? overallScore) - (fetchedPrevMonthScores[2]?.score ?? 0))}%
                     </span>
                   )}
                   {isLoading || isCalculating ? (
@@ -1558,11 +1589,26 @@ export function InstitutionalHealthSummary({
                   )}
                 </div>
                 <p className="text-gray-400 text-xs">{isLoading || isCalculating ? 'Calculating...' : 'Overall Health Score'}</p>
-                {!isLoading && !isCalculating && prevMonthScores && prevMonthScores.length === 3 && (
+                {!isLoading && !isCalculating && fetchedPrevMonthScores.length === 3 && (
                   <p className="text-xs text-gray-500 opacity-60">
-                    Previous: {prevMonthScores[2].score}% ({prevMonthScores[2].label}) · Avg: {Math.round((prevMonthScores[0].score + prevMonthScores[1].score + prevMonthScores[2].score) / 3)}% (3-month)
+                    Previous: {fetchedPrevMonthScores[2].score}% ({fetchedPrevMonthScores[2].label}) · Avg: {Math.round((fetchedPrevMonthScores[0].score + fetchedPrevMonthScores[1].score + fetchedPrevMonthScores[2].score) / 3)}% (3-month)
                   </p>
                 )}
+                <div className="mt-3">
+                  <button
+                    onClick={handleSaveCheckpoint}
+                    disabled={isLoading || isCalculating || checkpointStatus === 'saving'}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      checkpointStatus === 'saved'
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                        : checkpointStatus === 'error'
+                        ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {checkpointStatus === 'saving' ? 'Saving...' : checkpointStatus === 'saved' ? 'Saved' : checkpointStatus === 'error' ? 'Failed' : 'Save Checkpoint'}
+                  </button>
+                </div>
             </div>
           </div>
           {overallInstAvg !== undefined && overallTarget !== undefined && (
