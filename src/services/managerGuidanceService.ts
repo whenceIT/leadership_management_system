@@ -8,7 +8,7 @@ import {
   GuidanceEngineInput,
   KPIGuidanceRule,
 } from '@/types/managerGuidance';
-import { getRuleByKpiCode, KPI_GUIDANCE_RULES } from '@/config/kpiGuidanceRules';
+import { KPI_GUIDANCE_RULES } from '@/config/kpiGuidanceRules';
 import { BranchPerformance } from '@/services/ProvincialDataService';
 
 function uid(prefix: string): string {
@@ -39,6 +39,58 @@ function normalizeScore(value: any): number | null {
   return num;
 }
 
+/**
+ * Dynamically derive a KPI guidance rule from API data.
+ * No hardcoded thresholds — everything comes from the API response.
+ */
+function deriveRule(kpiCode: string, kpiName: string, apiData: any): KPIGuidanceRule | null {
+  const target = parseNumber(apiData?.target ?? apiData?.branch_target);
+  if (target === null) return null;
+
+  const higherIsBetter = apiData?.higher_is_better !== false && 
+    !kpiName.toLowerCase().includes('risk') && 
+    !kpiName.toLowerCase().includes('delinquency');
+
+  const warningThreshold = higherIsBetter ? target * 0.9 : target * 1.1;
+  const criticalThreshold = higherIsBetter ? target * 0.8 : target * 1.2;
+
+  return {
+    kpiCode,
+    kpiName,
+    target,
+    warningThreshold: Math.round(warningThreshold * 100) / 100,
+    criticalThreshold: Math.round(criticalThreshold * 100) / 100,
+    higherIsBetter,
+    severityRules: {
+      healthy: (current) => higherIsBetter ? current >= target : current <= target,
+      low: (current) => {
+        const lo = higherIsBetter ? criticalThreshold : target;
+        const hi = higherIsBetter ? warningThreshold : target * 1.1;
+        return current >= lo && current < hi;
+      },
+      medium: (current) => {
+        const lo = higherIsBetter ? criticalThreshold * 0.8 : target * 1.2;
+        const hi = higherIsBetter ? criticalThreshold : target * 1.1;
+        return current >= lo && current < hi;
+      },
+      high: (current) => {
+        const lo = higherIsBetter ? criticalThreshold * 0.6 : target * 1.3;
+        const hi = higherIsBetter ? criticalThreshold * 0.8 : target * 1.2;
+        return current >= lo && current < hi;
+      },
+      critical: (current) => higherIsBetter ? current < criticalThreshold * 0.6 : current > target * 1.3,
+    },
+    recommendedActions: {
+      branch: `Review ${kpiName} at your office. Take corrective action to move closer to the ${target} target.`,
+      district: `Review ${kpiName} across district offices. Identify under-performing branches and deploy targeted interventions.`,
+      province: `Assess ${kpiName} province-wide. Identify systemic issues and develop a province-level improvement plan.`,
+      institution: `Evaluate institutional ${kpiName} strategy. Review whether targets remain appropriate and align resources accordingly.`,
+    },
+    applicableRoles: ['branch', 'district', 'province', 'institution'],
+    route: `/lms/kpi-dashboard?tab=${kpiCode.replace(/_/g, '-')}`,
+    category: 'General',
+  };
+}
 export class ManagerGuidanceService {
   private static instance: ManagerGuidanceService;
 
@@ -127,7 +179,7 @@ export class ManagerGuidanceService {
     const tgt = typeof target === 'number' ? target : parseNumber(target) ?? 0;
     const bm = typeof benchmark === 'number' ? benchmark : parseNumber(benchmark) ?? 0;
     const varVal = typeof variance === 'number' ? variance : parseNumber(variance) ?? 0;
-    const displayUnit = unit || '%';
+    const displayUnit = unit || (kpiName === 'Staff Adequacy Score' ? ' LCs per office' : '%');
     const levelLabel = level.charAt(0).toUpperCase() + level.slice(1);
 
     let explanation = `${kpiName} is currently ${typeof currentValue === 'number' ? current.toFixed(1) : currentValue}${displayUnit}`;
@@ -267,7 +319,18 @@ export class ManagerGuidanceService {
     const { managerContext, kpiData, orgHierarchy, historicalData, maxRecommendations = 5 } = input;
     const recommendations: ManagerGuidanceRecommendation[] = [];
 
-    for (const rule of KPI_GUIDANCE_RULES) {
+    const derivedRules: KPIGuidanceRule[] = [];
+    const allRules: KPIGuidanceRule[] = [...KPI_GUIDANCE_RULES];
+
+    // Dynamically derive rules for any KPIs in kpiData that don't have a hardcoded rule
+    for (const [kpiCode, rawData] of Object.entries(kpiData)) {
+      if (allRules.some(r => r.kpiCode === kpiCode)) continue;
+      const kpiName = (rawData as any)?.kpiName || kpiCode.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+      const derived = deriveRule(kpiCode, kpiName, rawData);
+      if (derived) allRules.push(derived);
+    }
+
+    for (const rule of allRules) {
       if (!rule.applicableRoles.includes(managerContext.userTier)) continue;
 
       const rawData = kpiData[rule.kpiCode];
@@ -386,3 +449,6 @@ export class ManagerGuidanceService {
 }
 
 export const managerGuidanceService = ManagerGuidanceService.getInstance();
+
+
+

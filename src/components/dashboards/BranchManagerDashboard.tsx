@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardBase, KPICard, AlertCard, CollapsibleCard } from './DashboardBase';
-import { getHeadlineParameters } from '@/data/headline-parameters-mock';
 import { InstitutionalHealthSummary, getInstitutionalSummaryData, calculateCashPositionScore } from './InstitutionalHealthSummary';
 import { useBranchManagerMetrics } from '@/hooks/useBranchManagerMetrics';
 import { useUserKPI } from '@/hooks/useUserKPI';
@@ -54,11 +53,6 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
     target: kpi.target.toString(),
     weight: `${kpi.weight}%`
   })) : [];
-
-  // Headline parameters using composite index approach
-  const headlineParameters = getHeadlineParameters({
-    onStaffRatiosDrillDown: () => setDrillView('consultants')
-  });
 
   // Drill-down for Branch Manager: consultants -> transactions
   const [drillView, setDrillView] = useState<'consultants' | 'transactions'>('consultants');

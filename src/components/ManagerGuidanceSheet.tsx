@@ -50,8 +50,10 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
   const [isClosing, setIsClosing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const autoOpenedRef = useRef<string[]>(getAutoOpenedIds());
+  const seenSignaturesRef = useRef<Set<string>>(new Set());
+  const userDismissedRef = useRef(false);
   const { isLoading: isGlobalLoading } = useLoading();
-  const autoInput = useAutoManagerGuidanceInput(isOpen && !isGlobalLoading);
+  const autoInput = useAutoManagerGuidanceInput(!isGlobalLoading);
   const effectiveInput = input ?? autoInput;
   const { recommendations, isLoading, error, hasCritical, activeCount, criticalCount } = useManagerGuidance(effectiveInput ?? undefined);
 
@@ -61,27 +63,40 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
   }, []);
 
   const handleClose = useCallback(() => {
+    recommendations.forEach((r) => {
+      seenSignaturesRef.current.add(`${r.kpiCode}_${r.severity}_${r.currentValue}`);
+    });
+    userDismissedRef.current = true;
     setIsClosing(true);
     setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
     }, 300);
-  }, []);
+  }, [recommendations]);
 
   const handleMinimize = useCallback(() => {
+    recommendations.forEach((r) => {
+      seenSignaturesRef.current.add(`${r.kpiCode}_${r.severity}_${r.currentValue}`);
+    });
+    userDismissedRef.current = true;
     setIsClosing(true);
     setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
     }, 300);
-  }, []);
+  }, [recommendations]);
 
   useEffect(() => {
-    if (!isOpen && recommendations.length > 0) {
-      const newIds = recommendations.filter((r: ManagerGuidanceRecommendation) => !autoOpenedRef.current.includes(r.id)).map((r: ManagerGuidanceRecommendation) => r.id);
-      if (newIds.length > 0) {
-        autoOpenedRef.current = [...autoOpenedRef.current, ...newIds];
-        setAutoOpenedIds(autoOpenedRef.current);
+    if (!isOpen && recommendations.length > 0 && !userDismissedRef.current) {
+      const newCritical = recommendations.filter((r) => r.severity === 'critical' || r.severity === 'high');
+      const hasNew = newCritical.some((r) => {
+        const sig = `${r.kpiCode}_${r.severity}_${r.currentValue}`;
+        return !seenSignaturesRef.current.has(sig);
+      });
+      if (hasNew) {
+        newCritical.forEach((r) => {
+          seenSignaturesRef.current.add(`${r.kpiCode}_${r.severity}_${r.currentValue}`);
+        });
         setTimeout(() => {
           setIsClosing(false);
           setIsOpen(true);
@@ -202,19 +217,19 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
                 <div className="grid grid-cols-2 gap-3 mb-3">
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Current</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{rec.currentValue}{typeof rec.currentValue === 'number' && rec.kpiCode !== 'portfolio_load_balance' ? '%' : ''}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{rec.currentValue}{typeof rec.currentValue === 'number' && !['portfolio_load_balance', 'staff_adequacy_score'].includes(rec.kpiCode) ? '%' : ''}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Target</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{rec.target}{typeof rec.target === 'number' && rec.kpiCode !== 'portfolio_load_balance' ? '%' : ''}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{rec.target}{typeof rec.target === 'number' && !['portfolio_load_balance', 'staff_adequacy_score'].includes(rec.kpiCode) ? '%' : ''}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Benchmark</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{rec.benchmark}{typeof rec.benchmark === 'number' && rec.kpiCode !== 'portfolio_load_balance' ? '%' : ''}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{rec.benchmark}{typeof rec.benchmark === 'number' && !['portfolio_load_balance', 'staff_adequacy_score'].includes(rec.kpiCode) ? '%' : ''}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500 dark:text-gray-400">Variance</p>
-                    <p className="text-sm font-semibold text-red-600">{rec.variance}{typeof rec.variance === 'number' && rec.kpiCode !== 'portfolio_load_balance' ? '%' : ''}</p>
+                    <p className="text-sm font-semibold text-red-600">{rec.variance}{typeof rec.variance === 'number' && !['portfolio_load_balance', 'staff_adequacy_score'].includes(rec.kpiCode) ? '%' : ''}</p>
                   </div>
                 </div>
 
@@ -315,3 +330,5 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
     </>
   );
 }
+
+

@@ -66,7 +66,7 @@ export function useAutoManagerGuidanceInput(enabled: boolean): GuidanceEngineInp
 
   const branchId = useMemo(() => {
     const oid = getOfficeId();
-    return oid > 0 ? oid : 1;
+    return oid > 0 ? oid : 3;
   }, []);
 
   const officeId = useMemo(() => getOfficeId(), []);
@@ -107,7 +107,7 @@ export function useAutoManagerGuidanceInput(enabled: boolean): GuidanceEngineInp
         fn: () => Promise<any>;
         extract: (d: any) => number | undefined;
       }> = [
-        { key: 'staff_adequacy_score', fn: () => fetchStaffAdequacyPerformance(branchId), extract: (d) => num(d.normalized_score ?? d.average_normalized_score) },
+        { key: 'staff_adequacy_score', fn: () => fetchStaffAdequacyPerformance(branchId), extract: (d) => { const offices = num(d.offices_count); const lcs = num(d.actual_lcs); if (!lcs) return undefined; return offices && offices > 0 ? lcs / offices : lcs; } },
         { key: 'productivity_achievement', fn: () => fetchProductivityAchievement(branchId), extract: (d) => num(d.average_disbursement) },
         { key: 'vacancy_impact', fn: () => fetchVacancyImpact(branchId), extract: (d) => num(d.vacancies) },
         { key: 'portfolio_load_balance', fn: () => fetchLoanPortfolioLoad(branchId), extract: (d) => num(d.portfolio_per_lc) },
@@ -136,9 +136,10 @@ export function useAutoManagerGuidanceInput(enabled: boolean): GuidanceEngineInp
           const raw = await item.fn();
           const val = item.extract(raw);
           if (val !== undefined && val !== null) {
+            const instAvg = num(raw?.instAvg ?? raw?.average_normalized_score ?? raw?.average_score);
             data[item.key] = {
               current: val,
-              benchmark: 0,
+              benchmark: instAvg ?? 0,
             };
           }
         } catch {
@@ -171,3 +172,7 @@ export function useAutoManagerGuidanceInput(enabled: boolean): GuidanceEngineInp
     };
   }, [enabled, fetchedData, managerContext]);
 }
+
+
+
+

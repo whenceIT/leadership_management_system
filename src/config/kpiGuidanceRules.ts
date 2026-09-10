@@ -4,16 +4,16 @@ export const KPI_GUIDANCE_RULES: KPIGuidanceRule[] = [
   {
     kpiCode: 'staff_adequacy_score',
     kpiName: 'Staff Adequacy Score',
-    target: 100,
-    warningThreshold: 76,
-    criticalThreshold: 60,
+    target: 11,
+    warningThreshold: 10,
+    criticalThreshold: 9,
     higherIsBetter: true,
     severityRules: {
-      healthy: (current) => current >= 90,
-      low: (current) => current >= 76 && current < 90,
-      medium: (current) => current >= 60 && current < 76,
-      high: (current) => current >= 40 && current < 60,
-      critical: (current) => current < 40,
+      healthy: (current) => current >= 10 && current <= 12,
+      low: (current) => current >= 9 && current < 10,
+      medium: (current) => current >= 8 && current < 9,
+      high: (current) => current >= 7 && current < 8,
+      critical: (current) => current < 7,
     },
     recommendedActions: {
       branch: 'Review LC headcount at your office. Initiate recruitment if below target band, or re-balance workload if over-staffed.',
@@ -490,3 +490,4 @@ export function getRuleByKpiCode(kpiCode: string): KPIGuidanceRule | undefined {
 export function getRulesForRole(role: ManagerRoleTier): KPIGuidanceRule[] {
   return KPI_GUIDANCE_RULES.filter((r) => r.applicableRoles.includes(role));
 }
+

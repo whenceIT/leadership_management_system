@@ -11,7 +11,6 @@ import {
   KPIMetricsCard,
   CollapsibleCard
 } from './DashboardBase';
-import { getHeadlineParameters } from '@/data/headline-parameters-mock';
 import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import ProvincialDataService, {
   BranchPerformance, 
@@ -162,9 +161,6 @@ export default function ProvincialManagerDashboard() {
     if (branches.length === 0) return 0;
     return branches.reduce((sum, b) => sum + b.net_contribution_value, 0) / branches.length;
   };
-
-  // Headline parameters using composite index approach
-  const headlineParameters = getHeadlineParameters();
 
   // Drill-down for Provincial Manager: districts -> branches -> consultants -> transactions
   const [drillView, setDrillView] = useState<'districts' | 'branches' | 'consultants' | 'transactions'>('districts');

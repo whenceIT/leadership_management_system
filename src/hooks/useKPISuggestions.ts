@@ -365,6 +365,7 @@ export function useKPISuggestions(input: UseKPISuggestionsInput): UseKPISuggesti
         m.officeUsers = m.officeUsers ?? officeUsers;
         m.officeName = m.officeName ?? officeName ?? location?.branchName;
       }
+      m.userLevel = m.userLevel ?? input.userLevel;
       measurements.push(m);
     };
 
@@ -373,13 +374,13 @@ export function useKPISuggestions(input: UseKPISuggestionsInput): UseKPISuggesti
     if (mVac) withAttribution(mVac);
     if (mPort) withAttribution(mPort);
 
-    const otherMetrics: Array<{ name: string; data: any; location?: SuggestionLocation }> = [
+    const otherMetrics: Array<{ name: string; data: any; location?: SuggestionLocation; userLevel?: string }> = [
       ...(input.otherMetrics || []),
     ];
 
     const addIfMissing = (name: string, data: any, location?: SuggestionLocation) => {
       if (!otherMetrics.find((m) => m.name === name)) {
-        otherMetrics.push({ name, data, location });
+        otherMetrics.push({ name, data, location, userLevel: input.userLevel });
       }
     };
 
