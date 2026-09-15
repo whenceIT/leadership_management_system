@@ -10,6 +10,7 @@ import { ConsultantLevelView } from './ConsultantLevelView';
 import { ParametersTableView } from './ParametersTableView';
 import { useKPISuggestions } from '@/hooks/useKPISuggestions';
 import { saveOverallScoreCheckpoint, fetchScoreHistory } from '@/services/OverallScoreCheckpointService';
+import { getUserRole } from '@/utils/userContext';
 
 interface ParameterKPIs {
   [key: string]: KPI[];
@@ -1476,7 +1477,7 @@ export function InstitutionalHealthSummary({
 
     useEffect(() => {
       let cancelled = false;
-      fetchScoreHistory('executive')
+       fetchScoreHistory(getUserRole())
         .then((res) => {
           if (cancelled) return;
           const sorted = [...res.data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -1598,12 +1599,17 @@ export function InstitutionalHealthSummary({
                     <span className="text-4xl font-black text-white">{delayedOverallScore ?? overallScore}%</span>
                   )}
                 </div>
-                <p className="text-gray-400 text-xs">{isLoading || isCalculating ? 'Calculating...' : 'Overall Health Score'}</p>
-                {!isLoading && !isCalculating && fetchedPrevMonthScores.length === 3 && (
-                  <p className="text-xs text-gray-500 opacity-60">
-                    Previous: {fetchedPrevMonthScores[2].score}% ({fetchedPrevMonthScores[2].label}) · Avg: {Math.round((fetchedPrevMonthScores[0].score + fetchedPrevMonthScores[1].score + fetchedPrevMonthScores[2].score) / 3)}% (3-month)
-                  </p>
-                )}
+                 <p className="text-gray-400 text-xs">{isLoading || isCalculating ? 'Calculating...' : 'Overall Health Score'}</p>
+                 {!isLoading && !isCalculating && fetchedPrevMonthScores.length === 3 && (
+                   <p className="text-xs text-gray-500 opacity-60">
+                     Previous: {fetchedPrevMonthScores[2].score}% ({fetchedPrevMonthScores[2].label}) · Avg: {Math.round((fetchedPrevMonthScores[0].score + fetchedPrevMonthScores[1].score + fetchedPrevMonthScores[2].score) / 3)}% (3-month)
+                   </p>
+                 )}
+                 {!isLoading && !isCalculating && (
+                   <p className="text-xs text-gray-500 opacity-60 mt-1">
+                     Role: {getUserRole()}
+                   </p>
+                 )}
                 <div className="mt-3">
                   <button
                     onClick={handleSaveCheckpoint}

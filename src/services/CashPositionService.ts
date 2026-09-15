@@ -80,6 +80,7 @@ export interface CashHealthDistrict {
   district_id?: number;
   district_name?: string;
   office_count?: number;
+  cycle?: CashHealthCycle;
   financials?: CashHealthFinancials;
   reserve_breakdown?: Record<string, unknown>;
   scores?: CashHealthScores;
@@ -120,11 +121,12 @@ export interface CashHealthProvince {
   province_id?: number;
   province_name?: string;
   office_count?: number;
+  cycle?: CashHealthCycle;
   financials?: CashHealthFinancials;
   reserve_breakdown?: Record<string, unknown>;
   scores?: CashHealthScores;
   reason?: string;
-  districts?: CashHealthDistrict[];
+   districts?: CashHealthDistrict[];
   [key: string]: unknown;
 }
 
@@ -278,7 +280,7 @@ export async function fetchExecutiveCashHealth(): Promise<ExecutiveCashHealthDat
 const CASH_HEALTH_PROVINCE_API_BASE = process.env.NEXT_PUBLIC_CASH_HEALTH_API_URL || 'https://lms2backend.whencefinancesystem.com';
 
 export async function fetchCashHealthProvince(provinceId: number): Promise<CashHealthProvinceData> {
-  const response = await fetch(`${CASH_HEALTH_PROVINCE_API_BASE}/cash-health/province/${provinceId}?cycle_start=2026-08-24`, {
+  const response = await fetch(`${CASH_HEALTH_PROVINCE_API_BASE}/cash-health/province/${provinceId}?cycle_start=${getCurrentCycleStart()}`, {
     method: 'GET',
     cache: 'no-store',
     headers: {
@@ -584,7 +586,7 @@ export async function fetchDistrictCashPosition(districtId: number, offices?: Of
 const CASH_HEALTH_DISTRICT_API_BASE = process.env.NEXT_PUBLIC_CASH_HEALTH_API_URL || 'https://lms2backend.whencefinancesystem.com';
 
 export async function fetchCashHealthDistrict(districtId: number): Promise<CashHealthDistrictData> {
-  const response = await fetch(`${CASH_HEALTH_DISTRICT_API_BASE}/cash-health/district/${districtId}?cycle_start=2026-08-24`, {
+  const response = await fetch(`${CASH_HEALTH_DISTRICT_API_BASE}/cash-health/district/${districtId}?cycle_start=${getCurrentCycleStart()}`, {
     method: 'GET',
     cache: 'no-store',
     headers: {
@@ -644,10 +646,51 @@ export interface CashHealthBranchData {
   [key: string]: unknown;
 }
 
+/**
+ * Calculates the current cash cycle start date.
+ * Per cash-health.md section 2.2:
+ * - If today >= 25: cycle_start = current month's 25th
+ * - Else: cycle_start = previous month's 25th
+ */
+export function getCurrentCycleStart(): string {
+  const now = new Date();
+  const day = now.getDate();
+  let year = now.getFullYear();
+  let month = now.getMonth(); // 0-indexed
+
+  if (day >= 25) {
+    // Current month's 25th
+  } else {
+    // Previous month's 25th
+    month -= 1;
+    if (month < 0) {
+      month = 11;
+      year -= 1;
+    }
+  }
+
+  const monthStr = String(month + 1).padStart(2, '0');
+  return `${year}-${monthStr}-25`;
+}
+
+/**
+ * Calculates the current cash cycle end date (cycle_start + 1 month - 1 day)
+ */
+export function getCurrentCycleEnd(): string {
+  const cycleStart = getCurrentCycleStart();
+  const [y, m, d] = cycleStart.split('-').map(Number);
+  const start = new Date(y, m - 1, d);
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 24);
+  const year = end.getFullYear();
+  const monthStr = String(end.getMonth() + 1).padStart(2, '0');
+  const dayStr = String(end.getDate()).padStart(2, '0');
+  return `${year}-${monthStr}-${dayStr}`;
+}
+
 const CASH_HEALTH_BRANCH_API_BASE = process.env.NEXT_PUBLIC_CASH_HEALTH_API_URL || 'https://lms2backend.whencefinancesystem.com';
 
 export async function fetchCashHealthOffice(officeId: number): Promise<CashHealthBranchData> {
-  const response = await fetch(`${CASH_HEALTH_BRANCH_API_BASE}/cash-health/${officeId}?cycle_start=2026-08-24`, {
+  const response = await fetch(`${CASH_HEALTH_BRANCH_API_BASE}/cash-health/${officeId}?cycle_start=${getCurrentCycleStart()}`, {
     method: 'GET',
     cache: 'no-store',
     headers: {

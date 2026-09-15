@@ -15,6 +15,7 @@ export interface UserContext {
   email: string;
   firstName: string;
   lastName: string;
+  role: string;
   isImpersonating: boolean;
 }
 
@@ -162,6 +163,7 @@ export function getUserContext(): UserContext {
     email: '',
     firstName: '',
     lastName: '',
+    role: 'executive',
     isImpersonating: false,
   };
 
@@ -196,6 +198,7 @@ export function getUserContext(): UserContext {
       email: String(user.email || ''),
       firstName: String(user.first_name || ''),
       lastName: String(user.last_name || ''),
+      role: user.tier || getRoleFromJobPosition(user.job_position) || String(user.role || 'executive'),
       isImpersonating: impersonating,
     };
   } catch (e) {
@@ -266,6 +269,41 @@ export function getPositionId(): number {
   return context.positionId;
 }
 
+/**
+ * Maps a job_position integer ID to a hierarchical role string for API filtering.
+ * Used to dynamically determine the user's role based on their position.
+ */
+const POSITION_ROLE_MAP: Record<number, string> = {
+  1: 'executive',    // General Operations Manager (GOM)
+  2: 'province',     // Provincial Manager
+  3: 'district',     // District Regional Manager
+  4: 'district',     // District Manager
+  5: 'branch',       // Branch Manager
+  16: 'executive',   // General Operations Administrator (GOA)
+  20: 'executive',   // Executive Chairperson
+  21: 'consultant',  // Loan Consultant
+};
+
+/**
+ * Resolve a role string from a job_position integer ID.
+ * Falls back to the provided default if not in the map.
+ */
+function getRoleFromJobPosition(jobPosition: number | undefined, fallback = 'executive'): string {
+  if (jobPosition && POSITION_ROLE_MAP[jobPosition]) {
+    return POSITION_ROLE_MAP[jobPosition];
+  }
+  return fallback;
+}
+
+/**
+ * Get user role (supports impersonation)
+ * Dynamically resolved from user.tier, then job_position, then defaults to 'executive'
+ */
+export function getUserRole(): string {
+  const context = getUserContext();
+  return context.role;
+}
+
 export default {
   getUserContext,
   getUserQueryParams,
@@ -274,6 +312,7 @@ export default {
   getOfficeId,
   getProvinceId,
   getPositionId,
+  getUserRole,
   isImpersonating,
   getImpersonationData,
   getUserData,

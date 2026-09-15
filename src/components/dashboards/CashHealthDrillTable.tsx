@@ -1,10 +1,28 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ExecutiveCashHealthData, CashHealthProvince, CashHealthDistrict, CashHealthOffice } from '@/services/CashPositionService';
+import { ExecutiveCashHealthData, CashHealthProvince, CashHealthDistrict, CashHealthOffice, getCurrentCycleStart, getCurrentCycleEnd } from '@/services/CashPositionService';
 import { getOfficeNameById } from '@/hooks/useOffice';
 import { useOffice } from '@/hooks/useOffice';
 import CashHealthOfficePopup from './CashHealthOfficePopup';
+import CashHealthDetailsPopup from './CashHealthDetailsPopup';
+import BranchCashHealthView from './BranchCashHealthView';
+
+function formatCycle(data: { cycle?: { start_date?: string; end_date?: string } | undefined }): string {
+  const start = data?.cycle?.start_date;
+  const end = data?.cycle?.end_date;
+  if (start && end) return `${start} → ${end}`;
+  return '';
+}
+
+function CycleBadge({ cycleStart, cycleEnd }: { cycleStart?: string; cycleEnd?: string }) {
+  if (!cycleStart || !cycleEnd) return null;
+  return (
+    <span className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+      Cycle: {cycleStart} → {cycleEnd}
+    </span>
+  );
+}
 
 interface CashHealthDrillTableProps {
   data: ExecutiveCashHealthData | null;
@@ -48,11 +66,13 @@ function getScoreBadge(score: number | undefined, status?: string): React.ReactN
 function ProvinceRow({ 
   province, 
   onClick, 
-  showReason
+  showReason,
+  onReasonClick
 }: { 
   province: CashHealthProvince; 
   onClick: () => void;
   showReason?: boolean;
+  onReasonClick?: (province: CashHealthProvince) => void;
 }) {
   const scores = province.scores || {};
   const financials = province.financials || {};
@@ -85,23 +105,28 @@ function ProvinceRow({
        <td className="px-4 py-2 text-center">
          {getScoreBadge(overallScore, status)}
        </td>
-       {showReason && (
-         <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate" title={province.reason}>
-           {province.reason || '--'}
-         </td>
-       )}
-     </tr>
-   );
+        {showReason && (
+          <td className="px-4 py-2 text-sm text-blue-600 dark:text-blue-400 cursor-pointer hover:underline max-w-xs truncate" title={province.reason} onClick={(e) => {
+            e.stopPropagation();
+            onReasonClick?.(province);
+          }}>
+            {province.reason || '--'}
+          </td>
+        )}
+      </tr>
+    );
 }
 
 function DistrictRow({ 
   district, 
   onClick, 
-  showReason
+  showReason,
+  onReasonClick
 }: { 
   district: CashHealthDistrict; 
   onClick: () => void;
   showReason?: boolean;
+  onReasonClick?: (district: CashHealthDistrict) => void;
 }) {
   const scores = district.scores || {};
   const financials = district.financials || {};
@@ -134,11 +159,14 @@ function DistrictRow({
        <td className="px-4 py-2 text-center">
          {getScoreBadge(overallScore, status)}
        </td>
-       {showReason && (
-         <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate" title={district.reason}>
-           {district.reason || '--'}
-         </td>
-       )}
+        {showReason && (
+          <td className="px-4 py-2 text-sm text-blue-600 dark:text-blue-400 cursor-pointer hover:underline max-w-xs truncate" title={district.reason} onClick={(e) => {
+            e.stopPropagation();
+            onReasonClick?.(district);
+          }}>
+            {district.reason || '--'}
+          </td>
+        )}
      </tr>
    );
 }
@@ -147,11 +175,13 @@ function OfficeRow({
   office, 
   showReason,
   onReasonClick,
+  onOfficeClick,
   offices
 }: { 
   office: CashHealthOffice; 
   showReason?: boolean;
   onReasonClick?: (office: CashHealthOffice) => void;
+  onOfficeClick?: (office: CashHealthOffice) => void;
   offices?: any[];
 }) {
   const scores = office.scores || {};
@@ -160,7 +190,7 @@ function OfficeRow({
   const status = scores.status;
   
   return (
-    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+    <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onClick={() => onOfficeClick?.(office)}>
         <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white pl-12">
           {office.office_name || (office.office_id ? getOfficeNameById(office.office_id, offices) : undefined) || '-'}
         </td>
@@ -211,10 +241,21 @@ export function CashHealthDrillTable({
 }: CashHealthDrillTableProps) {
   const [showReason, setShowReason] = useState(false);
   const [officePopup, setOfficePopup] = useState<CashHealthOffice | null>(null);
+  const [provincePopup, setProvincePopup] = useState<CashHealthProvince | null>(null);
+  const [districtPopup, setDistrictPopup] = useState<CashHealthDistrict | null>(null);
+  const [branchViewPopup, setBranchViewPopup] = useState<CashHealthOffice | null>(null);
   const { offices } = useOffice();
   
   const handleReasonClick = (office: CashHealthOffice) => {
     setOfficePopup(office);
+  };
+  
+  const handleProvinceReasonClick = (province: CashHealthProvince) => {
+    setProvincePopup(province);
+  };
+  
+  const handleDistrictReasonClick = (district: CashHealthDistrict) => {
+    setDistrictPopup(district);
   };
   
   if (!data || !data.provinces || data.provinces.length === 0) {
@@ -232,7 +273,8 @@ export function CashHealthDrillTable({
     return (
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">National Cash Health - Provinces</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">National Cash Health - Provinces</h3>
+            <CycleBadge cycleStart={getCurrentCycleStart()} cycleEnd={getCurrentCycleEnd()} />
           <button
             onClick={() => setShowReason(!showReason)}
             className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
@@ -260,12 +302,13 @@ export function CashHealthDrillTable({
              </thead>
              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                {provinces.map((province) => (
-                <ProvinceRow
-                  key={province.province_id}
-                  province={province}
-                  onClick={() => onProvinceClick(province.province_id!)}
-                  showReason={showReason}
-                />
+                 <ProvinceRow
+                   key={province.province_id}
+                   province={province}
+                   onClick={() => onProvinceClick(province.province_id!)}
+                   onReasonClick={handleProvinceReasonClick}
+                   showReason={showReason}
+                 />
               ))}
             </tbody>
           </table>
@@ -298,9 +341,10 @@ export function CashHealthDrillTable({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {province.province_name || `Province ${province.province_id}`} - Districts
-            </h3>
+             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+               {province.province_name || `Province ${province.province_id}`} - Districts
+             </h3>
+             <CycleBadge cycleStart={getCurrentCycleStart()} cycleEnd={getCurrentCycleEnd()} />
           </div>
           <button
             onClick={() => setShowReason(!showReason)}
@@ -330,11 +374,12 @@ export function CashHealthDrillTable({
              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                {province.districts.map((district) => (
                 <DistrictRow
-                  key={district.district_id}
-                  district={district}
-                  onClick={() => onDistrictClick(district.district_id!)}
-                  showReason={showReason}
-                />
+                   key={district.district_id}
+                   district={district}
+                   onClick={() => onDistrictClick(district.district_id!)}
+                   onReasonClick={handleDistrictReasonClick}
+                   showReason={showReason}
+                 />
               ))}
             </tbody>
           </table>
@@ -373,6 +418,7 @@ export function CashHealthDrillTable({
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {district.district_name || `District ${district.district_id}`} - Branches/Offices
             </h3>
+            <CycleBadge cycleStart={getCurrentCycleStart()} cycleEnd={getCurrentCycleEnd()} />
           </div>
           <button
             onClick={() => setShowReason(!showReason)}
@@ -402,24 +448,66 @@ export function CashHealthDrillTable({
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {district.offices.map((office) => (
-                  <OfficeRow
-                  key={office.office_id}
-                  office={office}
-                  showReason={showReason}
-                  onReasonClick={handleReasonClick}
-                  offices={offices}
-                />
+                   <OfficeRow
+                   key={office.office_id}
+                   office={office}
+                   showReason={showReason}
+                   onReasonClick={handleReasonClick}
+                   onOfficeClick={(o) => setBranchViewPopup(o)}
+                   offices={offices}
+                 />
               ))}
             </tbody>
-          </table>
+           </table>
+         </div>
+       </div>
+       {officePopup && (
+         <CashHealthOfficePopup
+           office={officePopup}
+           onClose={() => setOfficePopup(null)}
+         />
+       )}
+       {provincePopup && (
+         <CashHealthDetailsPopup
+           title="Province Cash Health Details"
+           name={provincePopup.province_name || `Province ${provincePopup.province_id}`}
+           officeCount={provincePopup.office_count}
+           financials={provincePopup.financials}
+           scores={provincePopup.scores}
+           reason={provincePopup.reason}
+           details={provincePopup.details}
+           onClose={() => setProvincePopup(null)}
+         />
+       )}
+       {districtPopup && (
+         <CashHealthDetailsPopup
+           title="District Cash Health Details"
+           name={districtPopup.district_name || `District ${districtPopup.district_id}`}
+           officeCount={districtPopup.office_count}
+           financials={districtPopup.financials}
+           scores={districtPopup.scores}
+           reason={districtPopup.reason}
+           details={districtPopup.details}
+           onClose={() => setDistrictPopup(null)}
+         />
+       )}
+       {branchViewPopup && (
+         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setBranchViewPopup(null)}>
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Branch Cash Health</h3>
+              <button onClick={() => setBranchViewPopup(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <BranchCashHealthView data={branchViewPopup as any} />
+            </div>
+          </div>
         </div>
-      </div>
-      {officePopup && (
-        <CashHealthOfficePopup
-          office={officePopup}
-          onClose={() => setOfficePopup(null)}
-        />
-      )}
+       )}
       </>
     );
   }

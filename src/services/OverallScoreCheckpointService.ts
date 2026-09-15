@@ -1,4 +1,4 @@
-import { getOfficeId } from '@/utils/userContext';
+import { getOfficeId, getUserRole } from '@/utils/userContext';
 
 export interface OverallScoreCheckpointResponse {
   message: string;
@@ -30,7 +30,7 @@ export async function saveOverallScoreCheckpoint(score: number): Promise<Overall
     body: JSON.stringify({
       office_id: officeId,
       score: score,
-      type: 'executive',
+      type: getUserRole(),
     }),
   });
 
@@ -41,12 +41,13 @@ export async function saveOverallScoreCheckpoint(score: number): Promise<Overall
   return response.json();
 }
 
-export async function fetchScoreHistory(type = 'executive'): Promise<ScoreHistoryResponse> {
+export async function fetchScoreHistory(type?: string): Promise<ScoreHistoryResponse> {
   const officeId = getOfficeId();
+  const roleType = type ?? getUserRole();
   
   const url = new URL('https://smartbackend.whencefinancesystem.com/overall-score-checkpoint');
   url.searchParams.set('office_id', String(officeId));
-  url.searchParams.set('type', type);
+  url.searchParams.set('type', roleType);
 
   const response = await fetch(url.toString());
 

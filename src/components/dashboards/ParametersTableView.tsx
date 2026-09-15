@@ -5,6 +5,7 @@ import { ProvinceLevelView } from './ProvinceLevelView';
 import { DistrictLevelView } from './DistrictLevelView';
 import { BranchLevelView } from './BranchLevelView';
 import { CashHealthDrillTable } from './CashHealthDrillTable';
+import BranchCashHealthView from './BranchCashHealthView';
 import { KPI, KPIStatus, KPITrend, ParameterSummary } from '@/types/dashboard';
 import { ExecutiveCashHealthData } from '@/services/CashPositionService';
 
@@ -212,6 +213,22 @@ export function ParametersTableView({
   const getProvincialAvgForKpi = (kpiName: string): string | null => {
     if (!provincialAverages) return null;
     return provincialAverages[kpiName] || null;
+  };
+
+  // Compute institutional average for Cash Position Score: average of province-level overall scores
+  const getCashPositionInstitutionalAvg = (): number | null => {
+    if (!cashPositionData?.provinces || cashPositionData.provinces.length === 0) return null;
+    let total = 0;
+    let count = 0;
+    cashPositionData.provinces.forEach((province: any) => {
+      const score = province?.scores?.overall;
+      if (score !== undefined && score !== null && !isNaN(Number(score))) {
+        total += Number(score);
+        count++;
+      }
+    });
+    if (count === 0) return null;
+    return total / count;
   };
 
   const DEFAULT_INSTITUTIONAL_AVGS: Record<string, string> = {
@@ -680,6 +697,9 @@ export function ParametersTableView({
                                 )}
 
                                 {drillLevel === 'branch' && selectedKPI === 'Cash Position Score' && cashPositionData ? (
+                                  userLevel === 'branch' ? (
+                                    <BranchCashHealthView data={cashPositionData} />
+                                  ) : (
                                   <CashHealthDrillTable
                                     data={cashPositionData as ExecutiveCashHealthData}
                                     drillLevel="office"
@@ -703,6 +723,7 @@ export function ParametersTableView({
                                       }
                                     }}
                                   />
+                                  )
                                 ) : drillLevel === 'branch' && selectedKPI && drillDownKPI !== 'Cash Position Score' && (
                                   <BranchLevelView
                                     selectedKPI={selectedKPI}
