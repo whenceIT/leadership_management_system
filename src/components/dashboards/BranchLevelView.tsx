@@ -27,10 +27,11 @@ import { fetchRollRateControl } from '@/services/RollRateControlService';
 import { fetchGrowthTrajectory } from '@/services/GrowthTrajectoryService';
 import { fetchRevenueAchievements } from '@/services/RevenueAchievementsService';
 import { fetchProfitabilityContribution } from '@/services/ProfitabilityContributionService';
-import { fetchCashPosition } from '@/services/CashPositionService';
+import { fetchCashHealthOffice } from '@/services/CashPositionService';
 import { ConsultantLevelView } from './ConsultantLevelView';
 import { KpiSummaryHeader } from './KpiSummaryHeader';
 import { getActualLCs } from '@/lib/staffing';
+import { getOfficeNameById } from '@/hooks/useOffice';
 
 interface BranchLevelViewProps {
   selectedKPI: string;
@@ -54,7 +55,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
   const [error, setError] = useState<string | null>(null);
   const [selectedBranchForDrill, setSelectedBranchForDrill] = useState<number | null>(null);
   const [showKpiInfo, setShowKpiInfo] = useState<boolean>(false);
-  const [verdictPopup, setVerdictPopup] = useState<{ branchName: string; verdict: string; reason: string; workstations?: number; minimum_loan_target?: number; amount_disbursed?: number; adjusted_disbursed_140_percent?: number; defaults?: number; mandatory_fixed_costs?: number; salaries_performance_allowances?: number; net_cash_position?: number } | null>(null);
+  const [verdictPopup, setVerdictPopup] = useState<{ branchName: string; verdict: string; reason: string; financials?: any; scores?: any } | null>(null);
 
   const userBranchId = useMemo(() => {
     if (!user) return null;
@@ -150,7 +151,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                 data = await fetchGrowthTrajectory(parseInt(branchId));
                 break;
               case 'Cash Position Score':
-                data = await fetchCashPosition(parseInt(branchId));
+                data = await fetchCashHealthOffice(parseInt(branchId));
                 break;
               case 'Portfolio Load Balance':
                 data = await fetchLoanPortfolioLoad(parseInt(branchId));
@@ -194,6 +195,30 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
     if (variance.startsWith('+')) return 'text-red-600 dark:text-red-400 font-semibold';
     if (variance.startsWith('-')) return 'text-green-600 dark:text-green-400 font-semibold';
     return 'text-gray-600 dark:text-gray-400';
+  };
+
+  const formatCurrency = (value: number | null | undefined): string => {
+    if (value === undefined || value === null) return '--';
+    return new Intl.NumberFormat('en-ZM', { style: 'currency', currency: 'ZMW', maximumFractionDigits: 0 }).format(value);
+  };
+
+  const getCashScoreBadge = (scores: any): React.ReactNode => {
+    const overallScore = scores?.overall;
+    const status = scores?.status;
+    if (overallScore === undefined || overallScore === null) return <span className="text-gray-400">--</span>;
+    let colorClass = 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+    if (status === 'GREEN' || (status === undefined && overallScore >= 80)) {
+      colorClass = 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
+    } else if (status === 'AMBER' || (status === undefined && overallScore >= 60)) {
+      colorClass = 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
+    } else {
+      colorClass = 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+    }
+    return (
+      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${colorClass}`}>
+        {overallScore}
+      </span>
+    );
   };
 
   // Helper function to extract KPI value from data
@@ -390,28 +415,30 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
          status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
        }
      } else if (selectedKPI === 'Cash Position Score') {
-      const score = data.cash_position_score ?? parseFloat(String(data.score ?? data.average_score ?? NaN));
-      const netCashPosition = data.net_cash_position;
-      const hasScore = !Number.isNaN(score);
+       const financials = data.financials || {};
+       const scores = data.scores || {};
+       const apiScore = scores.overall ?? data.cash_position_score ?? data.score ?? data.average_score;
+       const netCashPosition = financials.net_cash_position ?? data.net_cash_position;
+       const residualCash = financials.residual_cash;
+       const hasScore = apiScore !== undefined && apiScore !== null && !Number.isNaN(Number(apiScore));
 
-      if (hasScore) {
-        current = `${score.toFixed(2)}%`;
-        target = '≥100%';
-        variance = `${(score - 100).toFixed(2)}%`;
-        trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
-        status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
-      }
+       if (hasScore) {
+         const score = Number(apiScore);
+         current = `${score.toFixed(2)}%`;
+         target = '≥80%';
+         variance = `${(score - 100).toFixed(2)}%`;
+         trend = score >= 90 ? '↑' : score >= 70 ? '→' : '↓';
+         status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+       }
 
-      if (netCashPosition != null) {
-        if (!hasScore) {
-          current = `K${netCashPosition.toLocaleString()}`;
-          target = '≥K0';
-          variance = `${netCashPosition >= 0 ? '+' : '-'}K${Math.abs(netCashPosition).toLocaleString()}`;
-          trend = netCashPosition >= 0 ? '↑' : '↓';
-          status = netCashPosition >= 0 ? 'good' : 'critical';
-        }
-      }
-    }
+       if (!hasScore && netCashPosition != null) {
+         current = `K${netCashPosition.toLocaleString()}`;
+         target = '≥K0';
+         variance = `${netCashPosition >= 0 ? '+' : '-'}K${Math.abs(netCashPosition).toLocaleString()}`;
+         trend = netCashPosition >= 0 ? '↑' : '↓';
+         status = netCashPosition >= 0 ? 'good' : 'critical';
+       }
+     }
     return { current, target, variance, trend, status, actualLcs, totalStaff };
   };
 
@@ -484,13 +511,15 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
     }
   };
 
-  // Sort branches by Branch Avg (descending)
-  const sortedBranches = [...branches].sort((a, b) => {
-    if (selectedKPI === 'Cash Position Score') {
-      const cashA = branchData[a.id]?.totalCashBalance || 0;
-      const cashB = branchData[b.id]?.totalCashBalance || 0;
-      return cashB - cashA;
-    }
+   // Sort branches by Branch Avg (descending)
+   const sortedBranches = [...branches].sort((a, b) => {
+     if (selectedKPI === 'Cash Position Score') {
+       const dataA = branchData[a.id];
+       const dataB = branchData[b.id];
+       const cashA = dataA?.financials?.residual_cash ?? dataA?.totalCashBalance ?? 0;
+       const cashB = dataB?.financials?.residual_cash ?? dataB?.totalCashBalance ?? 0;
+       return cashB - cashA;
+     }
     const dataA = branchData[a.id];
     const dataB = branchData[b.id];
     
@@ -610,13 +639,15 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
             <tr>
               {selectedKPI === 'Cash Position Score' ? (
                 <>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Offices</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Residual Cash</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Net Cash Position</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Verdict</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Disbursed</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Collection Rate</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Collection Threshold</th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Capacity</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Min Loan Target</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Defaults</th>
+                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">irregular costs</th>
+                   <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase">Overall Score</th>
+                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Details</th>
                 </>
               ) : (
                 <>
@@ -636,61 +667,61 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                const data = branchData[branch.id];
                const kpiValue = getKPIValue(data, selectedKPI);
                
-                let rowBg = '';
-                if (selectedKPI === 'Cash Position Score') {
-                  const cashBalance = data?.totalCashBalance || 0;
-                  if (cashBalance >= 50000) {
-                    rowBg = 'bg-green-50 dark:bg-green-900/20';
-                  } else if (cashBalance >= 30000) {
-                    rowBg = 'bg-yellow-50 dark:bg-yellow-900/20';
-                  } else if (cashBalance >= 10000) {
-                    rowBg = 'bg-orange-50 dark:bg-orange-900/20';
-                  } else {
-                    rowBg = 'bg-red-50 dark:bg-red-900/20';
-                  }
-                }
+                 let rowBg = '';
+                 if (selectedKPI === 'Cash Position Score' && data?.financials) {
+                   const cashBalance = data.financials.residual_cash || 0;
+                   if (cashBalance >= 50000) {
+                     rowBg = 'bg-green-50 dark:bg-green-900/20';
+                   } else if (cashBalance >= 30000) {
+                     rowBg = 'bg-yellow-50 dark:bg-yellow-900/20';
+                   } else if (cashBalance >= 10000) {
+                     rowBg = 'bg-orange-50 dark:bg-orange-900/20';
+                   } else {
+                     rowBg = 'bg-red-50 dark:bg-red-900/20';
+                   }
+                 }
 
-                return (
-                     <tr 
-                       key={branch.id} 
-                       className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${rowBg}`}
-                       onClick={() => {
-                         onBranchClick(Number(branch.id));
-                         setSelectedBranchForDrill(Number(branch.id));
-                       }}
-                     >
-                        {selectedKPI === 'Cash Position Score' ? (
-                          <>
-                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
-                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.net_cash_position != null ? `K${data.net_cash_position.toLocaleString()}` : '--'}</td>
-                            <td className="px-4 py-2 text-sm">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setVerdictPopup({
-                                    branchName: branch.name,
-                                    verdict: data?.verdict || '--',
-                                    reason: data?.verdict_reason || 'No reason provided.',
-                                    workstations: data?.workstations,
-                                    minimum_loan_target: data?.minimum_loan_target,
-                                    amount_disbursed: data?.amount_disbursed,
-                                    adjusted_disbursed_140_percent: data?.adjusted_disbursed_140_percent,
-                                    defaults: data?.defaults,
-                                    mandatory_fixed_costs: data?.mandatory_fixed_costs,
-                                    salaries_performance_allowances: data?.salaries_performance_allowances,
-                                    net_cash_position: data?.net_cash_position
-                                  });
-                                }}
-                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
-                              >
-                                {data?.verdict || '--'}
-                              </button>
-                            </td>
-                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.amount_disbursed != null ? `K${data.amount_disbursed.toLocaleString()}` : '--'}</td>
-                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.collection_rate != null ? `${data.collection_rate.toFixed(2)}%` : '--'}</td>
-                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.total_minimum_needed != null ? `K${data.total_minimum_needed.toLocaleString()}` : '--'}</td>
-                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.workstations ?? '--'}</td>
-                          </>
+                 return (
+                 <tr 
+                        key={branch.id} 
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${rowBg}`}
+                        onClick={() => {
+                          onBranchClick(Number(branch.id));
+                          setSelectedBranchForDrill(Number(branch.id));
+                        }}
+                      >
+                         {selectedKPI === 'Cash Position Score' ? (
+                           <>
+                             <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{data?.office_name || getOfficeNameById(branch.id) || branch.name}</td>
+                             <td className="px-4 py-2 text-sm text-green-600 dark:text-green-400 font-semibold">{data?.financials?.residual_cash != null ? formatCurrency(data.financials.residual_cash) : '--'}</td>
+                             <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.financials?.net_cash_position != null ? formatCurrency(data.financials.net_cash_position) : '--'}</td>
+                             <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.financials?.minimum_loan_target != null ? formatCurrency(data.financials.minimum_loan_target) : '--'}</td>
+                             <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.financials?.defaults != null ? formatCurrency(data.financials.defaults) : '--'}</td>
+                             <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{data?.financials?.irregular_cost_reserve != null ? formatCurrency(data.financials.irregular_cost_reserve) : '--'}</td>
+                              <td className="px-4 py-2 text-sm text-center">
+                                {getCashScoreBadge(data?.scores)}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate" title={data?.reason || ''}>
+                                {data?.reason || '--'}
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setVerdictPopup({
+                                      branchName: data?.office_name || getOfficeNameById(branch.id) || branch.name,
+                                      verdict: data?.scores?.status || '--',
+                                      reason: data?.reason || 'No reason provided.',
+                                      financials: data?.financials,
+                                      scores: data?.scores
+                                    });
+                                  }}
+                                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline text-xs"
+                                >
+                                  Details
+                                </button>
+                              </td>
+                           </>
                         ) : (
                          <>
                            <td className="px-4 py-2 text-sm font-medium text-gray-900 dark:text-white">{branch.name}</td>
@@ -721,7 +752,7 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setVerdictPopup(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Verdict: {verdictPopup.branchName}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Financial Detail: {verdictPopup.branchName}</h3>
               <button
                 onClick={() => setVerdictPopup(null)}
                 className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
@@ -751,41 +782,70 @@ export function BranchLevelView({ selectedKPI, selectedProvince, selectedDistric
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                     <tr>
-                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Workstations</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.workstations ?? '--'}</td>
-                    </tr>
-                    <tr>
                       <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Minimum loan target</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.minimum_loan_target != null ? `K${verdictPopup.minimum_loan_target.toLocaleString()}` : '--'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{formatCurrency(verdictPopup.financials?.minimum_loan_target)}</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Amount disbursed</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.amount_disbursed != null ? `K${verdictPopup.amount_disbursed.toLocaleString()}` : '--'}</td>
-                    </tr>
-                    <tr>
-                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Maximum expected repayment (×1.40)</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.adjusted_disbursed_140_percent != null ? `K${verdictPopup.adjusted_disbursed_140_percent.toLocaleString()}` : '--'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Maximum expected repayment</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{formatCurrency(verdictPopup.financials?.maximum_expected_repayment)}</td>
                     </tr>
                     <tr>
                       <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Defaults</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.defaults != null ? `K${verdictPopup.defaults.toLocaleString()}` : '--'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{formatCurrency(verdictPopup.financials?.defaults)}</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Irregular cost reserve</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{formatCurrency(verdictPopup.financials?.irregular_cost_reserve)}</td>
                     </tr>
                     <tr>
                       <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Mandatory fixed costs</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.mandatory_fixed_costs != null ? `K${verdictPopup.mandatory_fixed_costs.toLocaleString()}` : '--'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{formatCurrency(verdictPopup.financials?.mandatory_fixed_cost)}</td>
                     </tr>
                     <tr>
-                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Salaries & allowances</td>
-                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.salaries_performance_allowances != null ? `K${verdictPopup.salaries_performance_allowances.toLocaleString()}` : '--'}</td>
+                      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Salaries</td>
+                      <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{formatCurrency(verdictPopup.financials?.salaries)}</td>
                     </tr>
                     <tr className="bg-gray-100 dark:bg-gray-700">
                       <td className="px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white">Net cash position</td>
-                      <td className="px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white text-right">{verdictPopup.net_cash_position != null ? `K${verdictPopup.net_cash_position.toLocaleString()}` : '--'}</td>
+                      <td className="px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white text-right">{formatCurrency(verdictPopup.financials?.net_cash_position)}</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
+            {verdictPopup.scores && (
+              <div className="mb-4">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Score Breakdown</p>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-900">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Component</th>
+                        <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Score</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      <tr>
+                        <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Disbursement</td>
+                        <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.scores.disbursement ?? '--'}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Collection</td>
+                        <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.scores.collection ?? '--'}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">Residual Cash</td>
+                        <td className="px-3 py-2 text-sm text-gray-900 dark:text-white text-right">{verdictPopup.scores.residual_cash ?? '--'}</td>
+                      </tr>
+                      <tr className="bg-gray-100 dark:bg-gray-700">
+                        <td className="px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white">Overall</td>
+                        <td className="px-3 py-2 text-sm font-semibold text-gray-900 dark:text-white text-right">{verdictPopup.scores.overall ?? '--'}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

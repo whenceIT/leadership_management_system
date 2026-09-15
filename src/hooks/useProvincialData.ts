@@ -20,7 +20,7 @@ import { fetchProvincialRollRateControl } from '@/services/RollRateControlServic
 import { fetchProvincialGrowthTrajectory } from '@/services/GrowthTrajectoryService';
 import { fetchProvincialRevenueAchievements } from '@/services/RevenueAchievementsService';
 import { fetchProvincialProfitabilityContribution } from '@/services/ProfitabilityContributionService';
-import { fetchProvincialCashPosition } from '@/services/CashPositionService';
+import { fetchProvincialCashPosition, fetchCashHealthProvince } from '@/services/CashPositionService';
 
 export interface ProvincialData {
   [provinceId: number]: any;
@@ -126,7 +126,7 @@ export function useProvincialData(selectedKPI: string | null) {
               const data = await fetchProvincialProfitabilityContribution(province.id);
               newProvincialData[province.id] = data;
             } else if (selectedKPI === 'Cash Position Score') {
-              const data = await fetchProvincialCashPosition(province.id);
+              const data = await fetchCashHealthProvince(province.id);
               newProvincialData[province.id] = data;
             }
             // Add other KPI fetch logic here as needed

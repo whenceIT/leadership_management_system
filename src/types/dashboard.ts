@@ -11,6 +11,7 @@ export interface KPI {
   trend: KPITrend;
   status: KPIStatus;
   contribution?: string;
+  reason?: string;
 }
 
 export interface Office {
@@ -50,4 +51,5 @@ export interface ParameterSummary {
   trend: KPITrend;
   status: KPIStatus;
   contribution?: string;
+  reason?: string;
 }

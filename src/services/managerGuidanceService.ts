@@ -1,4 +1,4 @@
-import {
+ï»¿import {
   ManagerGuidanceRecommendation,
   GuidanceSeverity,
   GuidanceLevel,
@@ -41,7 +41,7 @@ function normalizeScore(value: any): number | null {
 
 /**
  * Dynamically derive a KPI guidance rule from API data.
- * No hardcoded thresholds — everything comes from the API response.
+ * No hardcoded tthresholds - everything comes from the API response.
  */
 function deriveRule(kpiCode: string, kpiName: string, apiData: any): KPIGuidanceRule | null {
   const target = parseNumber(apiData?.target ?? apiData?.branch_target);
@@ -449,6 +449,8 @@ export class ManagerGuidanceService {
 }
 
 export const managerGuidanceService = ManagerGuidanceService.getInstance();
+
+
 
 
 

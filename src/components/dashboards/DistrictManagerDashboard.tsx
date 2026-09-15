@@ -6,14 +6,15 @@ import { DashboardBase, KPICard, AlertCard, SectionCard, QuickInfoBar, JobPurpos
 import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './InstitutionalHealthSummary';
 import { roleCardsData } from '@/data/role-cards-data';
 import { useUserKPI } from '@/hooks/useUserKPI';
-import { useInstitutionalCashPosition } from '@/hooks/useInstitutionalCashPosition';
+import { useDistrictCashPosition } from '@/hooks/useInstitutionalCashPosition';
 
 interface DistrictManagerDashboardProps {
   position?: string;
   userTier?: string;
+  districtId?: number;
 }
 
-export default function DistrictManagerDashboard({ position = 'District Manager', userTier }: DistrictManagerDashboardProps) {
+export default function DistrictManagerDashboard({ position = 'District Manager', userTier, districtId }: DistrictManagerDashboardProps) {
   const roleCard = roleCardsData[position] || roleCardsData['District Manager'] || {
     department: 'TBD',
     reportsTo: 'TBD',
@@ -26,8 +27,8 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
   // Get user-specific KPI data
   const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
 
-  // Cash position metrics
-  const { data: cashPositionData } = useInstitutionalCashPosition();
+  // Cash position metrics from Cash Health District API
+  const { data: cashPositionData } = useDistrictCashPosition(districtId ?? 0);
   
   // Build KPIs from user-specific KPI data
   const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({

@@ -947,8 +947,10 @@ function aggregateCashLiquidityManagementKPIs(
     };
   }
 
+  const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
   const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
-  const score = calculateCashPositionScore(cashBalance, userLevel);
+  const apiScoreNum = typeof apiScore === 'number' ? apiScore : parseFloat(String(apiScore || 0));
+  const score = Number.isFinite(apiScoreNum) ? apiScoreNum : calculateCashPositionScore(cashBalance, userLevel);
 
   const target = 100;
   const variance = score - target;
@@ -966,7 +968,8 @@ function aggregateCashLiquidityManagementKPIs(
     varianceAbs,
     trend,
     status,
-    contribution: `${score.toFixed(2)} of 100pp`
+    contribution: `${score.toFixed(2)} of 100pp`,
+    reason: cashPositionData?.reason || undefined
   };
 }
 
@@ -1324,14 +1327,16 @@ function getParameterKPIs(userLevel: string, paramName: string,
         name: 'Cash Position Score',
         institutionalAvg: (() => {
           if (!cashPositionData) return '--';
+          const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
-          const score = calculateCashPositionScore(cashBalance, userLevel);
+          const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
           return `${score.toFixed(2)}%`;
         })(),
         currentPeriod: (() => {
           if (!cashPositionData) return '--';
+          const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
-          const score = calculateCashPositionScore(cashBalance, userLevel);
+          const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
           return `${score.toFixed(2)}`;
         })(),
         target: (() => {
@@ -1343,27 +1348,32 @@ function getParameterKPIs(userLevel: string, paramName: string,
         })(),
         variance: (() => {
           if (!cashPositionData) return '--';
+          const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
-          const score = calculateCashPositionScore(cashBalance, userLevel);
+          const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
           return `${(score - 100).toFixed(2)}%`;
         })(),
         trend: (() => {
           if (!cashPositionData) return '→';
+          const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
-          const score = calculateCashPositionScore(cashBalance, userLevel);
+          const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
           return userLevel === 'institution' ? getCashPositionTrend(score) : (score >= 90 ? '↑' : '↓');
         })(),
         status: (() => {
           if (!cashPositionData) return 'warning';
+          const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
-          const score = calculateCashPositionScore(cashBalance, userLevel);
+          const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
           return userLevel === 'institution' ? getCashPositionStatus(score) : (score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical');
         })(),
         contribution: cashPositionData ? (() => {
+          const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
-          const score = calculateCashPositionScore(cashBalance, userLevel);
+          const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
           return `${score.toFixed(2)} of 100pp`;
-        })() : '--'
+        })() : '--',
+        reason: cashPositionData?.reason || undefined
       }
     ]
   };

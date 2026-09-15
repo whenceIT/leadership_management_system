@@ -22,7 +22,7 @@ export interface ScoreHistoryResponse {
 export async function saveOverallScoreCheckpoint(score: number): Promise<OverallScoreCheckpointResponse> {
   const officeId = getOfficeId();
   
-  const response = await fetch('http://localhost:5000/overall-score-checkpoint', {
+  const response = await fetch('https://smartbackend.whencefinancesystem.com/overall-score-checkpoint', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -44,7 +44,7 @@ export async function saveOverallScoreCheckpoint(score: number): Promise<Overall
 export async function fetchScoreHistory(type = 'executive'): Promise<ScoreHistoryResponse> {
   const officeId = getOfficeId();
   
-  const url = new URL('http://localhost:5000/overall-score-checkpoint');
+  const url = new URL('https://smartbackend.whencefinancesystem.com/overall-score-checkpoint');
   url.searchParams.set('office_id', String(officeId));
   url.searchParams.set('type', type);
 

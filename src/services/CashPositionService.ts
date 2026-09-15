@@ -33,6 +33,299 @@ export interface CashPositionData {
   cash_position_score?: number;
 }
 
+export interface CashHealthFinancials {
+  minimum_loan_target?: number;
+  maximum_expected_repayment?: number;
+  mandatory_fixed_cost?: number;
+  salaries?: number;
+  defaults?: number;
+  irregular_cost_reserve?: number;
+  averageMonthlyIrregularCostReserve?: number;
+  salary_advance_reserve?: number;
+  net_cash_position?: number;
+  residual_cash?: number;
+  [key: string]: unknown;
+}
+
+export interface CashHealthScores {
+  disbursement?: number;
+  collection?: number;
+  residual_cash?: number;
+  overall?: number;
+  status?: string;
+  [key: string]: unknown;
+}
+
+export interface CashHealthCycle {
+  start_date?: string;
+  end_date?: string;
+  [key: string]: unknown;
+}
+
+export interface CashHealthOffice {
+  office_id?: number;
+  office_name?: string;
+  cycle?: CashHealthCycle;
+  disbursed?: number;
+  collected?: number;
+  financials?: CashHealthFinancials;
+  reserve_breakdown?: Record<string, unknown>;
+  scores?: CashHealthScores;
+  reason?: string;
+  details?: any;
+  [key: string]: unknown;
+}
+
+export interface CashHealthDistrict {
+  district_id?: number;
+  district_name?: string;
+  office_count?: number;
+  financials?: CashHealthFinancials;
+  reserve_breakdown?: Record<string, unknown>;
+  scores?: CashHealthScores;
+  reason?: string;
+  offices?: CashHealthOffice[];
+  [key: string]: unknown;
+}
+
+export interface CashHealthDistrictData {
+  district_id?: number;
+  district_name?: string;
+  office_count?: number;
+  cycle?: CashHealthCycle;
+  disbursed?: number;
+  collected?: number;
+  financials?: CashHealthFinancials;
+  reserve_breakdown?: Record<string, unknown>;
+  scores?: CashHealthScores;
+  reason?: string;
+  offices?: CashHealthOffice[];
+  [key: string]: unknown;
+}
+
+export interface CashHealthProvinceData {
+  province_id?: number;
+  province_name?: string;
+  office_count?: number;
+  cycle?: CashHealthCycle;
+  financials?: CashHealthFinancials;
+  reserve_breakdown?: Record<string, unknown>;
+  scores?: CashHealthScores;
+  reason?: string;
+  districts?: CashHealthDistrict[];
+  [key: string]: unknown;
+}
+
+export interface CashHealthProvince {
+  province_id?: number;
+  province_name?: string;
+  office_count?: number;
+  financials?: CashHealthFinancials;
+  reserve_breakdown?: Record<string, unknown>;
+  scores?: CashHealthScores;
+  reason?: string;
+  districts?: CashHealthDistrict[];
+  [key: string]: unknown;
+}
+
+export interface ExecutiveCashHealthData {
+  level?: string;
+  office_count?: number;
+  cycle?: CashHealthCycle;
+  financials?: CashHealthFinancials;
+  reserve_breakdown?: Record<string, unknown>;
+  scores?: CashHealthScores;
+  reason?: string;
+  provinces: CashHealthProvince[];
+  totalCashBalance?: number;
+  cash_position_score?: number;
+  score?: number;
+  average_score?: number;
+  average_normalized_score?: number;
+  percentage_point?: number;
+  net_cash_position?: number;
+  [key: string]: unknown;
+}
+
+const CASH_HEALTH_API_BASE = process.env.NEXT_PUBLIC_CASH_HEALTH_API_URL || 'https://lms2backend.whencefinancesystem.com';
+
+function parseCashHealthNumber(value: unknown): number | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  const parsed = parseFloat(String(value).replace(/,/g, '').replace(/[^0-9.\-]/g, ''));
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function normalizeCashHealthFinancials(value: any): CashHealthFinancials | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  return {
+    ...value,
+    minimum_loan_target: parseCashHealthNumber(value.minimum_loan_target),
+    maximum_expected_repayment: parseCashHealthNumber(value.maximum_expected_repayment),
+    mandatory_fixed_cost: parseCashHealthNumber(value.mandatory_fixed_cost),
+    salaries: parseCashHealthNumber(value.salaries),
+    defaults: parseCashHealthNumber(value.defaults),
+    irregular_cost_reserve: parseCashHealthNumber(value.irregular_cost_reserve),
+    averageMonthlyIrregularCostReserve: parseCashHealthNumber(value.averageMonthlyIrregularCostReserve),
+    salary_advance_reserve: parseCashHealthNumber(value.salary_advance_reserve),
+    net_cash_position: parseCashHealthNumber(value.net_cash_position),
+    residual_cash: parseCashHealthNumber(value.residual_cash),
+  };
+}
+
+function normalizeCashHealthScores(value: any): CashHealthScores | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  return {
+    ...value,
+    disbursement: parseCashHealthNumber(value.disbursement),
+    collection: parseCashHealthNumber(value.collection),
+    residual_cash: parseCashHealthNumber(value.residual_cash),
+    overall: parseCashHealthNumber(value.overall),
+  };
+}
+
+function normalizeCashHealthOffice(value: any): CashHealthOffice {
+  return {
+    ...value,
+    office_id: parseCashHealthNumber(value.office_id ?? value.id),
+    cycle: value.cycle || undefined,
+    disbursed: parseCashHealthNumber(value.disbursed),
+    collected: parseCashHealthNumber(value.collected),
+    financials: normalizeCashHealthFinancials(value.financials),
+    reserve_breakdown: value.reserve_breakdown || {},
+    scores: normalizeCashHealthScores(value.scores),
+    reason: value.reason || '',
+    details: value.details || undefined,
+  };
+}
+
+function normalizeCashHealthDistrict(value: any): CashHealthDistrict {
+  return {
+    ...value,
+    district_id: parseCashHealthNumber(value.district_id ?? value.id),
+    office_count: parseCashHealthNumber(value.office_count) || 0,
+    financials: normalizeCashHealthFinancials(value.financials),
+    reserve_breakdown: value.reserve_breakdown || {},
+    scores: normalizeCashHealthScores(value.scores),
+    reason: value.reason || '',
+    offices: Array.isArray(value.offices) ? value.offices.map(normalizeCashHealthOffice) : [],
+  };
+}
+
+function normalizeCashHealthProvince(value: any): CashHealthProvince {
+  return {
+    ...value,
+    province_id: parseCashHealthNumber(value.province_id ?? value.id),
+    office_count: parseCashHealthNumber(value.office_count) || 0,
+    financials: normalizeCashHealthFinancials(value.financials),
+    reserve_breakdown: value.reserve_breakdown || {},
+    scores: normalizeCashHealthScores(value.scores),
+    reason: value.reason || '',
+    districts: Array.isArray(value.districts) ? value.districts.map(normalizeCashHealthDistrict) : [],
+  };
+}
+
+export async function fetchExecutiveCashHealth(): Promise<ExecutiveCashHealthData> {
+  const response = await fetch(`${CASH_HEALTH_API_BASE}/cash-health/national`, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch executive cash health: ${response.statusText}`);
+  }
+
+  const payload = await response.json();
+  const result = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
+
+  if (result?.error) {
+    throw new Error(result.message || result.error);
+  }
+
+  const provinces: CashHealthProvince[] = Array.isArray(result?.provinces)
+    ? result.provinces.map(normalizeCashHealthProvince)
+    : [];
+  const financials = normalizeCashHealthFinancials(result?.financials);
+  const scores = normalizeCashHealthScores(result?.scores);
+  const residualCash = financials?.residual_cash ?? financials?.net_cash_position ?? 0;
+
+  return {
+    ...result,
+    level: result?.level || 'national',
+    office_count: parseCashHealthNumber(result?.office_count) || provinces.reduce((sum, province) => sum + (province.office_count || 0), 0),
+    cycle: result?.cycle || undefined,
+    financials,
+    reserve_breakdown: result?.reserve_breakdown || {},
+    scores,
+    reason: result?.reason || '',
+    provinces,
+    totalCashBalance: residualCash,
+    cash_position_score: scores?.overall,
+    score: scores?.overall,
+    average_score: scores?.overall,
+    average_normalized_score: scores?.overall,
+    percentage_point: scores?.overall,
+    net_cash_position: financials?.net_cash_position,
+  };
+}
+
+const CASH_HEALTH_PROVINCE_API_BASE = process.env.NEXT_PUBLIC_CASH_HEALTH_API_URL || 'https://lms2backend.whencefinancesystem.com';
+
+export async function fetchCashHealthProvince(provinceId: number): Promise<CashHealthProvinceData> {
+  const response = await fetch(`${CASH_HEALTH_PROVINCE_API_BASE}/cash-health/province/${provinceId}?cycle_start=2026-08-24`, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch cash health province: ${response.statusText}`);
+  }
+
+  const payload = await response.json();
+  const result = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
+
+  if (result?.error) {
+    throw new Error(result.message || result.error);
+  }
+
+  const financials = normalizeCashHealthFinancials(result?.financials);
+  const scores = normalizeCashHealthScores(result?.scores);
+  const districts = Array.isArray(result?.districts)
+    ? result.districts.map(normalizeCashHealthDistrict)
+    : [];
+
+  return {
+    ...result,
+    province_id: parseCashHealthNumber(result?.province_id ?? result?.id),
+    province_name: result?.province_name || `Province ${result?.province_id}`,
+    office_count: parseCashHealthNumber(result?.office_count) || 0,
+    cycle: result?.cycle || undefined,
+    financials,
+    reserve_breakdown: result?.reserve_breakdown || {},
+    scores,
+    reason: result?.reason || '',
+    districts,
+    totalCashBalance: financials?.residual_cash ?? financials?.net_cash_position ?? 0,
+    cash_position_score: scores?.overall,
+    score: scores?.overall,
+    average_score: scores?.overall,
+    average_normalized_score: scores?.overall,
+    net_cash_position: financials?.net_cash_position,
+  };
+}
+
 const THRESHOLDS = {
   ABSOLUTE_MINIMUM: 20000,
   IDEAL_LOWER: 20000,
@@ -285,5 +578,117 @@ export async function fetchDistrictCashPosition(districtId: number, offices?: Of
     percentage_point: metrics.compositeScore.toString(),
     cash_position_score: metrics.cashPositionScore,
     offices_count: districtOffices.length,
+  };
+}
+
+const CASH_HEALTH_DISTRICT_API_BASE = process.env.NEXT_PUBLIC_CASH_HEALTH_API_URL || 'https://lms2backend.whencefinancesystem.com';
+
+export async function fetchCashHealthDistrict(districtId: number): Promise<CashHealthDistrictData> {
+  const response = await fetch(`${CASH_HEALTH_DISTRICT_API_BASE}/cash-health/district/${districtId}?cycle_start=2026-08-24`, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch cash health district: ${response.statusText}`);
+  }
+
+  const payload = await response.json();
+  const result = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
+
+  if (result?.error) {
+    throw new Error(result.message || result.error);
+  }
+
+  const financials = normalizeCashHealthFinancials(result?.financials);
+  const scores = normalizeCashHealthScores(result?.scores);
+
+  return {
+    ...result,
+    district_id: parseCashHealthNumber(result?.district_id ?? result?.id),
+    district_name: result?.district_name || `District ${result?.district_id}`,
+    office_count: parseCashHealthNumber(result?.office_count) || 0,
+    cycle: result?.cycle || undefined,
+    disbursed: parseCashHealthNumber(result?.disbursed),
+    collected: parseCashHealthNumber(result?.collected),
+    financials,
+    reserve_breakdown: result?.reserve_breakdown || {},
+    scores,
+    reason: result?.reason || '',
+    totalCashBalance: financials?.residual_cash ?? financials?.net_cash_position ?? 0,
+    cash_position_score: scores?.overall,
+    score: scores?.overall,
+    average_score: scores?.overall,
+    average_normalized_score: scores?.overall,
+    net_cash_position: financials?.net_cash_position,
+  };
+}
+
+export interface CashHealthBranchData {
+  office_id?: number;
+  office_name?: string;
+  cycle?: CashHealthCycle;
+  disbursed?: number;
+  collected?: number;
+  financials?: CashHealthFinancials;
+  reserve_breakdown?: Record<string, unknown>;
+  scores?: CashHealthScores;
+  reason?: string;
+  details?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+const CASH_HEALTH_BRANCH_API_BASE = process.env.NEXT_PUBLIC_CASH_HEALTH_API_URL || 'https://lms2backend.whencefinancesystem.com';
+
+export async function fetchCashHealthOffice(officeId: number): Promise<CashHealthBranchData> {
+  const response = await fetch(`${CASH_HEALTH_BRANCH_API_BASE}/cash-health/${officeId}?cycle_start=2026-08-24`, {
+    method: 'GET',
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch cash health office: ${response.statusText}`);
+  }
+
+  const payload = await response.json();
+  const result = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
+
+  if (result?.error) {
+    throw new Error(result.message || result.error);
+  }
+
+  const financials = normalizeCashHealthFinancials(result?.financials);
+  const scores = normalizeCashHealthScores(result?.scores);
+
+  return {
+    ...result,
+    office_id: parseCashHealthNumber(result?.office_id ?? result?.id),
+    office_name: result?.office_name || `Office ${result?.office_id}`,
+    cycle: result?.cycle || undefined,
+    disbursed: parseCashHealthNumber(result?.disbursed),
+    collected: parseCashHealthNumber(result?.collected),
+    financials,
+    reserve_breakdown: result?.reserve_breakdown || {},
+    scores,
+    reason: result?.reason || '',
+    details: result?.details || undefined,
+    totalCashBalance: financials?.residual_cash ?? financials?.net_cash_position ?? 0,
+    cash_position_score: scores?.overall,
+    score: scores?.overall,
+    average_score: scores?.overall,
+    average_normalized_score: scores?.overall,
+    net_cash_position: financials?.net_cash_position,
   };
 }

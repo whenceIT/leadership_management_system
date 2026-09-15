@@ -35,7 +35,7 @@ import { useInstitutionalMonth1DefaultRate } from '@/hooks/useInstitutionalMonth
 import { useInstitutionalRevenueAchievements } from '@/hooks/useInstitutionalRevenueAchievements';
 import { useInstitutionalProfitabilityContribution } from '@/hooks/useInstitutionalProfitabilityContribution';
 import { useInstitutionalRollRateControl } from '@/hooks/useInstitutionalRollRateControl';
-import { useInstitutionalCashPosition } from '@/hooks/useInstitutionalCashPosition';
+import { useInstitutionalCashPosition, useExecutiveCashHealth } from '@/hooks/useInstitutionalCashPosition';
 
 export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?: string }) {
   const [provincialData, setProvincialData] = useState<ProvincialPerformanceData[]>([]);
@@ -71,7 +71,7 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
   const { data: revenueAchievementsData } = useInstitutionalRevenueAchievements();
   const { data: profitabilityContributionData } = useInstitutionalProfitabilityContribution();
   const { data: rollRateControlData } = useInstitutionalRollRateControl();
-  const { data: cashPositionData } = useInstitutionalCashPosition();
+  const { data: cashPositionData, isLoading: isCashPositionLoading } = useExecutiveCashHealth();
   
   // Pre-fetch provincial averages for all headline KPIs
   const { averages: provincialAverages, loading: isProvincialAveragesLoading } = useProvincialAverages();
@@ -372,7 +372,7 @@ export default function ExecutiveChairpersonDashboard({ userTier }: { userTier?:
         revenueAchievementsData={revenueAchievementsData}
         profitabilityContributionData={profitabilityContributionData}
         cashPositionData={cashPositionData}
-        isLoading={isLoading || isKpiLoading || isProvincialAveragesLoading}
+        isLoading={isLoading || isKpiLoading || isProvincialAveragesLoading || isCashPositionLoading}
         provincialAverages={provincialAverages}
       />
     

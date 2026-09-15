@@ -46,6 +46,7 @@ export default function SignInForm() {
         },
         body: JSON.stringify(formData),
         signal: controller.signal,
+        credentials: "include",
       });
 
       const data = await response.json();
@@ -107,7 +108,7 @@ export default function SignInForm() {
             </p>
           </div>
           <div>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               {error && (
                 <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 rounded-lg dark:bg-red-900/20 dark:text-red-400">
                   {error}
@@ -127,7 +128,7 @@ export default function SignInForm() {
                     type="email"
                     name="email"
                     placeholder="info@gmail.com"
-                    defaultValue={formData.email}
+                    value={formData.email}
                     onChange={handleChange}
                     disabled={loading}
                   />
@@ -141,7 +142,7 @@ export default function SignInForm() {
                       type={showPassword ? "text" : "password"}
                       name="password"
                       placeholder="Enter your password"
-                      defaultValue={formData.password}
+                      value={formData.password}
                       onChange={handleChange}
                       disabled={loading}
                     />
@@ -180,8 +181,8 @@ export default function SignInForm() {
             </form>
 
             <div className="mt-5">
-              <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
-                Don't have an account? {""}
+                <p className="text-sm font-normal text-center text-gray-700 dark:text-gray-400 sm:text-start">
+                    Don&apos;t have an account? {""}
                 <Link
                   href="/signup"
                   className="text-brand-500 hover:text-brand-600 dark:text-brand-400"

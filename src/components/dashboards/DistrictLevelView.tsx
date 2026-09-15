@@ -25,7 +25,7 @@ import { fetchDistrictRevenueAchievements } from '@/services/RevenueAchievements
 import { fetchDistrictEfficiencyRatio } from '@/services/EfficiencyRatioService';
 import { fetchDistrictProfitabilityContribution } from '@/services/ProfitabilityContributionService';
 import { fetchDistrictGrowthTrajectory } from '@/services/GrowthTrajectoryService';
-import { fetchDistrictCashPosition } from '@/services/CashPositionService';
+import { fetchCashHealthDistrict } from '@/services/CashPositionService';
 import { fetchDistrictLoanPortfolioLoad } from '@/services/LoanPortfolioLoadService';
 
 interface DistrictLevelViewProps {
@@ -210,7 +210,7 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                 data = await fetchDistrictGrowthTrajectory(district.id);
                 break;
               case 'Cash Position Score':
-                data = await fetchDistrictCashPosition(district.id);
+                data = await fetchCashHealthDistrict(district.id);
                 break;
               case 'Portfolio Load Balance':
                 data = await fetchDistrictLoanPortfolioLoad(district.id);
@@ -288,8 +288,9 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
       case 'Portfolio Load Balance':
         return ['District', 'Offices', 'Total Staff', 'Score', 'Target', 'Variance', 'Trend', 'Status'];
       case 'Growth Trajectory':
+        return ['District', 'Offices', 'Benchmark', 'Weight', 'Avg Score', 'PP', 'Status'];
       case 'Cash Position Score':
-        return ['District', 'Offices', 'Avg Score', 'PP', 'Status'];
+        return ['District', 'Offices', 'Residual Cash', 'Net Cash Position', 'Min Loan Target', 'Defaults', 'Overall Score'];
       default:
         return ['District', 'Score', 'Status'];
     }
@@ -373,18 +374,12 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                   </div>
                 ) : selectedKPI === 'Cash Position Score' ? (
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
-                    <p><strong>Target Cash Balance:</strong> K100,000</p>
-                    <p><strong>Formula:</strong> Score = 100 - (shortfall ÷ 10,000) × 50 for balances K10,000-K20,000</p>
-                    <p><strong>Thresholds:</strong> 
-                      <ul className="list-disc list-inside mt-1 space-y-1 text-xs">
-                        <li>Below K10,000: Critical</li>
-                        <li>K10,000-K20,000: Bad </li>
-                        <li>K20,000-K30,000: Good</li>
-                        <li>K30,000-K50,000: Excellent </li>
-                        <li>Above K50,000: Risky</li>
-                      </ul>
-                    </p>
-                    <p><strong>Sorting:</strong> Sorted by total cash balance descending (highest cash first)</p>
+                    <p><strong>Residual Cash:</strong> Remaining cash after obligations</p>
+                    <p><strong>Net Cash Position:</strong> Cash inflow minus outflow</p>
+                    <p><strong>Min Loan Target:</strong> Minimum loan portfolio target</p>
+                    <p><strong>Defaults:</strong> Count of defaulted loans</p>
+                    <p><strong>Overall Score:</strong> Composite cash health score (0-100)</p>
+                    <p><strong>Data Source:</strong> Cash Health API hierarchy (National → Province → District)</p>
                   </div>
                 ) : (
                   <p className="text-sm text-gray-600 dark:text-gray-400">KPI information not available for this metric.</p>
@@ -636,16 +631,19 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                    }
                     case 'Growth Trajectory':
                     case 'Cash Position Score': {
-                      const cashBalance = parseFloat(data.totalCashBalance || data.cashBalance || '0');
-                      const score = calculateCashPositionScore(cashBalance, 'province');
-                      status = score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical';
+                      const financials = data?.financials || {};
+                      const officesCount = data?.office_count ?? (data?.offices ? (Array.isArray(data.offices) ? data.offices.length : 0) : 0);
                       rowData = [
                         district.name,
-                        district.offices_count || 0,
-                        `${score.toFixed(2)}%`,
-                        selectedKPI === 'Growth Trajectory' ? data.PP || 0 : score
+                        officesCount,
+                        financials.residual_cash ?? '--',
+                        financials.net_cash_position ?? '--',
+                        financials.minimum_loan_target ?? '--',
+                        financials.defaults ?? '--',
+                        data.scores?.overall ?? '--',
                       ];
-                     break;
+                      status = (data.scores?.overall ?? 0) >= 80 ? 'good' : (data.scores?.overall ?? 0) >= 60 ? 'warning' : 'critical';
+                      break;
                     }
                     case 'Portfolio Load Balance': {
                       const districtOffices = offices.filter(o => String(o.districtId) === String(district.id));

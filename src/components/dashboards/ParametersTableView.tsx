@@ -4,7 +4,9 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { ProvinceLevelView } from './ProvinceLevelView';
 import { DistrictLevelView } from './DistrictLevelView';
 import { BranchLevelView } from './BranchLevelView';
+import { CashHealthDrillTable } from './CashHealthDrillTable';
 import { KPI, KPIStatus, KPITrend, ParameterSummary } from '@/types/dashboard';
+import { ExecutiveCashHealthData } from '@/services/CashPositionService';
 
 interface TooltipHeaderProps {
   children: React.ReactNode;
@@ -489,6 +491,9 @@ export function ParametersTableView({
                                           {param.name === 'Cash & Liquidity Management' && (
                                             <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Cash Balance</th>
                                           )}
+                                          {param.name === 'Cash & Liquidity Management' && (
+                                            <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">Net Position</th>
+                                          )}
                                           <th className="px-4 py-2 text-center text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
                                             <TooltipHeader tooltip="Target value for this metric">Target</TooltipHeader>
                                           </th>
@@ -520,11 +525,22 @@ export function ParametersTableView({
                                                <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">
                                                     {isLoading ? 'calc..' : kpi.institutionalAvg}
                                               </td>
-                                             {param.name === 'Cash & Liquidity Management' && (
-                                               <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
-                                                  {isLoading ? 'calc..' : (kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` : '--')}
-                                               </td>
-                                             )}
+                                              {param.name === 'Cash & Liquidity Management' && (
+                                                <td className="px-4 py-2 text-center text-sm font-semibold text-green-600 dark:text-green-400">
+                                                   {isLoading ? 'calc..' : (kpi.name === 'Cash Position Score' && cashPositionData ? `K${cashPositionData.totalCashBalance?.toLocaleString() || '--'}` : '--')}
+                                                </td>
+                                              )}
+                                              {param.name === 'Cash & Liquidity Management' && (
+                                                <td className="px-4 py-2 text-center text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                                   {isLoading ? 'calc..' : (kpi.name === 'Cash Position Score' && cashPositionData
+                                                     ? (() => {
+                                                         const np = cashPositionData.financials?.net_cash_position;
+                                                         if (np === undefined || np === null || isNaN(Number(np))) return '--';
+                                                         return new Intl.NumberFormat('en-ZM', { style: 'currency', currency: 'ZMW', maximumFractionDigits: 0 }).format(Number(np));
+                                                       })()
+                                                     : '--')}
+                                                </td>
+                                              )}
                                                <td className="px-4 py-2 text-center text-sm text-gray-500 dark:text-gray-400">
                                                   {isLoading ? 'calc..' : (kpi.name === 'Cash Position Score' && (typeof kpi.target === 'number' || /^\d+$/.test(String(kpi.target)))
                                                     ? new Intl.NumberFormat('en-ZM', { style: 'currency', currency: 'ZMW', maximumFractionDigits: 0 }).format(typeof kpi.target === 'number' ? kpi.target : parseInt(String(kpi.target)))
@@ -587,7 +603,26 @@ export function ParametersTableView({
                                    </button>
                                 </div>
 
-                                {drillLevel === 'province' && userLevel === 'institution' && (
+                                {drillLevel === 'province' && userLevel === 'institution' && drillDownKPI === 'Cash Position Score' && cashPositionData ? (
+                                  <CashHealthDrillTable
+                                    data={cashPositionData as ExecutiveCashHealthData}
+                                    drillLevel={drillLevel}
+                                    selectedProvince={selectedProvince}
+                                    selectedDistrict={selectedDistrict}
+                                    onProvinceClick={(provinceId) => {
+                                      setSelectedProvince(provinceId);
+                                      setDrillLevel('district');
+                                    }}
+                                    onDistrictClick={(districtId) => {
+                                      setSelectedDistrict(districtId);
+                                      setDrillLevel('branch');
+                                    }}
+                                    onBack={() => {
+                                      setSelectedProvince(null);
+                                      setDrillLevel('province');
+                                    }}
+                                  />
+                                ) : drillLevel === 'province' && userLevel === 'institution' && drillDownKPI !== 'Cash Position Score' && (
                                   <ProvinceLevelView
                                     selectedKPI={selectedKPI}
                                     onProvinceClick={(provinceId) => {
@@ -600,7 +635,31 @@ export function ParametersTableView({
                                   />
                                 )}
 
-                                {drillLevel === 'district' && selectedKPI && (
+                                {drillLevel === 'district' && selectedKPI === 'Cash Position Score' && cashPositionData ? (
+                                  <CashHealthDrillTable
+                                    data={cashPositionData as ExecutiveCashHealthData}
+                                    drillLevel={drillLevel}
+                                    selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
+                                    selectedDistrict={selectedDistrict}
+                                    onProvinceClick={(provinceId) => {
+                                      setSelectedProvince(provinceId);
+                                      setDrillLevel('district');
+                                    }}
+                                    onDistrictClick={(districtId) => {
+                                      setSelectedDistrict(districtId);
+                                      setDrillLevel('branch');
+                                    }}
+                                    onBack={() => {
+                                      if (userLevel === 'province') {
+                                        setSelectedKPI(null);
+                                        setDrillLevel(null);
+                                      } else {
+                                        setSelectedProvince(null);
+                                        setDrillLevel('province');
+                                      }
+                                    }}
+                                  />
+                                ) : drillLevel === 'district' && selectedKPI && drillDownKPI !== 'Cash Position Score' && (
                                   <DistrictLevelView
                                     selectedKPI={selectedKPI}
                                     selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
@@ -620,7 +679,31 @@ export function ParametersTableView({
                                   />
                                 )}
 
-                                {drillLevel === 'branch' && selectedKPI && (
+                                {drillLevel === 'branch' && selectedKPI === 'Cash Position Score' && cashPositionData ? (
+                                  <CashHealthDrillTable
+                                    data={cashPositionData as ExecutiveCashHealthData}
+                                    drillLevel="office"
+                                    selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}
+                                    selectedDistrict={selectedDistrict}
+                                    onProvinceClick={(provinceId) => {
+                                      setSelectedProvince(provinceId);
+                                      setDrillLevel('district');
+                                    }}
+                                    onDistrictClick={(districtId) => {
+                                      setSelectedDistrict(districtId);
+                                      setDrillLevel('branch');
+                                    }}
+                                    onBack={() => {
+                                      if (userLevel === 'district') {
+                                        setSelectedKPI(null);
+                                        setDrillLevel(null);
+                                      } else {
+                                        setSelectedDistrict(null);
+                                        setDrillLevel('district');
+                                      }
+                                    }}
+                                  />
+                                ) : drillLevel === 'branch' && selectedKPI && drillDownKPI !== 'Cash Position Score' && (
                                   <BranchLevelView
                                     selectedKPI={selectedKPI}
                                     selectedProvince={userLevel === 'province' ? (userProvinceId || 1) : selectedProvince!}

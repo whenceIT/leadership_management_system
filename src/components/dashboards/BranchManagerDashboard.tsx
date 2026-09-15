@@ -23,7 +23,8 @@ import { useRollRateControl } from '@/hooks/useRollRateControl';
 import { useYieldAchievements } from '@/hooks/useYieldAchievements';
 import { useRevenueAchievements } from '@/hooks/useRevenueAchievements';
 import { useProfitabilityContribution } from '@/hooks/useProfitabilityContribution';
-import { useCashPosition } from '@/hooks/useCashPosition';
+import { useCashPosition, useCashHealthPosition } from '@/hooks/useCashPosition';
+import { useUserPosition } from '@/hooks/useUserPosition';
 import { fetchOfficeUsers, OfficeUsersResponse } from '@/services/OfficeUserService';
 
 interface BranchManagerDashboardProps {
@@ -112,8 +113,12 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
   // Fetch profitability contribution data
   const { data: profitabilityContributionData, isLoading: isProfitabilityContributionLoading, error: profitabilityContributionError } = useProfitabilityContribution(3);
 
+  // Get user's office ID
+  const { user: userPosition } = useUserPosition();
+  const officeId = userPosition?.office_id || userPosition?.officeId || userPosition?.id || 3;
+
   // Fetch cash position data
-  const { data: cashPositionData, isLoading: isCashPositionLoading, error: cashPositionError } = useCashPosition(3);
+  const { data: cashPositionData, isLoading: isCashPositionLoading, error: cashPositionError } = useCashHealthPosition(officeId);
 
   // Fetch office users for manager and referral counts
   const [officeUsers, setOfficeUsers] = useState<OfficeUsersResponse | null>(null);
@@ -125,7 +130,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       try {
         setIsOfficeUsersLoading(true);
         setOfficeUsersError(null);
-        const data = await fetchOfficeUsers(3);
+        const data = await fetchOfficeUsers(officeId);
         setOfficeUsers(data);
       } catch (err) {
         setOfficeUsersError(err instanceof Error ? err.message : 'Failed to fetch office users');
@@ -309,17 +314,45 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       };
     }
 
-      // Update Cash Position Score key metric using backend cash position payload
+      // Update Cash Position Score key metric using Cash Health Branch API payload
       if (cashPositionData) {
-        const rawScore = cashPositionData.cash_position_score ?? cashPositionData.score ?? cashPositionData.average_score;
-        const score = rawScore != null ? parseFloat(String(rawScore)) : null;
-        const netCashPosition = cashPositionData.net_cash_position ?? null;
-        const currentPeriod = score != null ? `${score.toFixed(1)}%` : netCashPosition != null ? `K${netCashPosition.toLocaleString()}` : '--';
-        const target = netCashPosition != null ? '≥K0' : 'K100,000';
-        const variance = score != null ? `${(score - 100).toFixed(1)}%` : netCashPosition != null ? `${netCashPosition >= 0 ? '+' : '-'}K${Math.abs(netCashPosition).toLocaleString()}` : '--';
-        const trend = score != null ? (score >= 90 ? '↑' : score >= 70 ? '→' : '↓') : netCashPosition != null ? (netCashPosition >= 0 ? '↑' : '↓') : '→';
-        const status = score != null ? (score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical') : netCashPosition != null ? (netCashPosition >= 0 ? 'good' : 'critical') : 'warning';
-        const contribution = score != null ? `${score.toFixed(1)} of 100pp` : cashPositionData.verdict || '--';
+        const financials = cashPositionData.financials || {};
+        const scores = cashPositionData.scores || {};
+        const overallScore = scores.overall ?? null;
+        const residualCash = financials.residual_cash;
+        const netCashPosition = financials.net_cash_position;
+        const minimumLoanTarget = financials.minimum_loan_target;
+        const defaults = financials.defaults;
+        const irregularCosts = financials.irregular_cost_reserve;
+        const reason = cashPositionData.reason || '';
+
+        const currentPeriod = overallScore != null
+          ? `${overallScore.toFixed(1)}%`
+          : residualCash != null ? `K${residualCash.toLocaleString()}`
+          : netCashPosition != null ? `K${netCashPosition.toLocaleString()}`
+          : '--';
+        const target = residualCash != null ? '≥K0' : 'K100,000';
+        const variance = overallScore != null
+          ? `${(overallScore - 100).toFixed(1)}%`
+          : residualCash != null
+            ? `${residualCash >= 0 ? '+' : '-'}${Math.abs(residualCash).toLocaleString()}`
+            : netCashPosition != null
+              ? `${netCashPosition >= 0 ? '+' : '-'}${Math.abs(netCashPosition).toLocaleString()}`
+              : '--';
+        const trend = overallScore != null
+          ? (overallScore >= 90 ? '↑' : overallScore >= 70 ? '→' : '↓')
+          : residualCash != null
+            ? (residualCash >= 0 ? '↑' : '↓')
+            : netCashPosition != null
+              ? (netCashPosition >= 0 ? '↑' : '↓')
+              : '→';
+        const status = overallScore != null
+          ? (overallScore >= 90 ? 'good' : overallScore >= 70 ? 'warning' : 'critical')
+          : residualCash != null
+            ? (residualCash >= 0 ? 'good' : 'critical')
+            : netCashPosition != null
+              ? (netCashPosition >= 0 ? 'good' : 'critical')
+              : 'warning';
 
         keyMetrics = keyMetrics.map(metric => {
           if (metric.parameter === 'Cash Position Score') {
@@ -331,7 +364,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
               variance,
               trend: trend as '↑' | '↓' | '→',
               provAvg: '90%',
-              contribution
+              contribution: overallScore != null ? `${overallScore.toFixed(1)} of 100pp` : cashPositionData.reason || '--'
             };
           }
           return metric;
@@ -603,49 +636,6 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
         />
       </div>
 
-      {/* Cash Position Details */}
-      {cashPositionData && (
-        <div className="mt-6">
-          <CollapsibleCard title="Cash Position Details">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900">
-                  <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Net Cash Position</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Verdict</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Disbursed</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Collection Rate</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Collection Threshold</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Capacity</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                      {cashPositionData.net_cash_position != null ? `K${cashPositionData.net_cash_position.toLocaleString()}` : '--'}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                      {cashPositionData.verdict || '--'}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                      {cashPositionData.amount_disbursed != null ? `K${cashPositionData.amount_disbursed.toLocaleString()}` : '--'}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                      {cashPositionData.collection_rate != null ? `${cashPositionData.collection_rate.toFixed(2)}%` : '--'}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                      {cashPositionData.total_minimum_needed != null ? `K${cashPositionData.total_minimum_needed.toLocaleString()}` : '--'}
-                    </td>
-                    <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                      {cashPositionData.workstations ?? '--'}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </CollapsibleCard>
-        </div>
-      )}
 
       {/* Manager Users List */}
       {officeUsers && officeUsers.manager_users.length > 0 && (

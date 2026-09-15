@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CachedAPI } from '@/lib/apiCache';
+import { CashHealthDistrictData, ExecutiveCashHealthData, fetchCashHealthDistrict, fetchExecutiveCashHealth } from '@/services/CashPositionService';
 
 export interface CashPositionData {
   score: number;
@@ -32,6 +33,8 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smartbackend.wh
 const CASH_POSITION_CACHE_TTL = 5 * 60 * 1000;
 
 const cashPositionCache = new CachedAPI<CashPositionData>(CASH_POSITION_CACHE_TTL);
+const executiveCashHealthCache = new CachedAPI<ExecutiveCashHealthData>(CASH_POSITION_CACHE_TTL);
+const districtCashHealthCache = new CachedAPI<CashHealthDistrictData>(CASH_POSITION_CACHE_TTL);
 
 function buildCacheKey(filters?: CashPositionFilters): string {
   if (!filters) return 'cash-position:default';
@@ -127,6 +130,102 @@ export function useInstitutionalCashPosition(filters?: CashPositionFilters) {
 
   const refresh = () => {
     cashPositionCache.clear(cacheKey);
+    setRefreshKey((k) => k + 1);
+  };
+
+  return {
+    data,
+    isLoading,
+    error,
+    refresh,
+  };
+}
+
+export function useExecutiveCashHealth() {
+  const cacheKey = 'executive-cash-health:national';
+  const [data, setData] = useState<ExecutiveCashHealthData | null>(() => executiveCashHealthCache.peek(cacheKey));
+  const [isLoading, setIsLoading] = useState(() => executiveCashHealthCache.peek(cacheKey) === null);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const fresh = await executiveCashHealthCache.get(cacheKey, fetchExecutiveCashHealth);
+        if (cancelled) return;
+        if (fresh) {
+          setData(fresh);
+        } else {
+          setError('No cash health data returned');
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'Failed to fetch executive cash health');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, refreshKey]);
+
+  const refresh = () => {
+    executiveCashHealthCache.clear(cacheKey);
+    setRefreshKey((k) => k + 1);
+  };
+
+  return {
+    data,
+    isLoading,
+    error,
+    refresh,
+  };
+}
+
+export function useDistrictCashPosition(districtId: number) {
+  const cacheKey = `district-cash-health:${districtId}`;
+  const [data, setData] = useState<CashHealthDistrictData | null>(() => districtCashHealthCache.peek(cacheKey));
+  const [isLoading, setIsLoading] = useState(() => districtCashHealthCache.peek(cacheKey) === null);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const fresh = await districtCashHealthCache.get(cacheKey, () => fetchCashHealthDistrict(districtId));
+        if (cancelled) return;
+        if (fresh) {
+          setData(fresh);
+        } else {
+          setError('No cash health data returned');
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'Failed to fetch district cash health');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, districtId, refreshKey]);
+
+  const refresh = () => {
+    districtCashHealthCache.clear(cacheKey);
     setRefreshKey((k) => k + 1);
   };
 

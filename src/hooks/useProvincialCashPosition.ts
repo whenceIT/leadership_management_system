@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { fetchProvincialCashPosition, CashPositionData } from '@/services/CashPositionService';
+import { fetchCashHealthProvince, CashHealthProvinceData } from '@/services/CashPositionService';
 import { useOffice } from '@/hooks/useOffice';
 
 export function useProvincialCashPosition(provinceId: number) {
   const { offices } = useOffice();
-  const [data, setData] = useState<CashPositionData | null>(null);
+  const [data, setData] = useState<CashHealthProvinceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +16,7 @@ export function useProvincialCashPosition(provinceId: number) {
       setError(null);
 
       try {
-        const result = await fetchProvincialCashPosition(provinceId, offices);
+        const result = await fetchCashHealthProvince(provinceId);
         setData(result);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch provincial cash position');

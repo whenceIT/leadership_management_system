@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSession, createSessionResponse, getSessionById, deleteSession, getUserById } from '@/lib/auth';
 
+// const API_BASE_URL = 'http://localhost:5000';
 const API_BASE_URL = 'https://smartbackend.whencefinancesystem.com';
 
 export async function POST(request: NextRequest) {
