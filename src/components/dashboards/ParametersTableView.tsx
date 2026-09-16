@@ -7,7 +7,7 @@ import { BranchLevelView } from './BranchLevelView';
 import { CashHealthDrillTable } from './CashHealthDrillTable';
 import BranchCashHealthView from './BranchCashHealthView';
 import { KPI, KPIStatus, KPITrend, ParameterSummary } from '@/types/dashboard';
-import { ExecutiveCashHealthData } from '@/services/CashPositionService';
+import { ExecutiveCashHealthData, calculateProvincialOverallScoreAverage } from '@/services/CashPositionService';
 
 interface TooltipHeaderProps {
   children: React.ReactNode;
@@ -215,22 +215,6 @@ export function ParametersTableView({
     return provincialAverages[kpiName] || null;
   };
 
-  // Compute institutional average for Cash Position Score: average of province-level overall scores
-  const getCashPositionInstitutionalAvg = (): number | null => {
-    if (!cashPositionData?.provinces || cashPositionData.provinces.length === 0) return null;
-    let total = 0;
-    let count = 0;
-    cashPositionData.provinces.forEach((province: any) => {
-      const score = province?.scores?.overall;
-      if (score !== undefined && score !== null && !isNaN(Number(score))) {
-        total += Number(score);
-        count++;
-      }
-    });
-    if (count === 0) return null;
-    return total / count;
-  };
-
   const DEFAULT_INSTITUTIONAL_AVGS: Record<string, string> = {
     'Branch Structure & Staffing': '85%',
     'Loan Consultant Performance': '75%',
@@ -241,6 +225,11 @@ export function ParametersTableView({
   };
 
   function getHeadlineUserLevelAvg(param: ParameterSummary): string {
+    if (userLevel === 'institution' && param.name === 'Cash & Liquidity Management') {
+      const cashAvg = calculateProvincialOverallScoreAverage(cashPositionData);
+      if (cashAvg !== null) return `${cashAvg.toFixed(2)}%`;
+    }
+
     if (!provincialAverages) return param.userLevelAvg || '--';
     
     const kpis = getParameterKPIs(
@@ -291,6 +280,14 @@ export function ParametersTableView({
   }
 
   function getHeadlineInstitutionalAvg(param: ParameterSummary): string {
+    if (
+      userLevel === 'institution' &&
+      param.name === 'Cash & Liquidity Management'
+    ) {
+      const cashAvg = calculateProvincialOverallScoreAverage(cashPositionData);
+      if (cashAvg !== null) return `${cashAvg.toFixed(2)}%`;
+    }
+
     const raw = param.institutionalAvg || '--';
     if (raw === '--') return raw;
     const num = parseFloat(raw.replace('%', ''));
@@ -534,7 +531,7 @@ export function ParametersTableView({
                                          >
                                             <td className="px-4 py-2 text-center text-sm text-gray-900 dark:text-white">{kpi.name}</td>
                                              <td className="px-4 py-2 text-center text-sm font-semibold text-gray-900 dark:text-white">{isLoading ? 'calc..' : (() => {
-                                               const raw = getProvincialAvgForKpi(kpi.name) || kpi.currentPeriod;
+                                                const raw = (userLevel === 'institution' && param.name === 'Cash & Liquidity Management') ? kpi.currentPeriod : getProvincialAvgForKpi(kpi.name) || kpi.currentPeriod;
                                                const num = parseFloat(String(raw));
                                                if (isNaN(num)) return raw;
                                                return Math.min(100, Math.max(0, num));

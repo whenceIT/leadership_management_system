@@ -10,6 +10,7 @@ import { ConsultantLevelView } from './ConsultantLevelView';
 import { ParametersTableView } from './ParametersTableView';
 import { useKPISuggestions } from '@/hooks/useKPISuggestions';
 import { saveOverallScoreCheckpoint, fetchScoreHistory } from '@/services/OverallScoreCheckpointService';
+import { calculateProvincialOverallScoreAverage } from '@/services/CashPositionService';
 import { getUserRole } from '@/utils/userContext';
 
 interface ParameterKPIs {
@@ -408,6 +409,15 @@ export function getInstitutionalSummaryData(userLevel: 'institution' | 'province
       const capped = Math.min(100, Math.max(0, avg));
       param.userLevelAvg = `${capped.toFixed(2)}%`;
     });
+  }
+
+  // Force Cash & Liquidity at institutional level to use provincial overall score average
+  const cashParamIdx = baseParameters.findIndex(p => p.name === 'Cash & Liquidity Management');
+  if (cashParamIdx >= 0 && userLevel === 'institution' && cashPositionData) {
+    const provincialScore = calculateProvincialOverallScoreAverage(cashPositionData);
+    if (provincialScore !== null) {
+      baseParameters[cashParamIdx].userLevelAvg = `${provincialScore.toFixed(2)}%`;
+    }
   }
 
   const baseKeyMetrics: KeyMetric[] = [
@@ -930,6 +940,26 @@ function aggregateRiskManagementKPIs(
   };
 }
 
+function getCashPositionScore(data: any, userLevel: string): number {
+  const apiScore = data?.cash_position_score ?? data?.scores?.overall ?? data?.score ?? data?.average_score;
+  const cashBalance = parseFloat(String(data?.totalCashBalance || data?.cashBalance || 0));
+  const apiScoreNum = typeof apiScore === 'number' ? apiScore : parseFloat(String(apiScore ?? 0));
+  return Number.isFinite(apiScoreNum) ? apiScoreNum : calculateCashPositionScore(cashBalance, userLevel);
+}
+
+function getCashPositionInstitutionalScore(data: any, userLevel: string, currentScore: number): number {
+  if (userLevel === 'institution') {
+    const provincialAverage = calculateProvincialOverallScoreAverage(data);
+    if (provincialAverage !== null) return provincialAverage;
+  }
+
+  const institutionalAvg = data?.instAvg;
+  const parsed = typeof institutionalAvg === 'number'
+    ? institutionalAvg
+    : parseFloat(String(institutionalAvg ?? currentScore));
+  return Number.isFinite(parsed) ? parsed : currentScore;
+}
+
 function aggregateCashLiquidityManagementKPIs(
   cashPositionData?: any,
   userLevel: string = 'institution'
@@ -948,10 +978,12 @@ function aggregateCashLiquidityManagementKPIs(
     };
   }
 
-  const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
-  const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
-  const apiScoreNum = typeof apiScore === 'number' ? apiScore : parseFloat(String(apiScore || 0));
-  const score = Number.isFinite(apiScoreNum) ? apiScoreNum : calculateCashPositionScore(cashBalance, userLevel);
+  let score = getCashPositionScore(cashPositionData, userLevel);
+  const institutionalScore = getCashPositionInstitutionalScore(cashPositionData, userLevel, score);
+
+  if (userLevel === 'institution' && institutionalScore !== null) {
+    score = institutionalScore;
+  }
 
   const target = 100;
   const variance = score - target;
@@ -962,7 +994,7 @@ function aggregateCashLiquidityManagementKPIs(
   const status: 'good' | 'warning' | 'critical' | 'bad' | 'moderate' | 'excellent' = userLevel === 'institution' ? getCashPositionStatus(score) : (score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical');
 
   return {
-    institutionalAvg: cashPositionData?.instAvg || `${score}%`,
+    institutionalAvg: `${institutionalScore.toFixed(2)}%`,
     userLevelAvg: `${score}%`,
     target: userLevel === 'branch' ? 'K100,000' : userLevel === 'province' ? 'K500,000' : 'K50,000,000',
     variance: varianceStr,
@@ -1328,13 +1360,16 @@ function getParameterKPIs(userLevel: string, paramName: string,
         name: 'Cash Position Score',
         institutionalAvg: (() => {
           if (!cashPositionData) return '--';
-          const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
-          const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
-          const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
-          return `${score.toFixed(2)}%`;
+          const currentScore = getCashPositionScore(cashPositionData, userLevel);
+          const institutionalScore = getCashPositionInstitutionalScore(cashPositionData, userLevel, currentScore);
+          return `${institutionalScore.toFixed(2)}%`;
         })(),
         currentPeriod: (() => {
           if (!cashPositionData) return '--';
+          if (userLevel === 'institution') {
+            const provincialAvg = calculateProvincialOverallScoreAverage(cashPositionData);
+            if (provincialAvg !== null) return `${provincialAvg.toFixed(2)}`;
+          }
           const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
           const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
@@ -1349,6 +1384,10 @@ function getParameterKPIs(userLevel: string, paramName: string,
         })(),
         variance: (() => {
           if (!cashPositionData) return '--';
+          if (userLevel === 'institution') {
+            const provincialAvg = calculateProvincialOverallScoreAverage(cashPositionData);
+            if (provincialAvg !== null) return `${(provincialAvg - 100).toFixed(2)}%`;
+          }
           const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
           const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
@@ -1356,6 +1395,10 @@ function getParameterKPIs(userLevel: string, paramName: string,
         })(),
         trend: (() => {
           if (!cashPositionData) return '→';
+          if (userLevel === 'institution') {
+            const provincialAvg = calculateProvincialOverallScoreAverage(cashPositionData);
+            if (provincialAvg !== null) return getCashPositionTrend(provincialAvg);
+          }
           const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
           const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
@@ -1363,12 +1406,20 @@ function getParameterKPIs(userLevel: string, paramName: string,
         })(),
         status: (() => {
           if (!cashPositionData) return 'warning';
+          if (userLevel === 'institution') {
+            const provincialAvg = calculateProvincialOverallScoreAverage(cashPositionData);
+            if (provincialAvg !== null) return getCashPositionStatus(provincialAvg);
+          }
           const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
           const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);
           return userLevel === 'institution' ? getCashPositionStatus(score) : (score >= 90 ? 'good' : score >= 70 ? 'warning' : 'critical');
         })(),
         contribution: cashPositionData ? (() => {
+          if (userLevel === 'institution') {
+            const provincialAvg = calculateProvincialOverallScoreAverage(cashPositionData);
+            if (provincialAvg !== null) return `${provincialAvg.toFixed(2)} of 100pp`;
+          }
           const apiScore = cashPositionData?.cash_position_score ?? cashPositionData?.scores?.overall ?? cashPositionData?.score ?? cashPositionData?.average_score;
           const cashBalance = parseFloat(String(cashPositionData.totalCashBalance || cashPositionData.cashBalance || 0));
           const score = typeof apiScore === 'number' ? apiScore : Number.isFinite(parseFloat(String(apiScore || 0))) ? parseFloat(String(apiScore)) : calculateCashPositionScore(cashBalance, userLevel);

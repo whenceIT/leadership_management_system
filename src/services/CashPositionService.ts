@@ -149,6 +149,25 @@ export interface ExecutiveCashHealthData {
   [key: string]: unknown;
 }
 
+export function calculateProvincialOverallScoreAverage(
+  data: Pick<ExecutiveCashHealthData, 'provinces'> | null | undefined
+): number | null {
+  const provinces = data?.provinces;
+  if (!Array.isArray(provinces) || provinces.length === 0) return null;
+
+  const scores = provinces
+    .map((province) => province?.scores?.overall)
+    .map((score) => {
+      if (score === undefined || score === null || String(score).trim() === '') return null;
+      const parsed = Number(score);
+      return Number.isFinite(parsed) ? parsed : null;
+    })
+    .filter((score): score is number => score !== null);
+
+  if (scores.length === 0) return null;
+  return scores.reduce((sum, score) => sum + score, 0) / scores.length;
+}
+
 const CASH_HEALTH_API_BASE = process.env.NEXT_PUBLIC_CASH_HEALTH_API_URL || 'https://lms2backend.whencefinancesystem.com';
 
 function parseCashHealthNumber(value: unknown): number | undefined {
