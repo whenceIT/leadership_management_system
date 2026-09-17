@@ -11,7 +11,7 @@ import { ParametersTableView } from './ParametersTableView';
 import { useKPISuggestions } from '@/hooks/useKPISuggestions';
 import { saveOverallScoreCheckpoint, fetchScoreHistory } from '@/services/OverallScoreCheckpointService';
 import { calculateProvincialOverallScoreAverage } from '@/services/CashPositionService';
-import { getUserRole } from '@/utils/userContext';
+import { getUserRole, getOfficeId } from '@/utils/userContext';
 
 interface ParameterKPIs {
   [key: string]: KPI[];
@@ -1602,9 +1602,13 @@ export function InstitutionalHealthSummary({
      district: 'District',
      branch: 'Branch',
      consultant: 'Personal'
-   }[userLevel];
+    }[userLevel];
 
-   return (
+    const lastFetchedScore = fetchedPrevMonthScores.length > 0
+      ? fetchedPrevMonthScores[fetchedPrevMonthScores.length - 1].score
+      : 0;
+
+    return (
     <div className="space-y-4">
       {/* Overall Health Banner */}
       {overallScore !== undefined && (
@@ -1616,51 +1620,53 @@ export function InstitutionalHealthSummary({
             </div>
             <div className="text-right">
                 <div className="flex items-center justify-end gap-3 mb-1">
-                 {fetchedPrevMonthScores.length === 3 && (
+                 {fetchedPrevMonthScores.length > 0 && (
                    <>
-                     <span className="text-2xl font-bold text-gray-400 opacity-40">
-                       {fetchedPrevMonthScores[0].score}%
-                     </span>
-                     <span className="text-xs text-gray-500 opacity-40">{fetchedPrevMonthScores[0].label}</span>
-                     <span className="text-2xl font-bold text-gray-400 opacity-50">
-                       {fetchedPrevMonthScores[1].score}%
-                     </span>
-                     <span className="text-xs text-gray-500 opacity-50">{fetchedPrevMonthScores[1].label}</span>
-                     <span className="text-3xl font-bold text-gray-400 opacity-60">
-                       {fetchedPrevMonthScores[2].score}%
-                     </span>
-                     <span className="text-xs text-gray-500 opacity-60">{fetchedPrevMonthScores[2].label}</span>
+                     {fetchedPrevMonthScores.map((ms, idx) => {
+                       const isLast = idx === fetchedPrevMonthScores.length - 1;
+                       const step = fetchedPrevMonthScores.length > 1 ? idx / (fetchedPrevMonthScores.length - 1) : 1;
+                       const opacity = Math.round(40 + step * 20);
+                       const scoreSize = isLast ? 'text-3xl' : 'text-2xl';
+                       return (
+                         <React.Fragment key={idx}>
+                           <span className={`font-bold text-gray-400 ${scoreSize}`} style={{ opacity: opacity / 100 }}>
+                              {ms.score.toFixed(2)}%
+                           </span>
+                           <span className="text-xs text-gray-500" style={{ opacity: opacity / 100 }}>{ms.label}</span>
+                         </React.Fragment>
+                       );
+                     })}
                    </>
                  )}
                   {isLoading || isCalculating ? (
                     <span className="text-xs font-medium text-gray-400">calc..</span>
                   ) : (
                     <span className={`text-xs font-medium ${
-                      (delayedOverallScore ?? overallScore) >= (fetchedPrevMonthScores[2]?.score ?? 0)
+                      (delayedOverallScore ?? overallScore) >= (lastFetchedScore)
                         ? 'text-green-400'
                         : 'text-red-400'
                     }`}>
-                      {(delayedOverallScore ?? overallScore) >= (fetchedPrevMonthScores[2]?.score ?? 0) ? '▲' : '▼'}
-                      {Math.abs((delayedOverallScore ?? overallScore) - (fetchedPrevMonthScores[2]?.score ?? 0))}%
+                      {(delayedOverallScore ?? overallScore) >= (lastFetchedScore) ? '▲' : '▼'}
+                      {Math.abs((delayedOverallScore ?? overallScore) - (lastFetchedScore)).toFixed(2)}%
                     </span>
                   )}
                   {isLoading || isCalculating ? (
                     <span className="text-4xl font-black text-white animate-pulse">calc..</span>
                   ) : (
-                    <span className="text-4xl font-black text-white">{delayedOverallScore ?? overallScore}%</span>
+                    <span className="text-4xl font-black text-white">{(delayedOverallScore ?? overallScore ?? 0).toFixed(2)}%</span>
                   )}
                 </div>
                  <p className="text-gray-400 text-xs">{isLoading || isCalculating ? 'Calculating...' : 'Overall Health Score'}</p>
-                 {!isLoading && !isCalculating && fetchedPrevMonthScores.length === 3 && (
-                   <p className="text-xs text-gray-500 opacity-60">
-                     Previous: {fetchedPrevMonthScores[2].score}% ({fetchedPrevMonthScores[2].label}) · Avg: {Math.round((fetchedPrevMonthScores[0].score + fetchedPrevMonthScores[1].score + fetchedPrevMonthScores[2].score) / 3)}% (3-month)
-                   </p>
-                 )}
-                 {!isLoading && !isCalculating && (
-                   <p className="text-xs text-gray-500 opacity-60 mt-1">
-                     Role: {getUserRole()}
-                   </p>
-                 )}
+                {!isLoading && !isCalculating && fetchedPrevMonthScores.length > 0 && (
+                  <p className="text-xs text-gray-500 opacity-60">
+                    Previous: {lastFetchedScore.toFixed(2)}% ({fetchedPrevMonthScores[fetchedPrevMonthScores.length - 1].label}) · Avg: {(fetchedPrevMonthScores.reduce((sum, ms) => sum + ms.score, 0) / fetchedPrevMonthScores.length).toFixed(2)}% ({fetchedPrevMonthScores.length}-month)
+                  </p>
+                )}
+                  {!isLoading && !isCalculating && (
+                    <p className="text-xs text-gray-500 opacity-60 mt-1">
+                      Role: {getUserRole()} · Office: {getOfficeId()}
+                    </p>
+                  )}
                 <div className="mt-3">
                   <button
                     onClick={handleSaveCheckpoint}
@@ -1686,7 +1692,7 @@ export function InstitutionalHealthSummary({
                   <p className="text-white font-bold animate-pulse">calc..</p>
                 ) : (
                   <>
-                    <p className="text-white font-bold">{(delayedOverallScore ?? overallScore)}%</p>
+                    <p className="text-white font-bold">{(delayedOverallScore ?? overallScore ?? 0).toFixed(2)}%</p>
                     {/* Indicator for comparison with Institutional Avg */}
                     <div className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg)
                       ? 'bg-green-900/50 text-green-300'
@@ -1695,8 +1701,8 @@ export function InstitutionalHealthSummary({
                       <span className="mr-1">{(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg) ? '▲' : '▼'}</span>
                       <span>
                         {(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg)
-                          ? `+${(delayedOverallScore ?? overallScore) - (delayedOverallInstAvg ?? overallInstAvg)}%`
-                          : `${(delayedOverallScore ?? overallScore) - (delayedOverallInstAvg ?? overallInstAvg)}%`}
+                          ? `+${((delayedOverallScore ?? overallScore ?? 0) - (delayedOverallInstAvg ?? overallInstAvg ?? 0)).toFixed(2)}%`
+                          : `${((delayedOverallScore ?? overallScore ?? 0) - (delayedOverallInstAvg ?? overallInstAvg ?? 0)).toFixed(2)}%`}
                       </span>
                     </div>
                   </>
@@ -1707,14 +1713,14 @@ export function InstitutionalHealthSummary({
                 {isLoading || isCalculating ? (
                   <p className="text-white font-bold animate-pulse">calc..</p>
                 ) : (
-                  <p className={`font-bold ${(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg) ? 'text-green-400' : 'text-red-400'}`}>{(delayedOverallInstAvg ?? overallInstAvg)}%</p>
+                  <p className={`font-bold ${(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg) ? 'text-green-400' : 'text-red-400'}`}>{(delayedOverallInstAvg ?? overallInstAvg ?? 0).toFixed(2)}%</p>
                 )}
                 {/* Show variance */}
                 {!isLoading && !isCalculating && (
                   <p className="text-xs text-gray-500 mt-1">
                     {(delayedOverallScore ?? overallScore) >= (delayedOverallInstAvg ?? overallInstAvg)
-                      ? `+${(delayedOverallScore ?? overallScore) - (delayedOverallInstAvg ?? overallInstAvg)}% above`
-                      : `${(delayedOverallScore ?? overallScore) - (delayedOverallInstAvg ?? overallInstAvg)}% below`}
+                      ? `+${((delayedOverallScore ?? overallScore ?? 0) - (delayedOverallInstAvg ?? overallInstAvg ?? 0)).toFixed(2)}% above`
+                      : `${((delayedOverallScore ?? overallScore ?? 0) - (delayedOverallInstAvg ?? overallInstAvg ?? 0)).toFixed(2)}% below`}
                   </p>
                 )}
               </div>
@@ -1734,8 +1740,8 @@ export function InstitutionalHealthSummary({
                     <span className="mr-1">{(delayedOverallScore ?? overallScore) >= overallTarget ? '▲' : '▼'}</span>
                     <span>
                       {(delayedOverallScore ?? overallScore) >= overallTarget
-                        ? `+${(delayedOverallScore ?? overallScore) - overallTarget}%`
-                        : `${(delayedOverallScore ?? overallScore) - overallTarget}%`}
+                        ? `+${((delayedOverallScore ?? overallScore ?? 0) - overallTarget).toFixed(2)}%`
+                        : `${((delayedOverallScore ?? overallScore ?? 0) - overallTarget).toFixed(2)}%`}
                     </span>
                   </div>
                 )}
