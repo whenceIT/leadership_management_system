@@ -23,7 +23,6 @@ function CycleBadge({ cycleStart, cycleEnd }: { cycleStart?: string; cycleEnd?: 
     </span>
   );
 }
-
 interface CashHealthDrillTableProps {
   data: ExecutiveCashHealthData | null;
   drillLevel: 'province' | 'district' | 'office' | null;
@@ -245,6 +244,10 @@ export function CashHealthDrillTable({
   const [districtPopup, setDistrictPopup] = useState<CashHealthDistrict | null>(null);
   const [branchViewPopup, setBranchViewPopup] = useState<CashHealthOffice | null>(null);
   const { offices } = useOffice();
+
+  // Prefer cycle bounds from the API response envelope; fall back to client-calculated values
+  const cycleStart = data?.cycleStart || getCurrentCycleStart();
+  const cycleEnd = data?.cycleEnd || getCurrentCycleEnd();
   
   const handleReasonClick = (office: CashHealthOffice) => {
     setOfficePopup(office);
@@ -274,7 +277,7 @@ export function CashHealthDrillTable({
       <div>
         <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">National Cash Health - Provinces</h3>
-            <CycleBadge cycleStart={getCurrentCycleStart()} cycleEnd={getCurrentCycleEnd()} />
+            <CycleBadge cycleStart={cycleStart} cycleEnd={cycleEnd} />
           <button
             onClick={() => setShowReason(!showReason)}
             className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
@@ -344,7 +347,7 @@ export function CashHealthDrillTable({
              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                {province.province_name || `Province ${province.province_id}`} - Districts
              </h3>
-             <CycleBadge cycleStart={getCurrentCycleStart()} cycleEnd={getCurrentCycleEnd()} />
+             <CycleBadge cycleStart={cycleStart} cycleEnd={cycleEnd} />
           </div>
           <button
             onClick={() => setShowReason(!showReason)}
@@ -418,7 +421,7 @@ export function CashHealthDrillTable({
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {district.district_name || `District ${district.district_id}`} - Branches/Offices
             </h3>
-            <CycleBadge cycleStart={getCurrentCycleStart()} cycleEnd={getCurrentCycleEnd()} />
+            <CycleBadge cycleStart={cycleStart} cycleEnd={cycleEnd} />
           </div>
           <button
             onClick={() => setShowReason(!showReason)}

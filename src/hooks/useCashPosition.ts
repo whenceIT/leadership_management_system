@@ -36,6 +36,10 @@ export function useCashPosition(branchId: number) {
   };
 }
 
+/**
+ * Fetches branch-level cash health from GET /cash_health/show/{officeId}
+ * per cash-health-apis.md.
+ */
 export function useCashHealthPosition(officeId: number) {
   const [data, setData] = useState<CashHealthBranchData | null>(null);
   const [isLoading, setIsLoading] = useState(true);

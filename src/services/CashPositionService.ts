@@ -64,6 +64,7 @@ export interface CashHealthCycle {
 
 export interface CashHealthOffice {
   office_id?: number;
+  /** API returns `name`; normalised to `office_name` for consistency */
   office_name?: string;
   cycle?: CashHealthCycle;
   disbursed?: number;
@@ -101,6 +102,9 @@ export interface CashHealthDistrictData {
   scores?: CashHealthScores;
   reason?: string;
   offices?: CashHealthOffice[];
+  availableCycles?: unknown[];
+  cycleStart?: string;
+  cycleEnd?: string;
   [key: string]: unknown;
 }
 
@@ -114,6 +118,9 @@ export interface CashHealthProvinceData {
   scores?: CashHealthScores;
   reason?: string;
   districts?: CashHealthDistrict[];
+  availableCycles?: unknown[];
+  cycleStart?: string;
+  cycleEnd?: string;
   [key: string]: unknown;
 }
 
@@ -146,6 +153,9 @@ export interface ExecutiveCashHealthData {
   average_normalized_score?: number;
   percentage_point?: number;
   net_cash_position?: number;
+  availableCycles?: unknown[];
+  cycleStart?: string;
+  cycleEnd?: string;
   [key: string]: unknown;
 }
 
@@ -209,6 +219,8 @@ function normalizeCashHealthOffice(value: any): CashHealthOffice {
   return {
     ...value,
     office_id: parseCashHealthNumber(value.office_id ?? value.id),
+    // API spec returns `name` at the office level; normalise to `office_name`
+    office_name: value.office_name || value.name || undefined,
     cycle: value.cycle || undefined,
     disbursed: parseCashHealthNumber(value.disbursed),
     collected: parseCashHealthNumber(value.collected),
@@ -247,7 +259,9 @@ function normalizeCashHealthProvince(value: any): CashHealthProvince {
 }
 
 export async function fetchExecutiveCashHealth(): Promise<ExecutiveCashHealthData> {
-  const response = await fetch(`${CASH_HEALTH_API_BASE}/cash-health/national`, {
+  // Per cash-health-apis.md: cycle_start is optional but must be the 25th when provided.
+  // Pass it explicitly to avoid the backend defaulting to an invalid cycle and returning 500.
+  const response = await fetch(`${CASH_HEALTH_API_BASE}/cash-health/national?cycle_start=${getCurrentCycleStart()}`, {
     method: 'GET',
     cache: 'no-store',
     headers: {
@@ -263,6 +277,8 @@ export async function fetchExecutiveCashHealth(): Promise<ExecutiveCashHealthDat
   }
 
   const payload = await response.json();
+
+  // Per cash-health-national sample response: the API returns a flat object (no wrapper envelope).
   const result = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
 
   if (result?.error) {
@@ -315,6 +331,8 @@ export async function fetchCashHealthProvince(provinceId: number): Promise<CashH
   }
 
   const payload = await response.json();
+
+  // Per cash-health-province.md sample: API returns a flat object (no provinceHealth wrapper).
   const result = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
 
   if (result?.error) {
@@ -621,6 +639,8 @@ export async function fetchCashHealthDistrict(districtId: number): Promise<CashH
   }
 
   const payload = await response.json();
+
+  // Per cash-health-district.md sample: API returns a flat object (no districtHealth wrapper).
   const result = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
 
   if (result?.error) {
@@ -629,12 +649,16 @@ export async function fetchCashHealthDistrict(districtId: number): Promise<CashH
 
   const financials = normalizeCashHealthFinancials(result?.financials);
   const scores = normalizeCashHealthScores(result?.scores);
+  // offices array lives directly on the district object per the real API response
+  const offices = Array.isArray(result?.offices)
+    ? result.offices.map(normalizeCashHealthOffice)
+    : [];
 
   return {
     ...result,
     district_id: parseCashHealthNumber(result?.district_id ?? result?.id),
     district_name: result?.district_name || `District ${result?.district_id}`,
-    office_count: parseCashHealthNumber(result?.office_count) || 0,
+    office_count: parseCashHealthNumber(result?.office_count) || offices.length,
     cycle: result?.cycle || undefined,
     disbursed: parseCashHealthNumber(result?.disbursed),
     collected: parseCashHealthNumber(result?.collected),
@@ -642,6 +666,7 @@ export async function fetchCashHealthDistrict(districtId: number): Promise<CashH
     reserve_breakdown: result?.reserve_breakdown || {},
     scores,
     reason: result?.reason || '',
+    offices,
     totalCashBalance: financials?.residual_cash ?? financials?.net_cash_position ?? 0,
     cash_position_score: scores?.overall,
     score: scores?.overall,
@@ -653,6 +678,7 @@ export async function fetchCashHealthDistrict(districtId: number): Promise<CashH
 
 export interface CashHealthBranchData {
   office_id?: number;
+  /** Normalised from API `office.name` field */
   office_name?: string;
   cycle?: CashHealthCycle;
   disbursed?: number;
@@ -662,12 +688,17 @@ export interface CashHealthBranchData {
   scores?: CashHealthScores;
   reason?: string;
   details?: Record<string, unknown>;
+  /** Loans summary from branch show endpoint */
+  loans?: { number_of_loans?: number; total_collected?: number };
+  availableCycles?: unknown[];
+  cycleStart?: string;
+  cycleEnd?: string;
   [key: string]: unknown;
 }
 
 /**
  * Calculates the current cash cycle start date.
- * Per cash-health.md section 2.2:
+ * Per cash-health-apis.md: cycle_start must be the 25th of a month.
  * - If today >= 25: cycle_start = current month's 25th
  * - Else: cycle_start = previous month's 25th
  */
@@ -677,38 +708,42 @@ export function getCurrentCycleStart(): string {
   let year = now.getFullYear();
   let month = now.getMonth(); // 0-indexed
 
-  if (day >= 25) {
-    // Current month's 25th
-  } else {
-    // Previous month's 25th
+  if (day < 25) {
+    // Use previous month's 25th
     month -= 1;
     if (month < 0) {
       month = 11;
       year -= 1;
     }
   }
+  // else: use current month's 25th
 
   const monthStr = String(month + 1).padStart(2, '0');
   return `${year}-${monthStr}-25`;
 }
 
 /**
- * Calculates the current cash cycle end date (cycle_start + 1 month - 1 day)
+ * Calculates the current cash cycle end date.
+ * Cycle runs from the 25th to the 24th of the following month.
  */
 export function getCurrentCycleEnd(): string {
   const cycleStart = getCurrentCycleStart();
-  const [y, m, d] = cycleStart.split('-').map(Number);
-  const start = new Date(y, m - 1, d);
-  const end = new Date(start.getFullYear(), start.getMonth() + 1, 24);
-  const year = end.getFullYear();
-  const monthStr = String(end.getMonth() + 1).padStart(2, '0');
-  const dayStr = String(end.getDate()).padStart(2, '0');
-  return `${year}-${monthStr}-${dayStr}`;
+  const [y, m] = cycleStart.split('-').map(Number);
+  let endMonth = m + 1;
+  let endYear = y;
+  if (endMonth > 12) {
+    endMonth = 1;
+    endYear += 1;
+  }
+  const monthStr = String(endMonth).padStart(2, '0');
+  return `${endYear}-${monthStr}-24`;
 }
 
 const CASH_HEALTH_BRANCH_API_BASE = process.env.NEXT_PUBLIC_CASH_HEALTH_API_URL || 'https://lms2backend.whencefinancesystem.com';
 
 export async function fetchCashHealthOffice(officeId: number): Promise<CashHealthBranchData> {
+  // Per cash-health-backend-api-code.md: endpoint is GET /cash-health/:id?cycle_start=YYYY-MM-DD
+  // cycle_start must be the 25th of a month.
   const response = await fetch(`${CASH_HEALTH_BRANCH_API_BASE}/cash-health/${officeId}?cycle_start=${getCurrentCycleStart()}`, {
     method: 'GET',
     cache: 'no-store',
@@ -725,6 +760,8 @@ export async function fetchCashHealthOffice(officeId: number): Promise<CashHealt
   }
 
   const payload = await response.json();
+
+  // Per cash-health-branch.md sample: API returns a flat object directly.
   const result = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
 
   if (result?.error) {
@@ -736,8 +773,9 @@ export async function fetchCashHealthOffice(officeId: number): Promise<CashHealt
 
   return {
     ...result,
-    office_id: parseCashHealthNumber(result?.office_id ?? result?.id),
-    office_name: result?.office_name || `Office ${result?.office_id}`,
+    office_id: parseCashHealthNumber(result?.office_id ?? officeId),
+    // API returns office_name as a top-level field in the branch response
+    office_name: result?.office_name || `Office ${officeId}`,
     cycle: result?.cycle || undefined,
     disbursed: parseCashHealthNumber(result?.disbursed),
     collected: parseCashHealthNumber(result?.collected),

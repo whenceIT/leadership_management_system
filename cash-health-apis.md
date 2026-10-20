@@ -1,537 +1,457 @@
-const express = require('express')
-const app = express()
-const cors = require("cors")
-const mysql = require('mysql2')
-const pool = require("./db");
-const bcrypt = require("bcrypt");
-const multer = require('multer')
-const s3Client = require('@aws-sdk/client-s3')
-const crypto = require('crypto')
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3')
-const bodyParser = require("body-parser");
-const axios = require("axios");
-const twilio = require("twilio");
-const http = require("http")
-const { Server } = require("socket.io")
-const dayjs = require('dayjs');
-const QRCode = require('qrcode');
-const archiver = require('archiver');
-const createCashHealthService =
-    require('./services/cashHealthService');
-   
+# Cash Health API Documentation
 
-   
-app.use(cors())
-app.use(express.json())
+This document describes the API endpoints and response structures for the Cash Health module.
 
-app.use(bodyParser.urlencoded({ extended: false }));
+## Table of Contents
 
+- [Routes](#routes)
+- [Page Views](#page-views)
+  - [Show (Branch) - `/cash-health/show/{id}`](#show-branch---cash-healthshowid)
+  - [District - `/cash-health/district/{district}`](#district---cash-healthdistrictdistrict)
+  - [Province - `/cash-health/province/{province}`](#province---cash-healthprovinceprovince)
+  - [National - `/cash-health/national`](#national---cash-healthnational)
+  - [Item (Legacy) - `/cash-health/item`](#item---cash-healthitem)
+- [JavaScript API Endpoints](#javascript-api-endpoints)
 
-const server = http.createServer(app)
-const io = new Server(server, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
-})
+---
 
-io.on("connection", (socket) => {
-  console.log("🟢 New client connected:", socket.id)
+## Routes
 
-  // Register manager
-  socket.on("register_manager", () => {
-    socket.join("managers")
-    console.log(`👤 Manager ${socket.id} joined managers room`)
-  })
+All routes are defined in `routes/web.php` under the `cash_health` prefix.
 
-  socket.on("disconnect", () => {
-    console.log("🔴 Client disconnected:", socket.id)
-  })
-})
+| Method | Route | Controller Method | Route Name |
+|--------|-------|-------------------|------------|
+| GET | `/cash_health/show/{id}` | `CashHealthController@show` | `cash_health.show` |
+| GET | `/cash_health/district/{district}` | `CashHealthController@district` | `cash_health.district` |
+| GET | `/cash_health/province/{province}` | `CashHealthController@province` | `cash_health.province` |
+| GET | `/cash_health/national` | `CashHealthController@national` | `cash_health.national` |
+| GET | `/cash_health/contribution/{id}` | `CashHealthController@contributionHistory` | `cash_health.contribution` |
+| GET | `/cash_health/national/balances` | `CashHealthController@nationalBalances` | `cash_health.national.balances` |
+| GET | `/cash_health/national/balance/{officeId}` | `CashHealthController@nationalOfficeBalance` | `cash_health.national.office.balance` |
 
+---
 
+## Page Views
 
-app.use(cors({
-  origin: "*",
-  methods: ["GET","POST","PUT","DELETE"],
-  credentials: true, // if you send cookies/auth headers
-}));
+### Show (Branch) - `/cash-health/show/{id}`
 
-const imageName = () =>{
-    return crypto.randomBytes(32).toString('hex')
-  }
+**Route Name**: `cash_health.show`
 
+**Purpose**: Displays cash health details for a specific branch/office.
 
-  const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+**Query Parameters**:
+- `cycle_start` (optional): Date in `Y-m-d` format. Must be the 25th of a month. Defaults to current cycle.
 
+**Response Data Structure**:
 
-//PLACE ALL UNDER ENV WHEN PUSHING  
-// DO_ACCESS_KEY_ID=DO00RP9FA3QZTA3JV637
-// DO_SECRET_ACCESS_KEY=GWEj+tmCLlYb/RzX7b6vab8Kz9OjFO1PknyYyUQTnjk
-// DO_DEFAULT_REGION=nyc3
-// DO_BUCKET=wfssystem
-// DO_ENDPOINT=https://wfssystem.nyc3.digitaloceanspaces.com
+```php
+[
+    'office' => [
+        'office_id' => int,
+        'name' => string
+    ],
+    'cycle' => [
+        'start' => 'Y-m-d',
+        'end' => 'Y-m-d'
+    ],
+    'scores' => [
+        'overall' => float,
+        'disbursement' => float,
+        'collection' => float,
+        'residual_cash' => float,
+        'status' => string('GREEN' | 'AMBER' | 'RED'),
+        'months_of_cover' => float,
+        'full_payment_ratio' => float
+    ],
+    'financials' => [
+        'minimum_loan_target' => float,
+        'maximum_expected_repayment' => float,
+        'mandatory_fixed_cost' => float,
+        'salaries' => float,
+        'defaults' => float,
+        'irregular_cost_reserve' => float,
+        'salary_advance_reserve' => float,
+        'net_cash_position' => float,
+        'residual_cash' => float
+    ],
+    'loans' => [
+        'number_of_loans' => int,
+        'total_collected' => float
+    ],
+    'reason' => string,
+    'disbursed' => float,
+    'collected' => float,
+    'availableCycles' => array,
+    'cycleStart' => string,
+    'cycleEnd' => string
+]
+```
 
+---
 
-const branches = [
-  "Zimco Branch Lusaka",
-  "Kambendekela House Branch Lusaka",
-  "Anchor House Branch Lusaka",
-  "Kabwe Branch",
-  "Kitwe Branch",
-  "Ndola",
-  "Solwezi",
-  "Mansa",
-  "Kasama",
-  "Chipata",
-  "Livingstone",
-  "Mazabuka",
-  "Kafue",
-  "Chingola",
-  "Choma",
-  "Petauke",
-  "Kalumbila",
-  "Mongu",
-  "Chongwe",
-  "Kaoma",
-  "Luanshya",
-  "Lumwana",
-  "Monze",
-  "Mufulira",
-  "Mpika",
-  "Chirundu",
-  "Masala-Ndola",
-  "Mpongwe",
-  "Kalomo",
-  "Chambishi"
-];
+### District - `/cash-health/district/{district}`
 
+**Route Name**: `cash_health.district`
 
-const officerNumbers = [
-  { branchId: 0, phone: "whatsapp:+260970000001" }, // Zimco Branch Lusaka
-  { branchId: 1, phone: "whatsapp:+260963689579" }, // Kambendekela House Branch Lusaka
-  { branchId: 2, phone: "whatsapp:+260963689579" }, // Anchor House Branch Lusaka
-  { branchId: 3, phone: "whatsapp:+260970000004" }, // Kabwe Branch
-  { branchId: 4, phone: "whatsapp:+260970000005" }, // Kitwe Branch
-  { branchId: 5, phone: "whatsapp:+260970000006" }, // Ndola
-  { branchId: 6, phone: "whatsapp:+260970000007" }, // Solwezi
-  { branchId: 7, phone: "whatsapp:+260970000008" }, // Mansa
-  { branchId: 8, phone: "whatsapp:+260970000009" }, // Kasama
-  { branchId: 9, phone: "whatsapp:+260970000010" }, // Chipata
-  { branchId: 10, phone: "whatsapp:+260970000011" }, // Livingstone
-  { branchId: 11, phone: "whatsapp:+260970000012" }, // Mazabuka
-  { branchId: 12, phone: "whatsapp:+260970000013" }, // Kafue
-  { branchId: 13, phone: "whatsapp:+260970000014" }, // Chingola
-  { branchId: 14, phone: "whatsapp:+260970000015" }, // Choma
-  { branchId: 15, phone: "whatsapp:+260970000016" }, // Petauke
-  { branchId: 16, phone: "whatsapp:+260970000017" }, // Kalumbila
-  { branchId: 17, phone: "whatsapp:+260970000018" }, // Mongu
-  { branchId: 18, phone: "whatsapp:+260970000019" }, // Chongwe
-  { branchId: 19, phone: "whatsapp:+260970000020" }, // Kaoma
-  { branchId: 20, phone: "whatsapp:+260970000021" }, // Luanshya
-  { branchId: 21, phone: "whatsapp:+260970000022" }, // Lumwana
-  { branchId: 22, phone: "whatsapp:+260970000023" }, // Monze
-  { branchId: 23, phone: "whatsapp:+260970000024" }, // Mufulira
-  { branchId: 24, phone: "whatsapp:+260970000025" }, // Mpika
-  { branchId: 25, phone: "whatsapp:+260970000026" }, // Chirundu
-  { branchId: 26, phone: "whatsapp:+260970000027" }, // Masala-Ndola
-  { branchId: 27, phone: "whatsapp:+260970000028" }, // Mpongwe
-  { branchId: 28, phone: "whatsapp:+260970000029" }, // Kalomo
-  { branchId: 29, phone: "whatsapp:+260970000030" }  // Chambishi
-];
+**Purpose**: Displays cash health overview for all branches in a district with expandable office details.
 
- const cashHealthService = createCashHealthService(pool);
+**Query Parameters**:
+- `cycle_start` (optional): Date in `Y-m-d` format. Must be the 25th of a month. Defaults to current cycle.
 
+**Response Data Structure**:
 
+```php
+[
+    'districtHealth' => [
+        'district_id' => int,
+        'district_name' => string,
+        'office_count' => int,
+        'scores' => [
+            'overall' => float,
+            'status' => string('GREEN' | 'AMBER' | 'RED'),
+            'disbursement' => float,
+            'collection' => float,
+            'residual_cash' => float
+        ],
+        'financials' => [
+            'residual_cash' => float,
+            'net_cash_position' => float
+        ],
+        'reason' => string,
+        'offices' => [
+            [
+                'office_id' => int,
+                'name' => string,
+                'scores' => [...],
+                'financials' => [...],
+                'reason' => string
+            ]
+        ]
+    ],
+    'availableCycles' => array,
+    'cycleStart' => string,
+    'cycleEnd' => string,
+    'offices' => Collection<Office>
+]
+```
 
-    app.get('/cash-health/national', async (req, res) => {
+---
 
-    try {
+### Province - `/cash-health/province/{province}`
 
-         const { cycle_start } = req.query;
+**Route Name**: `cash_health.province`
 
-        const result =
-            await cashHealthService
-                .calculateNationalCashHealth(cycle_start);
+**Purpose**: Displays cash health for all districts within a province, with expandable district and branch details.
 
+**Query Parameters**:
+- `cycle_start` (optional): Date in `Y-m-d` format. Must be the 25th of a month. Defaults to current cycle.
 
-        return res.json(result);
+**Response Data Structure**:
 
+```php
+[
+    'provinceHealth' => [
+        'province_id' => int,
+        'province_name' => string,
+        'office_count' => int,
+        'scores' => [
+            'overall' => float,
+            'status' => string('GREEN' | 'AMBER' | 'RED'),
+            'disbursement' => float,
+            'collection' => float,
+            'residual_cash' => float
+        ],
+        'financials' => [
+            'residual_cash' => float,
+            'net_cash_position' => float
+        ],
+        'reason' => string,
+        'districts' => [
+            [
+                'district_id' => int,
+                'district_name' => string,
+                'office_count' => int,
+                'scores' => [...],
+                'financials' => [...],
+                'reason' => string,
+                'offices' => [...]
+            ]
+        ]
+    ],
+    'availableCycles' => array,
+    'cycleStart' => string,
+    'cycleEnd' => string,
+    'districts' => array,
+    'totalOffices' => int
+]
+```
 
-    } catch (error) {
+---
 
-        console.error(
-            'National Cash Health Error:',
-            error
-        );
+### National - `/cash-health/national`
 
+**Route Name**: `cash_health.national`
 
-        return res.status(500).json({
+**Purpose**: Displays institution-wide cash health overview with province and office drill-down.
 
-            error:
-                'Unable to calculate national cash health',
+**Query Parameters**:
+- `cycle_start` (optional): Date in `Y-m-d` format. Must be the 25th of a month. Defaults to current cycle.
 
-            message:
-                error.message
+**Response Data Structure**:
 
-        });
+```php
+[
+    'nationalHealth' => [
+        'office_count' => int,
+        'scores' => [
+            'overall' => float,
+            'status' => string,
+            'disbursement' => float,
+            'collection' => float,
+            'residual_cash' => float
+        ],
+        'financials' => [
+            'minimum_loan_target' => float,
+            'maximum_expected_repayment' => float,
+            'mandatory_fixed_cost' => float,
+            'salaries' => float,
+            'defaults' => float,
+            'irregular_cost_reserve' => float,
+            'salary_advance_reserve' => float,
+            'net_cash_position' => float,
+            'residual_cash' => float
+        ],
+        'reserve_breakdown' => [
+            'irregular_cost_reserve' => float,
+            'salary_advance_reserve' => float,
+            'defaults' => float
+        ],
+        'provinces' => [
+            [
+                'province_id' => int,
+                'province_name' => string,
+                'office_count' => int,
+                'scores' => [...],
+                'financials' => [...],
+                'reason' => string,
+                'districts' => [...]
+            ]
+        ],
+        'offices' => [
+            [
+                'office_id' => int,
+                'name' => string,
+                'scores' => [...],
+                'financials' => [...],
+                'reason' => string
+            ]
+        ]
+    ],
+    'availableCycles' => array,
+    'cycleStart' => string,
+    'cycleEnd' => string,
+    'totalBalance' => float,
+    'offices' => Collection<Office>
+]
+```
 
-    }
+---
 
-});
+### Item (Legacy) - `/cash-health/item`
 
+**Route Name**: None (legacy view)
 
-app.get('/cash-health/:id', async (req, res) => {
-    try {
-        const officeId = Number(req.params.id);
+**Purpose**: Legacy view with additional features including reserve breakdown and contribution charts.
 
-        if (
-            !Number.isInteger(officeId) ||
-            officeId <= 0
-        ) {
-            return res.status(400).json({
-                error: 'A valid office ID is required'
-            });
+**Query Parameters**:
+- `cycle_start` (optional): Date in `Y-m-d` format. Defaults to current cycle.
+
+**Response Data Structure**:
+
+```php
+[
+    'financials' => [...],
+    'scores' => [...],
+    'status' => string('HEALTHY' | 'NEEDS ATTENTION' | 'AT RISK'),
+    'statusConfig' => [
+        'label' => string,
+        'bg' => string,
+        'border' => string,
+        'color' => string,
+        'iconBg' => string,
+        'icon' => string,
+        'description' => string
+    ],
+    'office' => [...],
+    'availableCycles' => array,
+    'cycleStart' => string,
+    'cycleEnd' => string,
+    'id' => int,
+    'officeName' => string,
+    'contributionEndpoint' => string
+]
+```
+
+---
+
+## JavaScript API Endpoints
+
+### Contribution History - `GET /cash_health/contribution/{id}`
+
+**Route Name**: `cash_health.contribution`
+
+**Purpose**: Fetches contribution history data for rendering the contribution chart.
+
+**Parameters**:
+- `id` (path parameter): Office ID
+
+**Response Structure**:
+
+```json
+{
+    "cycles": [
+        {
+            "cycle": {
+                "start_date": "YYYY-MM-DD",
+                "end_date": "YYYY-MM-DD"
+            },
+            "contribution": float,
+            "cumulative_contribution": float
         }
+    ],
+    "total_contribution": float
+}
+```
 
-        // ============================================================
-        // CYCLE START DATE
-        // Example:
-        // ?cycle_start=2026-07-25
-        // Automatically becomes:
-        // 2026-07-25 -> 2026-08-24
-        // ============================================================
+### National Balances - `GET /cash_health/national/balances`
 
-        const { cycle_start } = req.query;
+**Route Name**: `cash_health.national.balances`
 
-        if (!cycle_start) {
-            return res.status(400).json({
-                error: 'cycle_start is required',
-                example: '/cash-health/3?cycle_start=2026-07-25'
-            });
+**Purpose**: Returns all offices with their province/district hierarchy for national views.
+
+**Response Structure**:
+
+```json
+{
+    "success": true,
+    "offices": [
+        {
+            "office_id": int,
+            "office_name": string,
+            "province_id": int,
+            "district_id": int,
+            "province_name": string,
+            "district_name": string,
+            "wallet_id": string
         }
+    ]
+}
+```
 
-        // Validate YYYY-MM-DD format
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(cycle_start)) {
-            return res.status(400).json({
-                error: 'cycle_start must be in YYYY-MM-DD format',
-                example: '2026-07-25'
-            });
-        }
+### National Office Balance - `GET /cash_health/national/balance/{officeId}`
 
-        // Validate that it is a real date
-        const parsedCycleStart = dayjs(
-            cycle_start,
-            'YYYY-MM-DD',
-            true
-        );
+**Route Name**: `cash_health.national.office.balance`
 
-        if (!parsedCycleStart.isValid()) {
-            return res.status(400).json({
-                error: 'Invalid cycle_start date',
-                example: '2026-07-25'
-            });
-        }
+**Purpose**: Fetches real-time cash balance for a specific office.
 
-        const result =
-            await cashHealthService.calculateCashHealth(
-                officeId,
-                cycle_start
-            );
+**Parameters**:
+- `officeId` (path parameter): Office ID
 
-        return res.json(result);
+**Response Structure**:
 
-    } catch (error) {
+```json
+{
+    "success": true,
+    "office_id": int,
+    "province_id": int,
+    "district_id": int,
+    "balance": float
+}
+```
 
-        console.error(
-            'Cash Health Error:',
-            error
-        );
+**Error Response**:
 
-        return res.status(500).json({
-            error: 'Unable to calculate cash health',
-            message: error.message
-        });
-    }
-});
+```json
+{
+    "success": false,
+    "message": "Office not found."
+}
+```
 
+Or when wallet is not configured:
 
-app.get('/cash-health/district/:id', async (req, res) => {
+```json
+{
+    "success": false,
+    "office_id": int,
+    "balance": null,
+    "message": "Please verify withinhere wallet."
+}
+```
 
-    try {
+---
 
-        const districtId =
-            Number(req.params.id);
+## Status Color Mapping
 
+### Score Status
 
-        if (
-            !Number.isInteger(districtId) ||
-            districtId <= 0
-        ) {
+| Status | Label | Background Color | Text Color |
+|--------|-------|------------------|------------|
+| GREEN | Healthy | `#dcfce7` | `#15803d` |
+| AMBER | Needs Attention | `#fef3c7` | `#b45309` |
+| RED | At Risk | `#fee2e2` | `#dc2626` |
 
-            return res.status(400).json({
+### Balance Status
 
-                error:
-                    'A valid district ID is required'
+| Condition | Color |
+|-----------|-------|
+| Balance >= 0 | `#202633` (dark green) |
+| Balance < 0 | `#dc2626` (dark red) |
 
-            });
+### National Status
 
-        }
+| Status | Label | Background Color | Text Color |
+|--------|-------|------------------|------------|
+| green | Healthy | `#ecfdf5` | `#087443` |
+| amber | Needs Attention | `#fff8e8` | `#9a6500` |
+| red | At Risk | `#fff0f0` | `#a72828` |
 
-         const { cycle_start } = req.query;
+---
 
-             if (!cycle_start) {
-            return res.status(400).json({
-                error: 'cycle_start is required',
-                example: '/cash-health/3?cycle_start=2026-07-25'
-            });
-        }
+## Cycle Selector Format
 
-        // Validate YYYY-MM-DD format
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(cycle_start)) {
-            return res.status(400).json({
-                error: 'cycle_start must be in YYYY-MM-DD format',
-                example: '2026-07-25'
-            });
-        }
+All pages include a cycle selector with the following format:
 
+**Date Format**: `d M Y` (e.g., `25 Jul 2024 → 24 Aug 2024`)
 
-            const parsedCycleStart = dayjs(
-            cycle_start,
-            'YYYY-MM-DD',
-            true
-        );
+**API Request Parameter**: `cycle_start` (YYYY-MM-DD format)
 
-        if (!parsedCycleStart.isValid()) {
-            return res.status(400).json({
-                error: 'Invalid cycle_start date',
-                example: '2026-07-25'
-            });
-        }
+**Cycle Definition**: Cash cycles run from the 25th of one month to the 24th of the next month.
 
+---
 
+## Error Handling
 
+### Invalid Cycle Date
 
-        const result =
-            await cashHealthService
-                .calculateDistrictCashHealth(
-                    districtId,
-                    cycle_start
-                );
+Returns HTTP 400 with message: `Invalid cycle start date.`
 
+### Invalid Cycle Start Day
 
-        return res.json(result);
+Returns HTTP 400 with message: `Cash cycle must start on the 25th.`
 
+### API Unavailability
 
-    } catch (error) {
+When external API calls fail:
+- Returns HTTP status from API error
+- Message: `Unable to retrieve [District/National/Provincial] Cash Health data.`
 
-        console.error(
-            'District Cash Health Error:',
-            error
-        );
+---
 
+## Notes
 
-        return res.status(500).json({
-
-            error:
-                'Unable to calculate district cash health',
-
-            message:
-                error.message
-
-        });
-
-    }
-
-});
-
-
-app.get('/cash-health/province/:id', async (req, res) => {
-
-    try {
-
-        const provinceId =
-            Number(req.params.id);
-
-
-        if (
-            !Number.isInteger(provinceId) ||
-            provinceId <= 0
-        ) {
-
-            return res.status(400).json({
-
-                error:
-                    'A valid province ID is required'
-
-            });
-
-        }
-
-
-            const { cycle_start } = req.query;
-
-             if (!cycle_start) {
-            return res.status(400).json({
-                error: 'cycle_start is required',
-                example: '/cash-health/3?cycle_start=2026-07-25'
-            });
-        }
-
-        // Validate YYYY-MM-DD format
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(cycle_start)) {
-            return res.status(400).json({
-                error: 'cycle_start must be in YYYY-MM-DD format',
-                example: '2026-07-25'
-            });
-        }
-
-
-            const parsedCycleStart = dayjs(
-            cycle_start,
-            'YYYY-MM-DD',
-            true
-        );
-
-        if (!parsedCycleStart.isValid()) {
-            return res.status(400).json({
-                error: 'Invalid cycle_start date',
-                example: '2026-07-25'
-            });
-        }
-
-
-        const result =
-            await cashHealthService
-                .calculateProvinceCashHealth(
-                    provinceId,
-                    cycle_start
-                );
-
-
-        return res.json(result);
-
-
-    } catch (error) {
-
-        console.error(
-            'Province Cash Health Error:',
-            error
-        );
-
-
-        return res.status(500).json({
-
-            error:
-                'Unable to calculate province cash health',
-
-            message:
-                error.message
-
-        });
-
-    }
-
-});
-
-
-app.get('/cash-health/national/contributions', async (req, res) => {
-
-    try {
-
-        const result =
-            await cashHealthService
-                .calculateNationalContributionHistory();
-
-
-        return res.json(result);
-
-
-    } catch (error) {
-
-        console.error(
-            'National Contribution History Error:',
-            error
-        );
-
-
-        return res.status(500).json({
-
-            error:
-                'Unable to calculate national contribution history',
-
-            message:
-                error.message
-
-        });
-
-    }
-
-});
-
-
-app.get('/cash-health/:id/contributions', async (req, res) => {
-
-    try {
-
-        const officeId =
-            Number(req.params.id);
-
-
-        if (
-            !Number.isInteger(officeId) ||
-            officeId <= 0
-        ) {
-
-            return res.status(400).json({
-                error:
-                    'A valid office ID is required'
-            });
-
-        }
-
-
-        const result =
-            await cashHealthService
-                .calculateContributionHistory(
-                    officeId
-                );
-
-
-        return res.json(result);
-
-
-    } catch (error) {
-
-        console.error(
-            'Contribution History Error:',
-            error
-        );
-
-
-        return res.status(500).json({
-
-            error:
-                'Unable to calculate contribution history',
-
-            message:
-                error.message
-
-        });
-
-    }
-
-});
-
-
-
-
-
-});
-
-
-
-
-
-
-
-//THIS IS THE OG CODE
-
-server.listen(5000, "0.0.0.0", () => console.log("🚀 Server running"))
+- All monetary values are in local currency (K)
+- Scores are calculated on a 0-100 scale
+- Overall score is a composite of disbursement, collection quality, and residual cash scores
+- Higher residual cash scores indicate better cash coverage
+- The `status` field in scores determines the health indicator color

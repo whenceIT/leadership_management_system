@@ -118,6 +118,10 @@ export default function BranchCashHealthView({ data }: BranchCashHealthViewProps
   const status = scores.status;
   const tone = statusTone(status || undefined);
 
+  // Prefer cycle bounds from API response; fall back to client-calculated values
+  const displayCycleStart = data.cycleStart || (cycle?.start_date) || getCurrentCycleStart();
+  const displayCycleEnd = data.cycleEnd || (cycle?.end_date) || getCurrentCycleEnd();
+
   const resolvedOfficeName = useMemo(() => {
     if (data.office_name && data.office_name !== `Office ${data.office_id}`) {
       return data.office_name;
@@ -149,7 +153,7 @@ export default function BranchCashHealthView({ data }: BranchCashHealthViewProps
               </span>
             </div>
              <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-0.5">
-               {getCurrentCycleStart()} → {getCurrentCycleEnd()}
+               {displayCycleStart} → {displayCycleEnd}
              </p>
           </div>
 

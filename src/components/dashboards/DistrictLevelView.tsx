@@ -632,7 +632,9 @@ export function DistrictLevelView({ selectedKPI, selectedProvince, onDistrictCli
                     case 'Growth Trajectory':
                     case 'Cash Position Score': {
                       const financials = data?.financials || {};
-                      const officesCount = data?.office_count ?? (data?.offices ? (Array.isArray(data.offices) ? data.offices.length : 0) : 0);
+                      // office_count comes from the districtHealth envelope; fall back to offices array length
+                      const officesCount = data?.office_count
+                        ?? (Array.isArray(data?.offices) ? data.offices.length : 0);
                       rowData = [
                         district.name,
                         officesCount,

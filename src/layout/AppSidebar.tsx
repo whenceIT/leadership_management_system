@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -109,6 +109,18 @@ const navItems: NavItem[] = [
   //   disabled: true,
   // },
   {
+    name: "Remuneration",
+    icon: <PayrollIcon />,
+    subItems: [
+      { name: "Dashboard", path: "/remuneration", pro: false, new: true },
+      { name: "Managers", path: "/remuneration/managers", pro: false },
+      { name: "Calculator", path: "/remuneration/calculator", pro: false },
+      { name: "Approvals", path: "/remuneration/approvals", pro: false },
+      { name: "Structure", path: "/remuneration/structure", pro: false },
+      { name: "Reports", path: "/remuneration/reports", pro: false },
+    ],
+  },
+  {
     name: "Settings",
     icon: <SettingsIcon />,
     subItems: [
@@ -126,6 +138,7 @@ const AppSidebar: React.FC = () => {
   const pathname = usePathname();
 
   const [openSubmenu, setOpenSubmenu] = useState<number | null>(null);
+  const [submenuPath, setSubmenuPath] = useState<string>(pathname);
   const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>(
     {}
   );
@@ -133,30 +146,27 @@ const AppSidebar: React.FC = () => {
 
   const isActive = useCallback((path: string) => path === pathname, [pathname]);
 
-  useEffect(() => {
-    // Check if current path matches any submenu item
-    let submenuMatched = false;
-    navItems.forEach((nav, index) => {
-      if (nav.subItems) {
-        nav.subItems.forEach((subItem) => {
-          if (isActive(subItem.path)) {
-            setOpenSubmenu(index);
-            submenuMatched = true;
-          }
-        });
-      }
-    });
+  // The submenu that should be open for the current route. A manual toggle wins
+  // until the route changes again.
+  const activeSubmenuIndex = useMemo(
+    () =>
+      navItems.findIndex((nav) =>
+        nav.subItems?.some((subItem) => subItem.path === pathname)
+      ),
+    [pathname]
+  );
 
-    // If no submenu item matches, close open submenu
-    if (!submenuMatched) {
-      setOpenSubmenu(null);
-    }
-  }, [pathname, isActive]);
+  const openSubmenuIndex =
+    submenuPath === pathname
+      ? openSubmenu
+      : activeSubmenuIndex >= 0
+        ? activeSubmenuIndex
+        : null;
 
   useEffect(() => {
     // Set the height of the submenu items when the submenu is opened
-    if (openSubmenu !== null) {
-      const key = `${openSubmenu}`;
+    if (openSubmenuIndex !== null) {
+      const key = `${openSubmenuIndex}`;
       if (subMenuRefs.current[key]) {
         setSubMenuHeight((prevHeights) => ({
           ...prevHeights,
@@ -164,15 +174,11 @@ const AppSidebar: React.FC = () => {
         }));
       }
     }
-  }, [openSubmenu]);
+  }, [openSubmenuIndex]);
 
   const handleSubmenuToggle = (index: number) => {
-    setOpenSubmenu((prevOpenSubmenu) => {
-      if (prevOpenSubmenu === index) {
-        return null;
-      }
-      return index;
-    });
+    setSubmenuPath(pathname);
+    setOpenSubmenu(openSubmenuIndex === index ? null : index);
   };
 
   const renderMenuItems = (navItems: NavItem[]) => (
@@ -183,7 +189,7 @@ const AppSidebar: React.FC = () => {
             <button
               onClick={() => handleSubmenuToggle(index)}
               className={`menu-item group  ${
-                openSubmenu === index
+                openSubmenuIndex === index
                   ? "menu-item-active"
                   : "menu-item-inactive"
               } cursor-pointer ${
@@ -194,7 +200,7 @@ const AppSidebar: React.FC = () => {
             >
               <span
                 className={` ${
-                  openSubmenu === index
+                  openSubmenuIndex === index
                     ? "menu-item-icon-active"
                     : "menu-item-icon-inactive"
                 }`}
@@ -207,7 +213,7 @@ const AppSidebar: React.FC = () => {
               {(isExpanded || isHovered || isMobileOpen) && (
                 <ChevronDownIcon
                   className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                    openSubmenu === index
+                    openSubmenuIndex === index
                       ? "rotate-180 text-brand-500"
                       : ""
                   }`}
@@ -258,7 +264,7 @@ const AppSidebar: React.FC = () => {
               className="overflow-hidden transition-all duration-300"
               style={{
                 height:
-                  openSubmenu === index
+                  openSubmenuIndex === index
                     ? `${subMenuHeight[`${index}`]}px`
                     : "0px",
               }}
