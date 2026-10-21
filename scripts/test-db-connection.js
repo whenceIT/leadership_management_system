@@ -1,14 +1,21 @@
 // Test database connection and create a test user
+const path = require('path');
+const { loadEnvConfig } = require('@next/env');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 
+// Load .env.local so the credentials match the running application.
+loadEnvConfig(path.resolve(__dirname, '..'));
+
 // Database configuration
+// The credentials come from the environment (see .env.local) so nothing
+// secret is committed to the repository.
 const dbConfig = {
-  host: '127.0.0.1',
-  port: 3306,
-  user: 'root',
-  password: '',
-  database: 'smart',
+  host: process.env.DB_HOST || '127.0.0.1',
+  port: Number(process.env.DB_PORT || 3306),
+  user: process.env.DB_USERNAME || process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD ?? '',
+  database: process.env.DB_DATABASE || 'whence_db',
   waitForConnections: true,
   connectionLimit: 10,
 };
@@ -37,12 +44,20 @@ async function testConnection() {
       
       // Hash password
       const hashedPassword = await bcrypt.hash('password123', 10);
-      
+
+      // The users table requires a job position.
+      const [positions] = await connection.execute(
+        'SELECT id FROM job_positions ORDER BY id LIMIT 1'
+      );
+      if (positions.length === 0) {
+        throw new Error('No job position is defined, so the test user cannot be created.');
+      }
+
       // Insert test user
       const [result] = await connection.execute(
-        `INSERT INTO users (first_name, last_name, email, password, status, created_at, updated_at) 
-         VALUES (?, ?, ?, ?, 'Active', NOW(), NOW())`,
-        ['Test', 'User', 'test@example.com', hashedPassword]
+        `INSERT INTO users (first_name, last_name, email, password, status, job_position, created_at, updated_at)
+         VALUES (?, ?, ?, ?, 'Active', ?, NOW(), NOW())`,
+        ['Test', 'User', 'test@example.com', hashedPassword, positions[0].id]
       );
       
       console.log(`✓ Test user created with ID: ${result.insertId}`);
@@ -64,7 +79,7 @@ async function testConnection() {
     } else if (error.code === 'ER_ACCESS_DENIED_ERROR') {
       console.error('\nPlease check your database credentials');
     } else if (error.code === 'ER_BAD_DB_ERROR') {
-      console.error('\nDatabase "smart" does not exist. Please create it first.');
+      console.error(`\nDatabase "${dbConfig.database}" does not exist. Please create it first.`);
     }
   } finally {
     if (connection) {

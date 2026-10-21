@@ -528,6 +528,15 @@ export function calculateRemuneration(input: CalculationInput): RemunerationComp
         'The performance result was entered manually. Internal audit must verify it before payroll.',
     });
   }
+  if (qualification.basis === 'manual_override') {
+    flags.push({
+      code: 'manual_tier_override',
+      severity: 'warning',
+      message: `The tier was assigned manually rather than qualified by the result. ${
+        performance.overrideReason?.trim() ?? 'No override reason was recorded.'
+      }`,
+    });
+  }
 
   const referenceNetPay = tier?.referenceNetPay ?? tier?.payBlock.referenceNetPay ?? null;
   const referenceTotalCost = tier?.payBlock.referenceTotalCompanyCost ?? null;

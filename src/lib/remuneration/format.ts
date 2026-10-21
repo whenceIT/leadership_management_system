@@ -38,6 +38,15 @@ export function currentPeriod(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
+/** The last day of a pay month (`YYYY-MM`), as `YYYY-MM-DD`. */
+export function periodEnd(period: string): string {
+  const [year, month] = period.split('-');
+  const index = Number(month) - 1;
+  if (!year || Number.isNaN(index) || index < 0 || index > 11) return period;
+  const lastDay = new Date(Number(year), index + 1, 0).getDate();
+  return `${year}-${String(index + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+}
+
 export function periodList(count = 12): string[] {
   const periods: string[] = [];
   const now = new Date();

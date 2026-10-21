@@ -10,6 +10,136 @@ import type {
   StatementStatus,
 } from '@/lib/remuneration/types';
 
+export interface ServiceTier {
+  id: number;
+  tier_number: number;
+  name: string;
+  description: string | null;
+  is_active: number;
+}
+
+export interface ServiceConfig {
+  id: number;
+  job_position_id: number;
+  remuneration_tier_id: number;
+  gross_pay: number;
+  target_net_pay: number | null;
+  currency: string;
+  threshold_type: string | null;
+  threshold_amount: number | null;
+  threshold_operator: string | null;
+  threshold_upper_amount: number | null;
+  threshold_period: string | null;
+  min_branches: number | null;
+  max_branches: number | null;
+  effective_from: string;
+  effective_to: string | null;
+  status: string;
+  position_name: string | null;
+  tier_name: string | null;
+  tier_number: number | null;
+}
+
+export interface ServiceComponent {
+  id: number;
+  name: string;
+  code: string;
+  component_type: string;
+  payment_method: string | null;
+  tax_treatment: string | null;
+  paid_by: string;
+  calculation_type: string;
+  description: string | null;
+  is_active: number;
+}
+
+export interface ServiceComponentValue {
+  id: number;
+  remuneration_config_id: number;
+  remuneration_component_id: number;
+  amount: number | null;
+  percentage: number | null;
+  calculation_base: string | null;
+  is_included_in_gross: number;
+  is_included_in_company_cost: number;
+  notes: string | null;
+  component_name?: string;
+  component_code?: string;
+  component_type?: string;
+  paid_by?: string;
+  calculation_type?: string;
+}
+
+export interface ServiceCriterion {
+  id: number;
+  remuneration_config_id: number;
+  criterion_name: string;
+  criterion_code: string;
+  measurement_type: string;
+  operator: string;
+  target_value: number | null;
+  measurement_period: string;
+  is_mandatory: number;
+  verification_source: string | null;
+}
+
+export interface ServiceHousingBand {
+  id: number;
+  job_position_id: number;
+  remuneration_tier_id: number;
+  monthly_limit: number;
+  effective_from: string;
+  effective_to: string | null;
+  status: string;
+  position_name: string | null;
+  tier_name: string | null;
+  tier_number: number | null;
+}
+
+export interface ServiceBonusRule {
+  id: number;
+  job_position_id: number;
+  bonus_name: string;
+  bonus_type: string;
+  amount: number | null;
+  percentage: number | null;
+  performance_metric: string | null;
+  minimum_target: number | null;
+  period: string;
+  effective_from: string;
+  status: string;
+  position_name: string | null;
+}
+
+export interface ServiceAssignment {
+  userId: number;
+  assignmentId: number;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  actingCapacity: boolean;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  positionId: number;
+  positionName: string | null;
+  configId: number;
+  tier: number | null;
+  tierName: string | null;
+  grossPay: number | null;
+  notes: string | null;
+}
+
+export interface ServiceAssessment {
+  id: number;
+  employee_remuneration_assignment_id: number;
+  assessment_period: string;
+  actual_performance: string | Record<string, unknown> | null;
+  achievement_percentage: number | null;
+  assessment_status: string;
+  corrective_plan: string | null;
+  decision: string | null;
+  decision_notes: string | null;
+  created_at: string;
+}
+
 export interface StructureResponse {
   roles: import('@/lib/remuneration/types').RoleDefinition[];
   payBlocks: Record<string, unknown>;
@@ -40,6 +170,27 @@ export interface StructureResponse {
     status: 'open' | 'confirmed';
   }[];
   persistence: 'mysql' | 'in-process';
+  service: {
+    connected: boolean;
+    error: string | null;
+    counts: {
+      tiers: number;
+      configs: number;
+      activeConfigs: number;
+      components: number;
+      componentValues: number;
+      criteria: number;
+      housingBands: number;
+      bonusRules: number;
+    };
+    tiers: ServiceTier[];
+    configs: ServiceConfig[];
+    components: ServiceComponent[];
+    componentValues: ServiceComponentValue[];
+    criteria: ServiceCriterion[];
+    housingBands: ServiceHousingBand[];
+    bonusRules: ServiceBonusRule[];
+  };
 }
 
 export interface PerformancePayload {
@@ -87,6 +238,25 @@ export interface SummaryResponse {
   byStatus: { status: string; count: number }[];
   periods: string[];
   statements: RemunerationStatement[];
+  service: {
+    connected: boolean;
+    error: string | null;
+    overview: {
+      tiers: number;
+      active_configs: number;
+      active_components: number;
+      approved_assignments: number;
+    } | null;
+    totals: {
+      statements: number;
+      unqualified: number;
+      grossPay: number;
+      netCashPay: number;
+      housing: number;
+      employerContributions: number;
+      totalCompanyCost: number;
+    };
+  };
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -121,6 +291,12 @@ export interface ManagersResponse {
     district_id: number | null;
   }[];
   districts: { id: number; name: string; provinceId: number | null }[];
+  service: {
+    connected: boolean;
+    error: string | null;
+    assignments: ServiceAssignment[];
+    counts: { total: number; approved: number; pending: number };
+  };
   counts: { total: number; registered: number; acting: number };
 }
 
@@ -146,7 +322,7 @@ export function saveManagerAssignment(payload: Partial<ManagerProfile>): Promise
 
 export function updateManagerAssignment(
   id: string,
-  payload: Partial<ManagerProfile>
+  payload: Partial<ManagerProfile> & { approveServiceAssignment?: boolean }
 ): Promise<ManagerProfile> {
   return request<ManagerProfile>(`/api/remuneration/managers/${id}`, {
     method: 'PATCH',
@@ -273,10 +449,16 @@ export function updateStatementStatus(
 
 export function fetchStatementDetail(
   id: string
-): Promise<{ statement: RemunerationStatement; audit: AuditEntry[] }> {
-  return request<{ statement: RemunerationStatement; audit: AuditEntry[] }>(
-    `/api/remuneration/statements/${id}`
-  );
+): Promise<{
+  statement: RemunerationStatement;
+  audit: AuditEntry[];
+  assessments: ServiceAssessment[];
+}> {
+  return request<{
+    statement: RemunerationStatement;
+    audit: AuditEntry[];
+    assessments: ServiceAssessment[];
+  }>(`/api/remuneration/statements/${id}`);
 }
 
 /* --------------------------------- Summary -------------------------------- */

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { backendHealth } from '@/lib/remuneration/backend';
 import {
   groupByRole,
   groupByTier,
@@ -47,6 +48,41 @@ export async function GET(request: NextRequest) {
       })
     );
 
+    /* The remuneration service holds the payroll side of the framework. Only a
+     * statement the engine qualified carries a comparable service figure, so
+     * the two columns add up to the same set of managers. */
+    const health = await backendHealth();
+    const serviceTotals = filtered.reduce(
+      (totals, statement) => {
+        const payroll = statement.payroll;
+        if (!payroll) return totals;
+        if (statement.qualification.tier === null) {
+          totals.unqualified += 1;
+          return totals;
+        }
+        totals.statements += 1;
+        totals.grossPay = Math.round((totals.grossPay + payroll.grossPay) * 100) / 100;
+        totals.netCashPay =
+          Math.round((totals.netCashPay + payroll.netCashPay) * 100) / 100;
+        totals.housing = Math.round((totals.housing + payroll.housing) * 100) / 100;
+        totals.employerContributions =
+          Math.round((totals.employerContributions + payroll.employerContributions) * 100) /
+          100;
+        totals.totalCompanyCost =
+          Math.round((totals.totalCompanyCost + payroll.totalCompanyCost) * 100) / 100;
+        return totals;
+      },
+      {
+        statements: 0,
+        unqualified: 0,
+        grossPay: 0,
+        netCashPay: 0,
+        housing: 0,
+        employerContributions: 0,
+        totalCompanyCost: 0,
+      }
+    );
+
     return NextResponse.json({
       success: true,
       data: {
@@ -57,6 +93,12 @@ export async function GET(request: NextRequest) {
         byStatus,
         periods: Array.from(new Set(statements.map((s) => s.period))).sort().reverse(),
         statements: filtered,
+        service: {
+          connected: health.connected,
+          error: health.error,
+          overview: health.overview,
+          totals: serviceTotals,
+        },
       },
     });
   } catch (error) {

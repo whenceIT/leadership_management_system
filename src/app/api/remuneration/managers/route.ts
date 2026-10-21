@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { createBackendAssignment } from '@/lib/remuneration/backend';
+import {
+  loadServiceAssignments,
+  loadServiceStructure,
+  resolveServiceConfig,
+} from '@/lib/remuneration/payroll';
 import { buildRegistry } from '@/lib/remuneration/registry';
 import { getAdapter, makeId } from '@/lib/remuneration/store';
 import { ROLES_BY_ID } from '@/lib/remuneration/structure';
@@ -22,7 +28,11 @@ export async function GET(request: NextRequest) {
 
     const adapter = await getAdapter();
     const registered = await adapter.listProfiles();
-    const snapshot = await buildRegistry(registered);
+    const [snapshot, structure, serviceAssignments] = await Promise.all([
+      buildRegistry(registered),
+      loadServiceStructure(),
+      loadServiceAssignments(),
+    ]);
 
     let profiles = snapshot.profiles;
 
@@ -46,12 +56,40 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const assignments = Array.from(serviceAssignments.values()).map((entry) => ({
+      userId: entry.assignment.user_id,
+      assignmentId: entry.assignment.id,
+      approvalStatus: entry.assignment.approval_status,
+      actingCapacity: entry.assignment.acting_capacity === 1,
+      effectiveFrom: entry.assignment.effective_from,
+      effectiveTo: entry.assignment.effective_to,
+      positionId: entry.assignment.job_position_id,
+      positionName: entry.assignment.position_name,
+      configId: entry.assignment.remuneration_config_id,
+      tier: entry.tier?.tier_number ?? null,
+      tierName: entry.tier?.name ?? null,
+      grossPay: entry.config?.gross_pay ?? null,
+      notes: entry.assignment.notes,
+    }));
+
     return NextResponse.json({
       success: true,
       data: {
         managers: profiles,
         offices: snapshot.offices,
         districts: snapshot.districts,
+        service: {
+          connected: structure.connected,
+          error: structure.error,
+          assignments,
+          counts: {
+            total: assignments.length,
+            approved: assignments.filter((a) => a.approvalStatus === 'approved')
+              .length,
+            pending: assignments.filter((a) => a.approvalStatus === 'pending')
+              .length,
+          },
+        },
         counts: {
           total: profiles.length,
           registered: profiles.filter((p) => p.source === 'registered').length,
@@ -159,7 +197,56 @@ export async function POST(request: NextRequest) {
       at: now,
     });
 
-    return NextResponse.json({ success: true, data: profile });
+    /* Mirror the assignment into the remuneration service so the payroll run
+     * picks it up. The service assignment carries the employee, the managerial
+     * position and the salary package. */
+    let serviceAssignmentId: number | null = null;
+    if (profile.userId !== null) {
+      const structure = await loadServiceStructure();
+      const assignments = await loadServiceAssignments(structure);
+      const current = assignments.get(profile.userId);
+
+      if (current) {
+        serviceAssignmentId = current.assignment.id;
+      } else {
+        const positionId = role.positionIds[0];
+        const config = resolveServiceConfig(
+          structure,
+          positionId,
+          profile.previousTier
+        );
+        if (config) {
+          const created = await createBackendAssignment({
+            user_id: profile.userId,
+            job_position_id: positionId,
+            remuneration_config_id: config.id,
+            acting_capacity: profile.acting,
+            effective_from:
+              profile.effectiveFrom ?? profile.appointmentDate ?? '2026-01-01',
+            effective_to: profile.effectiveTo,
+            approval_status: 'pending',
+            notes: `${profile.fullName} — ${role.name} (${scope.officeName ?? scope.districtName ?? scope.provinceName ?? 'no scope'}).`,
+          });
+          if (created.ok && created.data) {
+            serviceAssignmentId = created.data.id;
+            await adapter.saveAudit({
+              id: makeId('aud'),
+              statementId: null,
+              managerId: profile.id,
+              action: 'manager.service_assigned',
+              actor: 'Administrator',
+              detail: `Remuneration service assignment ${created.data.id} created for ${profile.fullName} on configuration ${config.id}.`,
+              at: now,
+            });
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { ...profile, serviceAssignmentId },
+    });
   } catch (error) {
     console.error('Error registering remuneration manager:', error);
     return NextResponse.json(

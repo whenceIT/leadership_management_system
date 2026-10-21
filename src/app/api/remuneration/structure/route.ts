@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+import { loadServiceStructure } from '@/lib/remuneration/payroll';
 import {
   ALLOWANCE_POLICY,
   BONUS_RULES,
@@ -19,10 +20,18 @@ import { getAdapter } from '@/lib/remuneration/store';
  * Returns the approved remuneration structure: managerial roles, tiers, pay
  * blocks, the housing policy, bonus rules, statutory rules and the decisions
  * management still has to confirm.
+ *
+ * The `service` block holds the configuration held by the remuneration service
+ * — the tiers, the position salary packages, the components, the component
+ * values, the qualifying criteria, the housing bands and the bonus rules the
+ * service actually pays from.
  */
 export async function GET() {
   try {
-    const adapter = await getAdapter();
+    const [adapter, service] = await Promise.all([
+      getAdapter(),
+      loadServiceStructure(),
+    ]);
 
     return NextResponse.json({
       success: true,
@@ -37,6 +46,18 @@ export async function GET() {
         allowancePolicy: ALLOWANCE_POLICY,
         confirmationChecklist: CONFIRMATION_CHECKLIST,
         persistence: adapter.persistent ? 'mysql' : 'in-process',
+        service: {
+          connected: service.connected,
+          error: service.error,
+          counts: service.counts,
+          tiers: service.tiers,
+          configs: service.configs,
+          components: service.components,
+          componentValues: service.componentValues,
+          criteria: service.criteria,
+          housingBands: service.housingBands,
+          bonusRules: service.bonusRules,
+        },
       },
     });
   } catch (error) {

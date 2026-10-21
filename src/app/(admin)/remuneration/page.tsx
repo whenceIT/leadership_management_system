@@ -78,6 +78,23 @@ export default function RemunerationOverviewPage() {
         description="Calculate what each manager qualifies to earn, what they receive after deductions, and what the arrangement costs the company — with every step auditable."
         actions={
           <>
+            <span
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                structure?.service.connected
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                  : 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+              }`}
+              title={
+                structure?.service.connected
+                  ? 'The remuneration service is connected'
+                  : `The remuneration service is unreachable: ${structure?.service.error ?? 'unknown error'}`
+              }
+            >
+              Remuneration service{' '}
+              {structure?.service.connected
+                ? `· ${structure.service.counts.activeConfigs} packages`
+                : '· offline'}
+            </span>
             <select
               value={period}
               onChange={(event) => {

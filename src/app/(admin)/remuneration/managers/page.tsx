@@ -13,7 +13,7 @@ import {
   SectionCard,
   inputClass,
 } from '@/components/remuneration/ui';
-import { initialsOf } from '@/lib/remuneration/format';
+import { formatZMW, initialsOf } from '@/lib/remuneration/format';
 import type { ManagerProfile } from '@/lib/remuneration/types';
 import {
   fetchManagers,
@@ -66,6 +66,7 @@ export default function RemunerationManagersPage() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [workingId, setWorkingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -153,6 +154,31 @@ export default function RemunerationManagersPage() {
           .includes(term);
       });
   }, [data, roleFilter, search]);
+
+  /** The remuneration service assignment for a manager, when there is one. */
+  const serviceAssignment = useCallback(
+    (manager: ManagerProfile) =>
+      (data?.service.assignments ?? []).find(
+        (assignment) => assignment.userId === manager.userId
+      ) ?? null,
+    [data]
+  );
+
+  const approveServiceAssignment = async (manager: ManagerProfile) => {
+    setWorkingId(manager.id);
+    setError(null);
+    try {
+      await updateManagerAssignment(manager.id, { approveServiceAssignment: true });
+      setNotice('The remuneration service assignment was approved for payroll.');
+      await load();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'Unable to approve the service assignment.'
+      );
+    } finally {
+      setWorkingId(null);
+    }
+  };
 
   const openCreate = () => {
     setForm(emptyForm);
@@ -439,7 +465,7 @@ export default function RemunerationManagersPage() {
       ) : (
         <SectionCard
           title="Manager registry"
-          description={`${data?.counts.total ?? 0} managers · ${data?.counts.registered ?? 0} registered assignments · ${data?.counts.acting ?? 0} acting`}
+          description={`${data?.counts.total ?? 0} managers · ${data?.counts.registered ?? 0} registered assignments · ${data?.counts.acting ?? 0} acting · ${data?.service.counts.total ?? 0} remuneration service assignments`}
         >
           <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_240px]">
             <input
@@ -471,7 +497,7 @@ export default function RemunerationManagersPage() {
             />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-sm">
+              <table className="w-full min-w-[1080px] text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500 dark:border-gray-700">
                     <th className="pb-3 pr-4 font-semibold">Manager</th>
@@ -479,6 +505,7 @@ export default function RemunerationManagersPage() {
                     <th className="pb-3 pr-4 font-semibold">Scope</th>
                     <th className="pb-3 pr-4 text-right font-semibold">Branches</th>
                     <th className="pb-3 pr-4 font-semibold">Status</th>
+                    <th className="pb-3 pr-4 font-semibold">Payroll package</th>
                     <th className="pb-3 text-right font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -533,14 +560,69 @@ export default function RemunerationManagersPage() {
                           ) : null}
                         </span>
                       </td>
+                      <td className="py-3 pr-4">
+                        {(() => {
+                          const assignment = serviceAssignment(manager);
+                          if (!assignment) {
+                            return (
+                              <span className="text-xs text-gray-400 dark:text-gray-500">
+                                No service assignment
+                              </span>
+                            );
+                          }
+                          return (
+                            <div>
+                              <p className="text-gray-700 dark:text-gray-200">
+                                {assignment.tierName ?? 'Assigned package'}
+                                {assignment.tier !== null ? ` · Tier ${assignment.tier}` : ''}
+                              </p>
+                              <p className="text-xs tabular-nums text-gray-400 dark:text-gray-500">
+                                {assignment.grossPay !== null
+                                  ? formatZMW(assignment.grossPay)
+                                  : '—'}{' '}
+                                · assignment {assignment.assignmentId}
+                              </p>
+                              <span
+                                className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                  assignment.approvalStatus === 'approved'
+                                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                    : assignment.approvalStatus === 'pending'
+                                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                                    : 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-300'
+                                }`}
+                              >
+                                {assignment.approvalStatus}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td className="py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => openEdit(manager)}
-                          className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-                        >
-                          Edit
-                        </button>
+                        <div className="inline-flex items-center gap-2">
+                          {(() => {
+                            const assignment = serviceAssignment(manager);
+                            if (!assignment || assignment.approvalStatus === 'approved') {
+                              return null;
+                            }
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => approveServiceAssignment(manager)}
+                                disabled={workingId === manager.id}
+                                className="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
+                              >
+                                {workingId === manager.id ? 'Approving…' : 'Approve'}
+                              </button>
+                            );
+                          })()}
+                          <button
+                            type="button"
+                            onClick={() => openEdit(manager)}
+                            className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                          >
+                            Edit
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

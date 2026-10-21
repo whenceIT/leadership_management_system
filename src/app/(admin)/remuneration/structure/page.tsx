@@ -26,6 +26,278 @@ import {
 
 const TIER_ORDER = [1, 2, 3, 4, 5, 6];
 
+/**
+ * The configuration held by the remuneration service — the tiers, the position
+ * salary packages, the components, the qualifying criteria, the housing bands
+ * and the bonus rules the service actually pays from.
+ */
+function ServiceConfiguration({
+  structure,
+  positionIds,
+}: {
+  structure: StructureResponse;
+  positionIds: number[];
+}) {
+  const service = structure.service;
+  const configs = service.configs.filter((config) =>
+    positionIds.includes(config.job_position_id)
+  );
+  const configIds = new Set(configs.map((config) => config.id));
+  const criteria = service.criteria.filter((criterion) =>
+    configIds.has(criterion.remuneration_config_id)
+  );
+  const bands = service.housingBands.filter((band) =>
+    positionIds.includes(band.job_position_id)
+  );
+  const bonuses = service.bonusRules.filter((rule) =>
+    positionIds.includes(rule.job_position_id)
+  );
+
+  return (
+    <SectionCard
+      title="Remuneration service configuration"
+      description="The salary packages, components and criteria held by the remuneration service for the selected position."
+      actions={
+        <span
+          className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+            service.connected
+              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+              : 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+          }`}
+        >
+          {service.connected ? 'Service connected' : 'Service unreachable'}
+        </span>
+      }
+    >
+      {!service.connected ? (
+        <p className="text-sm text-amber-700 dark:text-amber-300">
+          The remuneration service could not be reached{service.error ? `: ${service.error}` : ''}.
+          The approved structure above remains the fallback.
+        </p>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              { label: 'Tiers', value: service.counts.tiers },
+              { label: 'Packages', value: service.counts.configs },
+              { label: 'Active packages', value: service.counts.activeConfigs },
+              { label: 'Components', value: service.counts.components },
+              { label: 'Component values', value: service.counts.componentValues },
+              { label: 'Criteria', value: service.counts.criteria },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="rounded-xl border border-gray-200 px-3 py-2 dark:border-gray-700"
+              >
+                <p className="text-xs text-gray-500 dark:text-gray-400">{item.label}</p>
+                <p className="text-lg font-bold tabular-nums text-gray-900 dark:text-white">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">
+              Salary packages
+            </h3>
+            {configs.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                The service holds no package for this position yet.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[820px] text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500 dark:border-gray-700">
+                      <th className="pb-2 pr-4 font-semibold">Position</th>
+                      <th className="pb-2 pr-4 font-semibold">Tier</th>
+                      <th className="pb-2 pr-4 text-right font-semibold">Gross</th>
+                      <th className="pb-2 pr-4 text-right font-semibold">Target net</th>
+                      <th className="pb-2 pr-4 font-semibold">Threshold</th>
+                      <th className="pb-2 pr-4 text-right font-semibold">Branches</th>
+                      <th className="pb-2 text-right font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {configs.map((config) => (
+                      <tr key={config.id}>
+                        <td className="py-2.5 pr-4 text-gray-700 dark:text-gray-200">
+                          {config.position_name ?? `Position ${config.job_position_id}`}
+                        </td>
+                        <td className="py-2.5 pr-4">
+                          <TierBadge
+                            tier={config.tier_number}
+                            label={config.tier_name ?? `Tier ${config.tier_number}`}
+                          />
+                        </td>
+                        <td className="py-2.5 pr-4 text-right font-semibold tabular-nums text-gray-900 dark:text-white">
+                          {formatZMW(config.gross_pay)}
+                        </td>
+                        <td className="py-2.5 pr-4 text-right tabular-nums text-gray-500 dark:text-gray-400">
+                          {formatZMW(config.target_net_pay)}
+                        </td>
+                        <td className="py-2.5 pr-4 text-xs text-gray-600 dark:text-gray-300">
+                          {config.threshold_amount !== null
+                            ? `${config.threshold_operator ?? '>='} ${formatZMW(
+                                config.threshold_amount
+                              )}`
+                            : '—'}
+                          {config.threshold_period ? ` · ${config.threshold_period}` : ''}
+                        </td>
+                        <td className="py-2.5 pr-4 text-right tabular-nums text-gray-600 dark:text-gray-300">
+                          {config.min_branches ?? '—'}
+                        </td>
+                        <td className="py-2.5 text-right">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                              config.status === 'active'
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                : 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300'
+                            }`}
+                          >
+                            {config.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div>
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">
+                Qualifying criteria
+              </h3>
+              {criteria.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No criteria recorded for this position.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {criteria.map((criterion) => (
+                    <li
+                      key={criterion.id}
+                      className="rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
+                    >
+                      <p className="font-medium text-gray-800 dark:text-gray-100">
+                        {criterion.criterion_name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {criterion.operator}{' '}
+                        {criterion.target_value !== null
+                          ? formatZMW(criterion.target_value)
+                          : '—'}{' '}
+                        · {criterion.measurement_period} ·{' '}
+                        {criterion.is_mandatory ? 'Mandatory' : 'Supporting'}
+                        {criterion.verification_source
+                          ? ` · ${criterion.verification_source}`
+                          : ''}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">
+                Housing bands and bonus rules
+              </h3>
+              {bands.length === 0 && bonuses.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  The service holds no housing band or bonus rule for this position.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {bands.map((band) => (
+                    <li
+                      key={`band-${band.id}`}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
+                    >
+                      <span className="text-gray-700 dark:text-gray-200">
+                        Housing · Tier {band.tier_number ?? '—'}
+                      </span>
+                      <span className="font-semibold tabular-nums text-gray-900 dark:text-white">
+                        {formatZMW(band.monthly_limit)}
+                      </span>
+                    </li>
+                  ))}
+                  {bonuses.map((rule) => (
+                    <li
+                      key={`bonus-${rule.id}`}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-3 py-2 text-sm dark:border-gray-700"
+                    >
+                      <span className="min-w-0 text-gray-700 dark:text-gray-200">
+                        {rule.bonus_name}
+                        {rule.performance_metric ? (
+                          <span className="block text-xs text-gray-400 dark:text-gray-500">
+                            {rule.performance_metric}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="font-semibold tabular-nums text-gray-900 dark:text-white">
+                        {rule.amount !== null ? formatZMW(rule.amount) : `${rule.percentage}%`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">
+              Components
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500 dark:border-gray-700">
+                    <th className="pb-2 pr-4 font-semibold">Component</th>
+                    <th className="pb-2 pr-4 font-semibold">Type</th>
+                    <th className="pb-2 pr-4 font-semibold">Paid by</th>
+                    <th className="pb-2 pr-4 font-semibold">Calculation</th>
+                    <th className="pb-2 font-semibold">Treatment</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {service.components.map((component) => (
+                    <tr key={component.id}>
+                      <td className="py-2 pr-4">
+                        <span className="font-medium text-gray-800 dark:text-gray-100">
+                          {component.name}
+                        </span>
+                        <span className="ml-1 text-xs text-gray-400">{component.code}</span>
+                      </td>
+                      <td className="py-2 pr-4 text-gray-600 dark:text-gray-300">
+                        {component.component_type}
+                      </td>
+                      <td className="py-2 pr-4 text-gray-600 dark:text-gray-300">
+                        {component.paid_by}
+                      </td>
+                      <td className="py-2 pr-4 text-gray-600 dark:text-gray-300">
+                        {component.calculation_type}
+                      </td>
+                      <td className="py-2 text-xs text-gray-500 dark:text-gray-400">
+                        {component.tax_treatment ?? '—'}
+                        {component.payment_method ? ` · ${component.payment_method}` : ''}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
 export default function RemunerationStructurePage() {
   const [structure, setStructure] = useState<StructureResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -234,6 +506,11 @@ export default function RemunerationStructurePage() {
               </div>
             </SectionCard>
           ) : null}
+
+          <ServiceConfiguration
+            structure={structure}
+            positionIds={role?.positionIds ?? []}
+          />
 
           <SectionCard
             title="Managerial housing policy"

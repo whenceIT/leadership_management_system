@@ -97,7 +97,19 @@ const SCHEMA = [
 class DatabaseAdapter implements Adapter {
   readonly persistent = true;
 
-  private async ensureSchema(): Promise<void> {
+  /**
+   * MySQL `DATETIME` columns reject the ISO 8601 strings used across the
+   * module, so every timestamp is written in the `YYYY-MM-DD HH:MM:SS` form.
+   */
+  private timestamp(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return new Date().toISOString().slice(0, 19).replace('T', ' ');
+    }
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+  }
+
+  async ensureSchema(): Promise<void> {
     for (const statement of SCHEMA) {
       await query(statement);
     }
@@ -141,8 +153,8 @@ class DatabaseAdapter implements Adapter {
         profile.status,
         profile.previousTier,
         JSON.stringify(profile),
-        profile.createdAt,
-        profile.updatedAt,
+        this.timestamp(profile.createdAt),
+        this.timestamp(profile.updatedAt),
       ]
     );
     return profile;
@@ -193,8 +205,8 @@ class DatabaseAdapter implements Adapter {
         statement.status,
         JSON.stringify(statement),
         statement.createdBy,
-        statement.createdAt,
-        statement.updatedAt,
+        this.timestamp(statement.createdAt),
+        this.timestamp(statement.updatedAt),
       ]
     );
     return statement;
@@ -211,8 +223,17 @@ class DatabaseAdapter implements Adapter {
       action: String(row.action),
       actor: String(row.actor),
       detail: (row.detail as string) ?? '',
-      at: new Date(String(row.created_at)).toISOString(),
+      at: this.timestampToIso(row.created_at),
     }));
+  }
+
+  /** Reads a `DATETIME` column back as an ISO timestamp. */
+  private timestampToIso(value: unknown): string {
+    if (value instanceof Date) return value.toISOString();
+    const text = String(value ?? '');
+    if (!text) return new Date().toISOString();
+    const parsed = new Date(text.includes('T') ? text : text.replace(' ', 'T') + 'Z');
+    return Number.isNaN(parsed.getTime()) ? text : parsed.toISOString();
   }
 
   async saveAudit(entry: AuditEntry): Promise<void> {
@@ -228,7 +249,7 @@ class DatabaseAdapter implements Adapter {
         entry.action,
         entry.actor,
         entry.detail,
-        entry.at,
+        this.timestamp(entry.at),
       ]
     );
   }
@@ -284,6 +305,7 @@ export async function getAdapter(): Promise<Adapter> {
     const row = await queryOne('SELECT 1 AS ok');
     if (row) {
       const adapter = new DatabaseAdapter();
+      await adapter.ensureSchema();
       await adapter.listStatements();
       globalStore.__remunerationAdapter = adapter;
       return adapter;

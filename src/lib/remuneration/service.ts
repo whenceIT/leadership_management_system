@@ -8,6 +8,7 @@
 import { calculateRemuneration } from './calculator';
 import { currentPeriod } from './format';
 import { resolvePerformance } from './performance';
+import { reconcilePayroll, runServiceCalculation } from './payroll';
 import { buildRegistry, scopeLabel } from './registry';
 import { getAdapter } from './store';
 import { ROLES_BY_ID, STATUTORY_DEFAULTS } from './structure';
@@ -180,6 +181,13 @@ export async function computeForManager(options: {
       options.previousTier === undefined ? manager.previousTier : options.previousTier,
     actor: 'Administrator',
   });
+
+  /* The payroll figure the remuneration service will pay for this manager. */
+  const payroll = await runServiceCalculation(manager, period);
+  if (payroll) {
+    computation.payroll = payroll;
+    computation.payrollVariance = reconcilePayroll(computation, payroll);
+  }
 
   return { computation, manager, scopeLabel: scopeLabel(manager.scope) };
 }

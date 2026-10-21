@@ -302,6 +302,58 @@ export interface HousingAssessment {
   note: string;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Remuneration service                                                         */
+/* -------------------------------------------------------------------------- */
+
+/** A component as configured in the remuneration service. */
+export interface PayrollComponent {
+  code: string;
+  name: string;
+  componentType: string;
+  paidBy: string;
+  calculationType: string;
+  amount: number;
+  includedInGross: boolean;
+  includedInCompanyCost: boolean;
+}
+
+/**
+ * The payroll figure produced by the remuneration service from the employee's
+ * remuneration assignment, its configuration and the configured component
+ * values. It is the figure the service will pay, and it is reconciled against
+ * the engine figure before the statement is approved.
+ */
+export interface PayrollFigure {
+  source: 'remuneration-service' | 'engine';
+  assignmentId: number | null;
+  assignmentStatus: string | null;
+  packageTier: number | null;
+  packageLabel: string | null;
+  positionLabel: string | null;
+  grossPay: number;
+  employeeDeductions: number;
+  netCashPay: number;
+  housing: number;
+  totalDirectValue: number;
+  employerContributions: number;
+  totalCompanyCost: number;
+  components: PayrollComponent[];
+  period: string;
+  note: string | null;
+}
+
+/** The difference between the engine figure and the remuneration service figure. */
+export interface PayrollVariance {
+  grossPay: number;
+  netCashPay: number;
+  totalCompanyCost: number;
+  netCashPayPct: number | null;
+  totalCompanyCostPct: number | null;
+  packageMatchesTier: boolean;
+  note: string;
+}
+
 export interface RemunerationComputation {
   managerId: string;
   managerName: string;
@@ -339,6 +391,10 @@ export interface RemunerationComputation {
     costVariancePct: number | null;
   };
   flags: ValidationFlag[];
+  /** The payroll figure produced by the remuneration service, when the manager has an assignment. */
+  payroll?: PayrollFigure | null;
+  /** The difference between the engine figure and the remuneration service figure. */
+  payrollVariance?: PayrollVariance | null;
   generatedAt: string;
 }
 

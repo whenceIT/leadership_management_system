@@ -22,6 +22,7 @@ import {
   fetchStatementDetail,
   fetchStatements,
   updateStatementStatus,
+  type ServiceAssessment,
 } from '@/services/RemunerationService';
 
 const FILTERS: { key: StatementStatus | 'all'; label: string }[] = [
@@ -46,6 +47,7 @@ export default function RemunerationApprovalsPage() {
   const [filter, setFilter] = useState<StatementStatus | 'all'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [audit, setAudit] = useState<AuditEntry[]>([]);
+  const [assessments, setAssessments] = useState<ServiceAssessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [working, setWorking] = useState(false);
@@ -85,16 +87,23 @@ export default function RemunerationApprovalsPage() {
   useEffect(() => {
     if (!selectedId) {
       setAudit([]);
+      setAssessments([]);
       return;
     }
     let active = true;
     setDetailLoading(true);
     fetchStatementDetail(selectedId)
       .then((response) => {
-        if (active) setAudit(response.audit);
+        if (active) {
+          setAudit(response.audit);
+          setAssessments(response.assessments ?? []);
+        }
       })
       .catch(() => {
-        if (active) setAudit([]);
+        if (active) {
+          setAudit([]);
+          setAssessments([]);
+        }
       })
       .finally(() => {
         if (active) setDetailLoading(false);
@@ -129,6 +138,13 @@ export default function RemunerationApprovalsPage() {
       setWorking(false);
     }
   };
+
+  /* An unresolved error blocks the approval: the statement has to be
+   * recalculated on a confirmed tier or a verified result first. */
+  const blockingErrors = useMemo(
+    () => (selected?.flags ?? []).filter((flag) => flag.severity === 'error'),
+    [selected]
+  );
 
   return (
     <div className="space-y-6">
@@ -287,6 +303,26 @@ export default function RemunerationApprovalsPage() {
                 </dl>
 
                 <div className="mt-6 flex flex-wrap items-end gap-3 border-t border-gray-100 pt-5 dark:border-gray-700">
+                  {blockingErrors.length > 0 ? (
+                    <div className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+                      <p className="font-semibold">
+                        This statement cannot be approved or finalised while{' '}
+                        {blockingErrors.length > 1
+                          ? `${blockingErrors.length} validation errors stand`
+                          : 'a validation error stands'}
+                        .
+                      </p>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-5">
+                        {blockingErrors.map((flag) => (
+                          <li key={flag.code}>{flag.message}</li>
+                        ))}
+                      </ul>
+                      <p className="mt-1">
+                        Correct the underlying result and recalculate the statement before it goes
+                        to payroll.
+                      </p>
+                    </div>
+                  ) : null}
                   {selected.status !== 'finalised' ? (
                     <div className="min-w-[260px] flex-1">
                       <Field
@@ -309,13 +345,19 @@ export default function RemunerationApprovalsPage() {
                         <SecondaryButton onClick={() => act('rejected')} disabled={working}>
                           Reject
                         </SecondaryButton>
-                        <PrimaryButton onClick={() => act('approved')} disabled={working}>
+                        <PrimaryButton
+                          onClick={() => act('approved')}
+                          disabled={working || blockingErrors.length > 0}
+                        >
                           Approve
                         </PrimaryButton>
                       </>
                     ) : null}
                     {selected.status === 'approved' ? (
-                      <PrimaryButton onClick={() => act('finalised')} disabled={working}>
+                      <PrimaryButton
+                        onClick={() => act('finalised')}
+                        disabled={working || blockingErrors.length > 0}
+                      >
                         Finalise for payroll
                       </PrimaryButton>
                     ) : null}
@@ -334,6 +376,49 @@ export default function RemunerationApprovalsPage() {
               </SectionCard>
 
               <StatementPanel computation={selected} />
+
+              <SectionCard
+                title="Remuneration service assessment"
+                description="The monthly assessment recorded in the remuneration service for this manager's assignment."
+              >
+                {detailLoading ? (
+                  <LoadingState label="Loading the service assessment…" />
+                ) : assessments.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    No assessment recorded in the remuneration service yet. Approving the
+                    statement records the decision there.
+                  </p>
+                ) : (
+                  <ul className="space-y-3">
+                    {assessments.map((assessment) => (
+                      <li
+                        key={assessment.id}
+                        className="rounded-xl border border-gray-200 px-4 py-3 dark:border-gray-700"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {assessment.assessment_period}
+                          </p>
+                          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-300">
+                            {assessment.assessment_status}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                          {assessment.achievement_percentage !== null
+                            ? `Achievement ${assessment.achievement_percentage}%`
+                            : 'Achievement not recorded'}
+                          {assessment.decision ? ` · Decision: ${assessment.decision}` : ''}
+                        </p>
+                        {assessment.decision_notes ? (
+                          <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                            {assessment.decision_notes}
+                          </p>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </SectionCard>
 
               <SectionCard
                 title="Audit trail"

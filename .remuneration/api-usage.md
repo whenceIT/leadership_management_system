@@ -14,6 +14,14 @@ engine (`src/lib/remuneration/calculator.ts`) against the approved structure
 it submits a manager, a performance result and a period, and receives the
 statement back.
 
+The module also talks to the **remuneration service** (`smart-backend`, the
+Express + MySQL service at `http://localhost:5000/api/remuneration`). The
+service owns the payroll side of the framework: the tiers, the position salary
+packages, the allowance and deduction components, the qualifying criteria, the
+housing bands, the bonus rules, the employee assignments, the monthly
+assessments and the payroll calculation. See
+[Remuneration service integration](#remuneration-service-integration).
+
 ---
 
 ## Table of contents
@@ -29,9 +37,10 @@ statement back.
   - [GET /api/remuneration/statements](#get-apiremunerationstatements)
   - [POST /api/remuneration/statements](#post-apiremunerationstatements)
   - [GET /api/remuneration/statements/[id]](#get-apiremunerationstatementsid)
-  - [PATCH /api/remuneration/statements/[id]](#patch-apiremunerationstatementsid)
+  - [PATCH /api/remuneration/statements/[id]#patch-apiremunerationstatementsid)
   - [GET /api/remuneration/summary](#get-apiremunerationsummary)
 - [Upstream data sources](#upstream-data-sources)
+- [Remuneration service integration](#remuneration-service-integration)
 - [Calculation rules](#calculation-rules)
 - [Persistence](#persistence)
 - [Error handling](#error-handling)
@@ -156,7 +165,19 @@ from.
   "confirmationChecklist": [
     { "key": "performance_measurement", "title": "Performance measurement", "question": "…", "status": "open" }
   ],
-  "persistence": "mysql" | "in-process"
+  "persistence": "mysql" | "in-process",
+  "service": {
+    "connected": true,
+    "error": null,
+    "counts": { "tiers": 6, "configs": 66, "activeConfigs": 60, "components": 12, "componentValues": 726, "criteria": 66, "housingBands": 63, "bonusRules": 3 },
+    "tiers": [ { "id": 1, "tier_number": 1, "name": "Most Senior", "description": "…", "is_active": 1 } ],
+    "configs": [ { "id": 1, "job_position_id": 5, "remuneration_tier_id": 1, "gross_pay": 19948, "target_net_pay": 13000, "threshold_type": "monthly_revenue", "threshold_amount": 20000, "threshold_operator": ">=", "min_branches": 1, "effective_from": "2026-01-01", "status": "active", "position_name": "Branch Manager", "tier_name": "Most Senior", "tier_number": 1 } ],
+    "components": [ { "id": 1, "name": "Housing Allowance", "code": "housing", "component_type": "allowance", "paid_by": "employer", "calculation_type": "fixed", "tax_treatment": "non-taxable" } ],
+    "componentValues": [ { "remuneration_config_id": 1, "remuneration_component_id": 1, "amount": 3000, "percentage": null, "is_included_in_gross": 0, "is_included_in_company_cost": 1 } ],
+    "criteria": [ { "remuneration_config_id": 1, "criterion_name": "K20,000+ monthly bank deposits", "criterion_code": "monthly_revenue_threshold", "measurement_type": "amount", "operator": ">=", "target_value": 20000, "measurement_period": "monthly", "is_mandatory": 1 } ],
+    "housingBands": [ { "job_position_id": 5, "remuneration_tier_id": 1, "monthly_limit": 3000, "status": "active" } ],
+    "bonusRules": [ { "job_position_id": 2, "bonus_name": "Provincial Manager annual bonus", "bonus_type": "fixed", "amount": 20000, "period": "annual", "status": "active" } ]
+  }
 }
 ```
 
@@ -168,6 +189,9 @@ from.
 - `reference*` fields hold the illustrative figures printed in the guide. They
   are never used as the payable amount — they exist for reconciliation only.
 - `persistence` reports which store the server is writing to.
+- `service` holds the remuneration configuration read from the remuneration
+  service. When `service.connected` is `false` the module falls back to the
+  approved structure above.
 
 ---
 
@@ -220,6 +244,28 @@ with the assignments recorded by the administrator.
   ],
   "offices": [ { "id": 1, "name": "ZIMCO HOUSE LUSAKA", "province_id": 1, "district_id": null } ],
   "districts": [ { "id": 53, "name": "Lusaka District", "provinceId": 1 } ],
+  "service": {
+    "connected": true,
+    "error": null,
+    "assignments": [
+      {
+        "userId": 2163,
+        "assignmentId": 6,
+        "approvalStatus": "approved",
+        "actingCapacity": false,
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": null,
+        "positionId": 5,
+        "positionName": "Branch Manager",
+        "configId": 1,
+        "tier": 1,
+        "tierName": "Most Senior",
+        "grossPay": 19948,
+        "notes": "Takazo Siyunda — branch manager appointed to ZIMCO HOUSE LUSAKA."
+      }
+    ],
+    "counts": { "total": 85, "approved": 85, "pending": 0 }
+  },
   "counts": { "total": 92, "registered": 0, "acting": 0 }
 }
 ```
@@ -240,6 +286,9 @@ with the assignments recorded by the administrator.
   update an assignment: `PATCH /api/remuneration/managers/{registeredId}`.
 - A registered assignment that overrides a staff record keeps the staff scope
   fields it does not replace (`branchCount` falls back to the staff record).
+- `service.assignments` holds the payroll assignment of each manager as held by
+  the remuneration service, matched on the employee id. It carries the package,
+  the tier, the gross pay and the approval status used by the payroll run.
 
 ---
 
@@ -276,7 +325,8 @@ acting status and the effective remuneration period.
 }
 ```
 
-**Response `data`:** the saved `ManagerProfile`.
+**Response `data`:** the saved `ManagerProfile`, with `serviceAssignmentId` when
+the remuneration service holds an assignment for the manager.
 
 **Validation**
 
@@ -291,6 +341,11 @@ acting status and the effective remuneration period.
   assignment instead of creating a second one.
 - Fields that are omitted keep their current value — a request without `scope`
   does not clear the recorded scope.
+- When the manager has a staff record and no service assignment yet, the
+  assignment is also created in the remuneration service against the salary
+  package of the managerial position, with the approval status `pending`. The
+  service assignment id is returned and written to the audit trail as
+  `manager.service_assigned`.
 
 ---
 
@@ -303,7 +358,13 @@ Updates an existing assignment. Accepts any subset of the fields accepted by
 { "acting": true, "previousTier": 3, "effectiveFrom": "2026-10-01" }
 ```
 
-**Response `data`:** the updated `ManagerProfile`.
+**Extra field**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `approveServiceAssignment` | boolean | Approves the manager's assignment in the remuneration service so the payroll run picks it up. |
+
+**Response `data`:** the updated `ManagerProfile`, with `serviceApproved`.
 
 **Notes**
 
@@ -485,6 +546,37 @@ Runs the calculation engine for one manager and period.
       { "code": "reference_variance_cost", "severity": "info", "message": "Total company cost differs from the guide's illustrative figure by +11.82%." }
     ],
 
+    "payroll": {
+      "source": "remuneration-service",
+      "assignmentId": 6,
+      "assignmentStatus": "approved",
+      "packageTier": 1,
+      "packageLabel": "Most Senior",
+      "positionLabel": "Branch Manager",
+      "grossPay": 19948,
+      "employeeDeductions": 6534,
+      "netCashPay": 13414,
+      "housing": 3000,
+      "totalDirectValue": 16414,
+      "employerContributions": 3590,
+      "totalCompanyCost": 26538,
+      "components": [
+        { "code": "housing", "name": "Housing Allowance", "componentType": "allowance", "paidBy": "employer", "calculationType": "fixed", "amount": 3000, "includedInGross": false, "includedInCompanyCost": true }
+      ],
+      "period": "2026-10",
+      "note": null
+    },
+
+    "payrollVariance": {
+      "grossPay": 0,
+      "netCashPay": 0,
+      "totalCompanyCost": 0,
+      "netCashPayPct": 0,
+      "totalCompanyCostPct": 0,
+      "packageMatchesTier": true,
+      "note": "The engine and the remuneration service agree on the net pay and the company cost."
+    },
+
     "generatedAt": "2026-10-20T08:12:00.000Z"
   },
   "scopeLabel": "ZIMCO HOUSE LUSAKA",
@@ -505,6 +597,13 @@ Runs the calculation engine for one manager and period.
   structure. `grossPay` is the gross actually payable: the two differ when the
   housing continuity rule applies, because the housing difference is deducted
   from salary before the statutory deductions are computed.
+- `payroll` is the figure the remuneration service will pay, read from the
+  manager's assignment. It is `null` when the manager has no service assignment
+  or the service is unreachable.
+- `payrollVariance` is the difference between the two figures, and says so
+  plainly when they disagree. When the assessment did not qualify a tier the
+  engine figure is nil, so the two cannot be reconciled and the variance says
+  exactly that instead of reporting a match.
 
 ---
 
@@ -568,7 +667,10 @@ keeps the original id and creation time.
 
 Returns one statement with its audit trail.
 
-**Response `data`:** `{ "statement": { … }, "audit": [ { "id": "aud_…", "action": "statement.approved", "actor": "…", "detail": "…", "at": "…" } ] }`
+**Response `data`:** `{ "statement": { … }, "audit": [ { "id": "aud_…", "action": "statement.approved", "actor": "…", "detail": "…", "at": "…" } ], "assessments": [ { "id": 1, "employee_id": 4, "assessment_month": "2026-10", "gross_pay": 19948, "net_pay": 13414, "total_company_cost": 26538, "status": "approved" } ] }`
+
+`assessments` holds the monthly assessments recorded in the remuneration
+service for this statement.
 
 ---
 
@@ -594,6 +696,34 @@ Moves a statement through the approval workflow.
 
 Rejections must carry a `reason`, which is stored on the statement and written
 to the audit trail.
+
+**Validation**
+
+A statement that still carries an `error` flag cannot be approved or
+finalised. The transition is refused with `409 Conflict` and the offending
+flags are returned, so a statement with an unqualified tier, a missing
+performance result or an invalid manual tier never reaches payroll:
+
+```jsonc
+{
+  "success": false,
+  "message": "This statement cannot be approved while a validation error stands. …",
+  "errors": [ { "code": "tier_unqualified", "message": "The result does not reach …" } ]
+}
+```
+
+Warnings — a manually entered result, a manual tier override, a bonus that is
+not yet eligible — do not block the approval, but they are shown to the
+approver and recorded in the audit trail.
+
+**Service synchronisation**
+
+Moving a statement to `approved` or `finalised` also updates the remuneration
+service: the manager's assignment is approved for payroll and the monthly
+assessment is recorded there. The service result is written to the audit trail
+as `statement.service_sync`. When the service cannot be reached the statement
+is still approved and the failure is recorded as `statement.service_error`, so
+a statement is never blocked by a service outage.
 
 **Response `data`:** the updated `RemunerationStatement`.
 
@@ -632,9 +762,23 @@ Returns the consolidated management payroll report for the institution.
   "byTier": [ { "key": "tier-1", "label": "Tier 1", "count": 4, "grossPay": 180000, "netCashPay": 140000, "totalCompanyCost": 230000 } ],
   "byStatus": [ { "status": "approved", "count": 5 } ],
   "periods": ["2026-10", "2026-09"],
-  "statements": [ { /* RemunerationStatement */ } ]
+  "statements": [ { /* RemunerationStatement */ } ],
+  "service": {
+    "connected": true,
+    "error": null,
+    "overview": { "tiers": 6, "active_configs": 60, "active_components": 12, "approved_assignments": 85 },
+    "totals": { "statements": 12, "unqualified": 1, "grossPay": 482913, "netCashPay": 386593, "housing": 45000, "employerContributions": 64120, "totalCompanyCost": 605233 }
+  }
 }
 ```
+
+`service` holds the remuneration service view of the same period: the service
+overview (its tiers, its active packages, its components and its approved
+assignments) and the service payroll totals of the statements in the report,
+so the engine figures and the service figures sit side by side. A statement
+that did not qualify a tier carries a nil engine figure, so it is counted in
+`unqualified` and left out of the service totals — the two columns always
+cover the same set of managers.
 
 **CSV export**
 
@@ -645,7 +789,8 @@ Returns the consolidated management payroll report for the institution.
 Period, Manager, Role, Scope, Tier, Approved tier gross, Housing continuity,
 Gross pay, PAYE, NAPSA, NHIMA, Pension, Employee deductions, Net cash pay,
 Housing, Travel, Fuel, Life insurance, Total direct value, Employer
-contributions, Bonus, Total company cost, Status, Approved by
+contributions, Bonus, Total company cost, Status, Approved by, Service gross
+pay, Service net cash pay, Service company cost
 ```
 
 ---
@@ -672,6 +817,63 @@ administrator enters the result manually.
 
 ---
 
+## Remuneration service integration
+
+The remuneration service (`smart-backend`) is the system of record for the
+payroll side of the framework. The module reaches it from the server side
+only — the browser never calls the service directly.
+
+| Setting | Value |
+|---------|-------|
+| Base URL | `REMUNERATION_API_URL`, default `http://localhost:5000/api/remuneration` |
+| Adapter | `src/lib/remuneration/backend.ts` |
+| Bridge | `src/lib/remuneration/payroll.ts` |
+
+### Which service endpoint backs which area of the module
+
+| Module area | Service endpoints used | How it is used |
+|-------------|------------------------|----------------|
+| Structure | `GET /tiers`, `GET /configs`, `GET /components`, `GET /component-values`, `GET /criteria`, `GET /housing-bands`, `GET /bonus-rules` | The Structure page displays the salary packages, components, criteria, housing bands and bonus rules the service actually pays from. The approved guide structure remains the fallback when the service is unreachable. |
+| Managers | `GET /assignments`, `POST /assignments`, `PUT /assignments/{id}/approve` | The registry shows each manager's payroll package, tier and approval status. Registering an assignment creates the service assignment; the Approve action approves it for payroll. |
+| Calculator | `GET /calculate/{assignment_id}?period=YYYY-MM-DD` | The service figure is read alongside the engine figure and both are shown on the statement with a reconciliation. |
+| Approvals | `POST /assessments`, `GET /assessments` | Approving or finalising a statement approves the service assignment and records the monthly assessment there. The service assessment trail is displayed with the audit trail. |
+| Reports | `GET /` (overview) | The reports page shows the service overview and the service payroll totals next to the engine totals. |
+
+### Seeding the service
+
+The service ships empty. The approved structure is published into it with:
+
+```bash
+npm run seed:remuneration
+```
+
+The script creates the six tiers, the twelve components, the position salary
+packages with their component values and criteria, the housing bands, the bonus
+rules and an assignment for every manager in the registry. It is additive and
+safe to re-run.
+
+### Two figures, one statement
+
+The statement carries both figures and explains the difference:
+
+- **Engine figure** — the assessment result: tier qualification, performance
+  evidence, housing continuity, bonus eligibility and the validation flags.
+- **Service figure** — the payroll result: the gross, deductions, net pay,
+  housing, employer contributions and company cost the service calculates from
+  the employee's assignment, its configuration and the configured component
+  values.
+
+`payrollVariance` holds the difference. It also flags an assignment that still
+points at a different package than the tier the manager qualified for, and an
+assignment that is not approved for payroll.
+
+> **Known service behaviour:** the service includes the housing allowance in
+> both the employer contributions and the housing line, so its total company
+> cost carries the housing twice. The engine counts it once. The variance note
+> calls this out on every statement so the two figures reconcile.
+
+---
+
 ## Calculation rules
 
 Implemented in `src/lib/remuneration/calculator.ts`.
@@ -687,6 +889,8 @@ Implemented in `src/lib/remuneration/calculator.ts`.
 | Annual bonus | The role's bonus rule and its conditions (efficiency, PDUA, branch scope) must all be met. |
 | Total monthly company cost | Gross pay + employer statutory contributions + employer pension contribution + housing payment + employer paid benefits. |
 | Double counting | Travel and fuel allowances are inside gross pay and are never added again. Life insurance and medical are employer paid benefits outside gross pay. |
+| Manual tier | The administrator may assign a tier by hand for a role whose measure cannot be read from the source system. The override needs a reason, is recorded on the statement and raises a `manual_tier_override` warning. |
+| Unqualified result | A result that reaches no band leaves the engine figure nil and raises a `tier_unqualified` error. The statement can be recorded and rejected, but it cannot be approved until the underlying result is corrected and the statement recalculated. |
 
 ---
 
@@ -695,6 +899,10 @@ Implemented in `src/lib/remuneration/calculator.ts`.
 Statements, manager assignments and the audit trail are written to MySQL when
 the schema is available and to an in-process store when it is not. The active
 store is reported by `GET /api/remuneration/structure` → `data.persistence`.
+
+The remuneration configuration itself is not persisted by the module: it lives
+in the remuneration service (see
+[Remuneration service integration](#remuneration-service-integration)).
 
 Schema (created automatically):
 
@@ -765,12 +973,23 @@ Database credentials are read from `DB_HOST`, `DB_PORT`, `DB_DATABASE`,
 |--------|------|
 | `400` | Missing or invalid parameters (unknown role id, invalid transition) |
 | `404` | Manager or statement not found |
+| `409` | The statement carries an unresolved validation error, so it cannot be approved or finalised |
 | `500` | Unexpected server error |
 
 Error body:
 
 ```json
 { "success": false, "message": "Manager not found in the registry." }
+```
+
+A `409` adds the offending validation flags:
+
+```json
+{
+  "success": false,
+  "message": "This statement cannot be approved while a validation error stands. …",
+  "errors": [ { "code": "tier_unqualified", "message": "The result does not reach …" } ]
+}
 ```
 
 A failed upstream performance call never fails the request — the measure is

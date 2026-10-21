@@ -139,6 +139,9 @@ export function statementsToCsv(statements: RemunerationStatement[]): string {
     'Total company cost',
     'Status',
     'Approved by',
+    'Service gross pay',
+    'Service net cash pay',
+    'Service company cost',
   ];
 
   const rows = statements.map((statement) => [
@@ -166,6 +169,9 @@ export function statementsToCsv(statements: RemunerationStatement[]): string {
     statement.totalCompanyCost,
     statement.status,
     statement.approvedBy ?? '',
+    statement.payroll?.grossPay ?? '',
+    statement.payroll?.netCashPay ?? '',
+    statement.payroll?.totalCompanyCost ?? '',
   ]);
 
   return [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\n');

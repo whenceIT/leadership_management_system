@@ -18,6 +18,110 @@ function AllowanceMemo({ computation }: { computation: RemunerationComputation }
   );
 }
 
+function ServicePayroll({ computation }: { computation: RemunerationComputation }) {
+  const payroll = computation.payroll;
+  const variance = computation.payrollVariance;
+  if (!payroll) return null;
+
+  return (
+    <SectionCard
+      title="Remuneration service payroll figure"
+      description={`The figure the remuneration service calculates for this manager's assignment${
+        payroll.assignmentId ? ` (assignment ${payroll.assignmentId})` : ''
+      }.`}
+      actions={
+        <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">
+          {payroll.packageLabel ?? 'Assigned package'}
+          {payroll.packageTier ? ` · Tier ${payroll.packageTier}` : ''}
+        </span>
+      }
+    >
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div>
+          <MoneyRow label="Gross pay" amount={formatZMW(payroll.grossPay)} />
+          <MoneyRow
+            label="Employee deductions"
+            amount={`− ${formatZMW(payroll.employeeDeductions)}`}
+            tone="deduction"
+          />
+          <MoneyRow
+            label="Net cash pay"
+            amount={formatZMW(payroll.netCashPay)}
+            tone="positive"
+            strong
+          />
+          <MoneyRow
+            label="Housing paid to landlord"
+            amount={formatZMW(payroll.housing)}
+          />
+          <MoneyRow
+            label="Total direct value"
+            amount={formatZMW(payroll.totalDirectValue)}
+          />
+          <MoneyRow
+            label="Employer contributions"
+            amount={formatZMW(payroll.employerContributions)}
+          />
+          <MoneyRow
+            label="Total monthly cost to company"
+            amount={formatZMW(payroll.totalCompanyCost)}
+            strong
+          />
+        </div>
+
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">
+            Configured components
+          </p>
+          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+            {payroll.components.map((component) => (
+              <li
+                key={`${component.code}-${component.name}`}
+                className="flex items-center justify-between gap-3 py-2 text-sm"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-medium text-gray-800 dark:text-gray-100">
+                    {component.name}
+                  </span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                    {component.componentType} · {component.paidBy}
+                    {component.includedInGross ? ' · inside gross' : ''}
+                    {component.includedInCompanyCost ? ' · in company cost' : ''}
+                  </span>
+                </span>
+                <span className="tabular-nums font-semibold text-gray-900 dark:text-white">
+                  {formatZMW(component.amount)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {variance ? (
+        <div
+          className={`mt-5 rounded-xl border px-4 py-3 text-sm ${
+            variance.packageMatchesTier &&
+            (variance.netCashPayPct === null || Math.abs(variance.netCashPayPct) <= 5)
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200'
+              : 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200'
+          }`}
+        >
+          <p className="font-semibold">Reconciliation with the engine figure</p>
+          <p className="mt-1">
+            Net cash pay differs by {formatZMW(variance.netCashPay)}
+            {variance.netCashPayPct !== null
+              ? ` (${variance.netCashPayPct > 0 ? '+' : ''}${formatPercent(variance.netCashPayPct)})`
+              : ''}{' '}
+            and the total company cost by {formatZMW(variance.totalCompanyCost)}.
+          </p>
+          {variance.note ? <p className="mt-1">{variance.note}</p> : null}
+        </div>
+      ) : null}
+    </SectionCard>
+  );
+}
+
 export function StatementPanel({
   computation,
   showReference = true,
@@ -176,6 +280,8 @@ export function StatementPanel({
           </div>
         </div>
       </SectionCard>
+
+      <ServicePayroll computation={computation} />
 
       <SectionCard
         title="Validation"

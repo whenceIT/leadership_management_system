@@ -239,6 +239,93 @@ export default function RemunerationReportsPage() {
           </div>
 
           <SectionCard
+            title="Remuneration service"
+            description="The payroll side of the framework, as held by the remuneration service."
+            actions={
+              <span
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  data?.service.connected
+                    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                    : 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                }`}
+              >
+                {data?.service.connected ? 'Connected' : 'Unreachable'}
+              </span>
+            }
+          >
+            {!data?.service.connected ? (
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                The remuneration service could not be reached
+                {data?.service.error ? `: ${data.service.error}` : ''}. The report above is
+                calculated by the engine.
+              </p>
+            ) : (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <MetricCard
+                    label="Service gross pay"
+                    value={formatZMW(data.service.totals.grossPay)}
+                    hint={`${data.service.totals.statements} statement(s) with a qualified service assignment`}
+                  />
+                  <MetricCard
+                    label="Service net cash pay"
+                    value={formatZMW(data.service.totals.netCashPay)}
+                    tone="positive"
+                  />
+                  <MetricCard
+                    label="Service housing"
+                    value={formatZMW(data.service.totals.housing)}
+                  />
+                  <MetricCard
+                    label="Service company cost"
+                    value={formatZMW(data.service.totals.totalCompanyCost)}
+                  />
+                </div>
+                {data.service.totals.unqualified > 0 ? (
+                  <p className="mt-4 text-sm text-amber-700 dark:text-amber-300">
+                    {data.service.totals.unqualified} statement(s) did not qualify a tier, so
+                    the engine figure is nil and they are left out of the service totals above.
+                  </p>
+                ) : null}
+                <dl className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Tiers
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-800 dark:text-gray-100">
+                      {data.service.overview?.tiers ?? 0}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Active packages
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-800 dark:text-gray-100">
+                      {data.service.overview?.active_configs ?? 0}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Active components
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-800 dark:text-gray-100">
+                      {data.service.overview?.active_components ?? 0}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Approved assignments
+                    </dt>
+                    <dd className="mt-1 text-sm text-gray-800 dark:text-gray-100">
+                      {data.service.overview?.approved_assignments ?? 0}
+                    </dd>
+                  </div>
+                </dl>
+              </>
+            )}
+          </SectionCard>
+
+          <SectionCard
             title="Statement register"
             description={`${data?.statements.length ?? 0} statement(s)${
               period ? ` for ${formatMonth(period)}` : ' across all periods'
