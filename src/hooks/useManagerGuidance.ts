@@ -78,10 +78,7 @@ export function useManagerGuidance(input?: GuidanceEngineInput): UseManagerGuida
     try {
       setIsLoading(true);
       setError(null);
-      const result = managerGuidanceService.generateRecommendations({
-        ...input,
-        managerContext: { ...context, ...input.managerContext },
-      });
+      const result = managerGuidanceService.generateRecommendations(input);
       setRecommendations(result);
       initializedRef.current = true;
     } catch (err) {
@@ -89,7 +86,7 @@ export function useManagerGuidance(input?: GuidanceEngineInput): UseManagerGuida
     } finally {
       setIsLoading(false);
     }
-  }, [context, input]);
+  }, [input]);
 
   useEffect(() => {
     inputVersionRef.current += 1;

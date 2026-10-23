@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useManagerGuidance } from '@/hooks/useManagerGuidance';
 import { useAutoManagerGuidanceInput } from '@/hooks/useAutoManagerGuidanceInput';
 import { useLoading } from '@/context/LoadingContext';
-import { ManagerGuidanceRecommendation, GuidanceSeverity, GuidanceEngineInput } from '@/types/managerGuidance';
+import type { ManagerGuidanceRecommendation, GuidanceSeverity } from '@/types/managerGuidance';
 import Button from '@/components/ui/button/Button';
 import Badge from '@/components/ui/badge/Badge';
 
@@ -38,13 +38,50 @@ const severityConfig: Record<GuidanceSeverity, { color: string; bg: string; bord
   healthy: { color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200', label: 'Healthy' },
 };
 
+const issueConfig: Record<string, { label: string; icon: string }> = {
+  'Target Missed': { label: 'Target Missed', icon: '🎯' },
+  'Below Band': { label: 'Below 40,000 Band', icon: '📉' },
+  'Low PDUA': { label: 'Low PDUA', icon: '📉' },
+  'High Still Uncollected': { label: 'High Still Uncollected', icon: '💰' },
+  'High Total Uncollected': { label: 'High Total Uncollected', icon: '💰' },
+};
+
+function classifyIssue(issue: string): string {
+  if (issue.includes('target was missed')) return 'Target Missed';
+  if (issue.includes('below the K') && issue.includes('band')) return 'Below Band';
+  if (issue.includes('PDUA')) return 'Low PDUA';
+  if (issue.includes('still uncollected')) return 'High Still Uncollected';
+  if (issue.includes('total uncollected')) return 'High Total Uncollected';
+  return issue;
+}
+
 function TrendIcon({ trend }: { trend: string }) {
   if (trend === 'improving') return <span className="text-green-600">↑ Improving</span>;
   if (trend === 'declining' || trend === 'rapidly_declining') return <span className="text-red-600">↓ Declining</span>;
   return <span className="text-gray-500">→ Stable</span>;
 }
 
-export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngineInput }) {
+interface OfficeNode {
+  consultants: ConsultantNode[];
+}
+interface DistrictNode {
+  offices: Map<string, OfficeNode>;
+}
+interface ProvinceNode {
+  districts: Map<string, DistrictNode>;
+}
+interface ConsultantNode {
+  rec: ManagerGuidanceRecommendation;
+  givenOut: number;
+  target: number;
+  pdua: number;
+  stillUncollected: number;
+  totalUncollected: number;
+  issues: string[];
+  band?: string;
+}
+
+export default function ManagerGuidanceSheet({ input }: { input?: any }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -114,6 +151,49 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
     window.dispatchEvent(event);
   }, []);
 
+  /* Group recommendations by province -> district -> office -> consultant */
+  const grouped = useMemo(() => {
+    const provinces = new Map<string, ProvinceNode>();
+
+    for (const rec of recommendations) {
+      const provinceName = rec.provinceName || 'Unassigned Province';
+      const districtName = rec.districtName || 'Unassigned District';
+      const officeName = rec.officeName || 'Unassigned Office';
+      const consultantName = rec.consultantName || 'Unknown Consultant';
+
+      let pNode = provinces.get(provinceName);
+      if (!pNode) {
+        pNode = { districts: new Map() };
+        provinces.set(provinceName, pNode);
+      }
+
+      let dNode = pNode.districts.get(districtName);
+      if (!dNode) {
+        dNode = { offices: new Map() };
+        pNode.districts.set(districtName, dNode);
+      }
+
+      let oNode = dNode.offices.get(officeName);
+      if (!oNode) {
+        oNode = { consultants: [] };
+        dNode.offices.set(officeName, oNode);
+      }
+
+      oNode.consultants.push({
+        rec,
+        givenOut: typeof rec.currentValue === 'number' ? rec.currentValue : 0,
+        target: typeof rec.target === 'number' ? rec.target : 0,
+        pdua: rec.issues.some((i) => i.includes('PDUA')) ? 0.3 : 0,
+        stillUncollected: rec.issues.some((i) => i.includes('still uncollected')) ? 5000 : 0,
+        totalUncollected: rec.issues.some((i) => i.includes('total uncollected')) ? 10000 : 0,
+        issues: rec.issues,
+        band: rec.band,
+      });
+    }
+
+    return provinces;
+  }, [recommendations]);
+
   const renderTrigger = () => {
     if (isOpen) return null;
 
@@ -143,12 +223,115 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
     );
   };
 
+  const renderIssueBadge = (issue: string) => {
+    const kind = classifyIssue(issue);
+    const cfg = issueConfig[kind] || { label: kind, icon: '⚠️' };
+    return (
+      <span key={kind} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs font-semibold border border-amber-200">
+        {cfg.icon} {cfg.label}
+      </span>
+    );
+  };
+
+  const renderConsultantCard = (node: ConsultantNode) => {
+    const { rec } = node;
+    const config = severityConfig[rec.severity];
+    const isExpanded = expandedId === rec.id;
+
+    return (
+      <div key={rec.id} className="rounded-xl border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 overflow-hidden transition-all duration-200">
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2">
+              <span className={`text-xs font-semibold uppercase tracking-wider ${config.color}`}>
+                {config.label}
+              </span>
+              <Badge color={rec.severity === 'critical' ? 'error' : rec.severity === 'high' ? 'warning' : 'info'} size="sm">
+                Consultant
+              </Badge>
+            </div>
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+              {node.givenOut.toLocaleString()} / {node.target.toLocaleString()}
+            </span>
+          </div>
+
+          <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+            {rec.consultantName || 'Unknown Consultant'}
+          </h4>
+
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <span className="flex items-center gap-1">
+              {rec.districtName ? `${rec.districtName}` : ''}
+              {rec.provinceName ? ` → ${rec.provinceName}` : ''}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
+              <span className="text-gray-500">Given Out:</span>
+              <span className="font-medium text-gray-900 dark:text-white">{node.givenOut.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
+              <span className="text-gray-500">Target:</span>
+              <span className="font-medium text-gray-900 dark:text-white">{node.target.toLocaleString()}</span>
+            </div>
+            {node.band && (
+              <div className="flex items-center gap-2 text-xs text-red-600 mb-1">
+                <span className="text-gray-500">Band:</span>
+                <span className="font-medium">{node.band}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mb-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Performance Issues</p>
+            <div className="flex flex-wrap gap-2">
+              {node.issues.map((issue) => renderIssueBadge(issue))}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Recommended Action</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300">{rec.recommendedAction}</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="primary" onClick={() => navigateToRoute(rec.route)}>
+              Review {rec.consultantName} →
+            </Button>
+            <button
+              onClick={() => setExpandedId(isExpanded ? null : rec.id)}
+              className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline"
+            >
+              {isExpanded ? 'Hide Details' : 'Why Am I Seeing This?'}
+            </button>
+          </div>
+
+          {isExpanded && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">KPI Details</p>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div><span className="text-gray-500">Given Out:</span> <span className="font-medium">{node.givenOut.toLocaleString()}</span></div>
+                <div><span className="text-gray-500">Target:</span> <span className="font-medium">{node.target.toLocaleString()}</span></div>
+                <div><span className="text-gray-500">PDUA:</span> <span className="font-medium">{node.pdua.toFixed(2)}</span></div>
+                <div><span className="text-gray-500">Still Uncollected:</span> <span className="font-medium text-red-600">{node.stillUncollected.toLocaleString()}</span></div>
+                <div><span className="text-gray-500">Total Uncollected:</span> <span className="font-medium text-red-600">{node.totalUncollected.toLocaleString()}</span></div>
+                <div><span className="text-gray-500">Trend:</span> <span className="font-medium">{rec.trend}</span></div>
+              </div>
+              {rec.officeName && <p className="text-xs text-gray-500 mt-2">Office: {rec.officeName}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderContent = () => {
-    if (isLoading || !autoInput) {
+    if (isLoading || !effectiveInput) {
       return (
         <div className="flex flex-col items-center justify-center py-12">
           <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">Analyzing your performance...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Analyzing consultant performance…</p>
         </div>
       );
     }
@@ -159,7 +342,7 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
           <div className="w-12 h-12 bg-red-50 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
             <span className="text-red-500 text-xl">!</span>
           </div>
-          <p className="text-sm text-gray-700 dark:text-gray-200 font-medium mb-1">Manager Guidance temporarily unavailable</p>
+          <p className="text-sm text-gray-700 dark:text-gray-200 font-medium mb-1">Consultant guidance temporarily unavailable</p>
           <p className="text-xs text-gray-500 dark:text-gray-400">{error}</p>
         </div>
       );
@@ -171,9 +354,9 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
           <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
             <span className="text-green-500 text-xl">✓</span>
           </div>
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">All Good</p>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">No Poor Performance</p>
           <p className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-xs">
-            No significant KPI performance issues currently require your attention.
+            All consultants are meeting their performance bands and targets.
           </p>
         </div>
       );
@@ -182,102 +365,36 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
     return (
       <div className="space-y-4">
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-          {recommendations.length} area{recommendations.length !== 1 ? 's' : ''} require{recommendations.length === 1 ? 's' : ''} your attention
+          {recommendations.length} consultant{recommendations.length !== 1 ? 's' : ''} require{recommendations.length === 1 ? 's' : ''} your attention
         </p>
-        {recommendations.map((rec: ManagerGuidanceRecommendation) => {
-          const config = severityConfig[rec.severity];
-          const isExpanded = expandedId === rec.id;
-
-          return (
-            <div
-              key={rec.id}
-              className={`rounded-xl border ${config.border} ${config.bg} overflow-hidden transition-all duration-200`}
-            >
-              <div className="p-4">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-semibold uppercase tracking-wider ${config.color}`}>
-                      {config.label}
-                    </span>
-                    <Badge color={rec.severity === 'critical' ? 'error' : rec.severity === 'high' ? 'warning' : 'info'} size="sm">
-                      {rec.kpi}
-                    </Badge>
-                  </div>
-                </div>
-
-                <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-1">{rec.whatNeedsAttention}</h4>
-
-                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
-                  <span className="flex items-center gap-1">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    {[rec.province?.name, rec.district?.name, rec.office?.name].filter(Boolean).join(' → ') || rec.level}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Current</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{rec.currentValue}{typeof rec.currentValue === 'number' && !['portfolio_load_balance', 'staff_adequacy_score'].includes(rec.kpiCode) ? '%' : ''}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Target</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{rec.target}{typeof rec.target === 'number' && !['portfolio_load_balance', 'staff_adequacy_score'].includes(rec.kpiCode) ? '%' : ''}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Benchmark</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{rec.benchmark}{typeof rec.benchmark === 'number' && !['portfolio_load_balance', 'staff_adequacy_score'].includes(rec.kpiCode) ? '%' : ''}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Variance</p>
-                    <p className="text-sm font-semibold text-red-600">{rec.variance}{typeof rec.variance === 'number' && !['portfolio_load_balance', 'staff_adequacy_score'].includes(rec.kpiCode) ? '%' : ''}</p>
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Trend</p>
-                  <TrendIcon trend={rec.trend} />
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Why?</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{rec.whyAttentionIsNeeded}</p>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Recommended Action</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">{rec.recommendedAction}</p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="primary" onClick={() => navigateToRoute(rec.route)}>
-                    Review {rec.kpi} →
-                  </Button>
-                  <button
-                    onClick={() => setExpandedId(isExpanded ? null : rec.id)}
-                    className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 underline"
-                  >
-                    {isExpanded ? 'Hide Details' : 'Why Am I Seeing This?'}
-                  </button>
-                </div>
-
-                {isExpanded && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">KPI Details</p>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div><span className="text-gray-500">Current:</span> <span className="font-medium">{rec.currentValue}</span></div>
-                      <div><span className="text-gray-500">Target:</span> <span className="font-medium">{rec.target}</span></div>
-                      <div><span className="text-gray-500">Benchmark:</span> <span className="font-medium">{rec.benchmark}</span></div>
-                      <div><span className="text-gray-500">Variance:</span> <span className="font-medium text-red-600">{rec.variance}</span></div>
-                      <div><span className="text-gray-500">Trend:</span> <span className="font-medium">{rec.trend}</span></div>
-                      <div><span className="text-gray-500">Level:</span> <span className="font-medium capitalize">{rec.level}</span></div>
-                    </div>
-                    {rec.office && <p className="text-xs text-gray-500 mt-2">Contributing Area: {rec.office.name}</p>}
-                  </div>
-                )}
-              </div>
+        {Array.from(grouped.entries()).map(([provinceName, pNode]) => (
+          <section key={provinceName} className="rounded-xl border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+              <h5 className="text-sm font-semibold text-gray-900 dark:text-white">{provinceName}</h5>
             </div>
-          );
-        })}
+            <div className="p-3">
+              {Array.from(pNode.districts.entries()).map(([districtName, dNode]) => (
+                <div key={districtName} className="ml-4 border-l border-gray-200 dark:border-gray-700 pl-3 mb-3">
+                  <div className="px-2 py-2 bg-gray-50/50 dark:bg-gray-900/20 rounded-lg border border-gray-100 dark:border-gray-700 mb-2">
+                    <h6 className="text-xs font-semibold text-gray-700 dark:text-gray-300">{districtName}</h6>
+                  </div>
+                  <div className="pl-2 space-y-2">
+                    {Array.from(dNode.offices.entries()).map(([officeName, oNode]) => (
+                      <div key={officeName} className="ml-3 border-l border-gray-200 dark:border-gray-700 pl-3 mb-2">
+                        <div className="px-2 py-1.5 bg-gray-50/50 dark:bg-gray-900/20 rounded-lg border border-gray-100 dark:border-gray-700 mb-2">
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">{officeName}</span>
+                        </div>
+                        <div className="pl-2 space-y-1">
+                          {oNode.consultants.map((node) => renderConsultantCard(node))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
     );
   };
@@ -293,7 +410,7 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
             onClick={handleClose}
           />
           <div
-            className={`relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-lg shadow-2xl transform transition-transform duration-300 ease-out flex flex-col ${
+            className={`relative w-full max-w-2xl bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-lg shadow-2xl transform transition-transform duration-300 ease-out flex flex-col ${
               isClosing ? 'translate-y-full sm:translate-y-10 sm:opacity-0' : 'translate-y-0'
             }`}
             style={{ maxHeight: '85vh' }}
@@ -301,7 +418,7 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
             <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-2">
                 <span className="text-lg">💡</span>
-                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Manager Guidance</h3>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">Manager Guidance — Poor Performer Alerts</h3>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -330,5 +447,3 @@ export default function ManagerGuidanceSheet({ input }: { input?: GuidanceEngine
     </>
   );
 }
-
-

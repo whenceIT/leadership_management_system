@@ -1,96 +1,54 @@
 ﻿import {
-  ManagerGuidanceRecommendation,
-  GuidanceSeverity,
+  ConsultantPerformance,
+  GUIDANCE_THRESHOLDS,
   GuidanceLevel,
+  GuidanceSeverity,
   GuidanceStatus,
-  TrendDirection,
   ManagerContext,
-  GuidanceEngineInput,
-  KPIGuidanceRule,
+  ManagerGuidanceRecommendation,
+  TrendDirection,
 } from '@/types/managerGuidance';
-import { KPI_GUIDANCE_RULES } from '@/config/kpiGuidanceRules';
-import { BranchPerformance } from '@/services/ProvincialDataService';
 
 function uid(prefix: string): string {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
-function parseNumber(value: any): number | null {
-  if (value === undefined || value === null || value === '--') return null;
-  if (typeof value === 'number') return isNaN(value) ? null : value;
+function parseNumber(value: any, fallback = 0): number {
+  if (value === undefined || value === null || value === '--') return fallback;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : fallback;
   const str = String(value).trim().replace(/,/g, '');
   const m = str.match(/^(-?\d+(?:\.\d+)?)\s*([KM]?)$/i);
   if (m) {
     const num = parseFloat(m[1]);
     const suffix = m[2].toUpperCase();
-    if (isNaN(num)) return null;
+    if (isNaN(num)) return fallback;
     if (suffix === 'M') return num * 1_000_000;
     if (suffix === 'K') return num * 1000;
     return num;
   }
   const match = str.match(/-?\d+(?:\.\d+)?/);
-  if (!match) return null;
+  if (!match) return fallback;
   return parseFloat(match[0]);
 }
 
-function normalizeScore(value: any): number | null {
-  const num = parseNumber(value);
-  if (num === null || num < 0 || num > 100) return null;
-  return num;
-}
-
 /**
- * Dynamically derive a KPI guidance rule from API data.
- * No hardcoded tthresholds - everything comes from the API response.
+ * Return the highest severity across several issues.
  */
-function deriveRule(kpiCode: string, kpiName: string, apiData: any): KPIGuidanceRule | null {
-  const target = parseNumber(apiData?.target ?? apiData?.branch_target);
-  if (target === null) return null;
-
-  const higherIsBetter = apiData?.higher_is_better !== false && 
-    !kpiName.toLowerCase().includes('risk') && 
-    !kpiName.toLowerCase().includes('delinquency');
-
-  const warningThreshold = higherIsBetter ? target * 0.9 : target * 1.1;
-  const criticalThreshold = higherIsBetter ? target * 0.8 : target * 1.2;
-
-  return {
-    kpiCode,
-    kpiName,
-    target,
-    warningThreshold: Math.round(warningThreshold * 100) / 100,
-    criticalThreshold: Math.round(criticalThreshold * 100) / 100,
-    higherIsBetter,
-    severityRules: {
-      healthy: (current) => higherIsBetter ? current >= target : current <= target,
-      low: (current) => {
-        const lo = higherIsBetter ? criticalThreshold : target;
-        const hi = higherIsBetter ? warningThreshold : target * 1.1;
-        return current >= lo && current < hi;
-      },
-      medium: (current) => {
-        const lo = higherIsBetter ? criticalThreshold * 0.8 : target * 1.2;
-        const hi = higherIsBetter ? criticalThreshold : target * 1.1;
-        return current >= lo && current < hi;
-      },
-      high: (current) => {
-        const lo = higherIsBetter ? criticalThreshold * 0.6 : target * 1.3;
-        const hi = higherIsBetter ? criticalThreshold * 0.8 : target * 1.2;
-        return current >= lo && current < hi;
-      },
-      critical: (current) => higherIsBetter ? current < criticalThreshold * 0.6 : current > target * 1.3,
-    },
-    recommendedActions: {
-      branch: `Review ${kpiName} at your office. Take corrective action to move closer to the ${target} target.`,
-      district: `Review ${kpiName} across district offices. Identify under-performing branches and deploy targeted interventions.`,
-      province: `Assess ${kpiName} province-wide. Identify systemic issues and develop a province-level improvement plan.`,
-      institution: `Evaluate institutional ${kpiName} strategy. Review whether targets remain appropriate and align resources accordingly.`,
-    },
-    applicableRoles: ['branch', 'district', 'province', 'institution'],
-    route: `/lms/kpi-dashboard?tab=${kpiCode.replace(/_/g, '-')}`,
-    category: 'General',
+function worstSeverity(...severities: GuidanceSeverity[]): GuidanceSeverity {
+  const order: Record<GuidanceSeverity, number> = {
+    healthy: 0,
+    low: 1,
+    medium: 2,
+    high: 3,
+    critical: 4,
   };
+  let worst: GuidanceSeverity = 'healthy';
+  for (const s of severities) {
+    if (order[s as GuidanceSeverity] > order[worst]) worst = s;
+  }
+  return worst;
 }
+
 export class ManagerGuidanceService {
   private static instance: ManagerGuidanceService;
 
@@ -103,336 +61,120 @@ export class ManagerGuidanceService {
     return ManagerGuidanceService.instance;
   }
 
-  evaluateKPIAgainstRule(currentValue: number, rule: KPIGuidanceRule): GuidanceSeverity {
-    if (rule.higherIsBetter) {
-      if (rule.severityRules.critical(currentValue, rule.target)) return 'critical';
-      if (rule.severityRules.high(currentValue, rule.target)) return 'high';
-      if (rule.severityRules.medium(currentValue, rule.target)) return 'medium';
-      if (rule.severityRules.low(currentValue, rule.target)) return 'low';
-      return 'healthy';
-    } else {
-      if (rule.severityRules.critical(currentValue, rule.target)) return 'critical';
-      if (rule.severityRules.high(currentValue, rule.target)) return 'high';
-      if (rule.severityRules.medium(currentValue, rule.target)) return 'medium';
-      if (rule.severityRules.low(currentValue, rule.target)) return 'low';
-      return 'healthy';
-    }
-  }
+  /**
+   * Build poor-performance recommendations from consultant performance records.
+   * A consultant appears only when at least one condition is true:
+   *   - given_out below the band (K40,000)
+   *   - PDUA below the low threshold
+   *   - still_uncollected above the high threshold
+   *   - total_uncollected above the high threshold
+   *   - current cycle target missed
+   *
+   * Recommendations are grouped implicitly by province/district/office via the
+   * OrgUnit fields on each recommendation.
+   */
+  generateRecommendations(input: {
+    consultants: ConsultantPerformance[];
+    maxRecommendations?: number;
+  }): ManagerGuidanceRecommendation[] {
+    const { consultants, maxRecommendations = 5 } = input;
+    const recommendations: ManagerGuidanceRecommendation[] = [];
 
-  analyzeTrend(current: number, historical?: number[]): TrendDirection {
-    if (!historical || historical.length < 2) return 'stable';
-    const sorted = [...historical].sort((a, b) => a - b);
-    const previous = sorted[sorted.length - 2];
-    const older = sorted[0];
-    const changeRecent = current - previous;
-    const changeOverall = current - older;
-    const recentPct = previous > 0 ? (changeRecent / previous) * 100 : 0;
-    const overallPct = older > 0 ? (changeOverall / older) * 100 : 0;
+    for (const c of consultants) {
+      const issues: string[] = [];
 
-    if (recentPct <= -15 || overallPct <= -20) return 'rapidly_declining';
-    if (recentPct <= -5 || overallPct <= -10) return 'declining';
-    if (recentPct >= 5 || overallPct >= 10) return 'improving';
-    return 'stable';
-  }
-
-  calculatePriority(
-    severity: GuidanceSeverity,
-    variance: number,
-    benchmark: number,
-    current: number,
-    trend: TrendDirection,
-    orgImpact: number
-  ): number {
-    let score = 0;
-
-    switch (severity) {
-      case 'critical': score += 40; break;
-      case 'high': score += 30; break;
-      case 'medium': score += 20; break;
-      case 'low': score += 10; break;
-      case 'healthy': score += 0; break;
-    }
-
-    const target = benchmark > 0 ? benchmark : 1;
-    const variancePct = Math.abs(variance) / target;
-    score += Math.min(25, variancePct * 25);
-
-    if (trend === 'rapidly_declining') score += 20;
-    else if (trend === 'declining') score += 10;
-    else if (trend === 'improving') score -= 5;
-
-    score += Math.min(15, orgImpact * 2);
-
-    return Math.max(1, Math.min(100, Math.round(score)));
-  }
-
-  generateExplanation(
-    kpiName: string,
-    currentValue: number | string,
-    target: number | string,
-    benchmark: number | string,
-    variance: number | string,
-    level: GuidanceLevel,
-    unit?: string
-  ): string {
-    const current = typeof currentValue === 'number' ? currentValue : parseNumber(currentValue) ?? 0;
-    const tgt = typeof target === 'number' ? target : parseNumber(target) ?? 0;
-    const bm = typeof benchmark === 'number' ? benchmark : parseNumber(benchmark) ?? 0;
-    const varVal = typeof variance === 'number' ? variance : parseNumber(variance) ?? 0;
-    const displayUnit = unit || (kpiName === 'Staff Adequacy Score' ? ' LCs per office' : '%');
-    const levelLabel = level.charAt(0).toUpperCase() + level.slice(1);
-
-    let explanation = `${kpiName} is currently ${typeof currentValue === 'number' ? current.toFixed(1) : currentValue}${displayUnit}`;
-
-    if (tgt > 0) {
-      explanation += `, which is ${Math.abs(varVal).toFixed(1)}${displayUnit} ${varVal < 0 ? 'below' : 'above'} the ${tgt}${displayUnit} target`;
-    }
-
-    if (bm > 0 && bm !== tgt) {
-      explanation += ` and ${current < bm ? 'below' : 'above'} the institutional average of ${bm}${displayUnit}`;
-    }
-
-    explanation += `.`;
-
-    return explanation;
-  }
-
-  generateRecommendedAction(rule: KPIGuidanceRule, level: GuidanceLevel, context: ManagerContext): string {
-    const tier = context.userTier;
-    let action = '';
-
-    if (tier === 'branch') action = rule.recommendedActions.branch;
-    else if (tier === 'district') action = rule.recommendedActions.district;
-    else if (tier === 'province') action = rule.recommendedActions.province;
-    else action = rule.recommendedActions.institution;
-
-    if (level === 'consultant' && tier === 'branch') {
-      action = 'Review individual consultant performance and workload distribution. Provide targeted coaching and re-assign accounts where necessary.';
-    }
-
-    return action;
-  }
-
-  buildLocationBreadcrumb(
-    level: GuidanceLevel,
-    province?: { id: number; name: string },
-    district?: { id: number; name: string },
-    office?: { id: number; name: string }
-  ): string {
-    const parts: string[] = [];
-    if (province) parts.push(province.name);
-    if (district) parts.push(district.name);
-    if (office) parts.push(office.name);
-    if (parts.length === 0) parts.push(level.charAt(0).toUpperCase() + level.slice(1));
-    return parts.join(' → ');
-  }
-
-  determineWeaknessLevel(
-    currentValue: number,
-    target: number,
-    benchmark: number,
-    rule: KPIGuidanceRule,
-    hierarchy: {
-      provinceValue?: number;
-      districtValue?: number;
-      officeValue?: number;
-      consultantValue?: number;
-    }
-  ): GuidanceLevel {
-    const values = [
-      { level: 'institution' as GuidanceLevel, value: currentValue },
-      { level: 'province' as GuidanceLevel, value: hierarchy.provinceValue },
-      { level: 'district' as GuidanceLevel, value: hierarchy.districtValue },
-      { level: 'office' as GuidanceLevel, value: hierarchy.officeValue },
-      { level: 'consultant' as GuidanceLevel, value: hierarchy.consultantValue },
-    ].filter((v) => v.value !== undefined);
-
-    if (values.length === 0) return 'institution';
-
-    let weakest = values[0];
-    for (const v of values) {
-      if (v.value != null && weakest.value != null) {
-        if (rule.higherIsBetter ? v.value < weakest.value : v.value > weakest.value) {
-          weakest = v;
-        }
+      // Band check: below K40,000 given_out
+      if (c.given_out < GUIDANCE_THRESHOLDS.BAND_GIVEN_OUT) {
+        issues.push(
+          `Given-out of K${c.given_out.toLocaleString()} is below the K${GUIDANCE_THRESHOLDS.BAND_GIVEN_OUT.toLocaleString()} band`
+        );
       }
+
+      // PDUA low
+      if (c.pdua > 0 && c.pdua < GUIDANCE_THRESHOLDS.PDUA_LOW) {
+        issues.push(
+          `PDUA of ${(c.pdua * 100).toFixed(0)}% is below the ${(GUIDANCE_THRESHOLDS.PDUA_LOW * 100).toFixed(0)}% floor`
+        );
+      }
+
+      // Still uncollected high
+      if (c.still_uncollected > GUIDANCE_THRESHOLDS.STILL_UNCOLLECTED_HIGH) {
+        issues.push(
+          `Still uncollected of K${c.still_uncollected.toLocaleString()} exceeds the K${GUIDANCE_THRESHOLDS.STILL_UNCOLLECTED_HIGH.toLocaleString()} ceiling`
+        );
+      }
+
+      // Total uncollected high
+      if (c.total_uncollected > GUIDANCE_THRESHOLDS.TOTAL_UNCOLLECTED_HIGH) {
+        issues.push(
+          `Total uncollected of K${c.total_uncollected.toLocaleString()} exceeds the K${GUIDANCE_THRESHOLDS.TOTAL_UNCOLLECTED_HIGH.toLocaleString()} ceiling`
+        );
+      }
+
+      // Target missed
+      if (c.target_met_current === 0) {
+        issues.push('Current cycle target was missed');
+      }
+
+      if (issues.length === 0) continue;
+
+      const severity = worstSeverity(...issues.map((issue) => this.classifyIssue(issue)));
+      const issuesDisplay = issues.join('; ');
+
+      const band = c.given_out < GUIDANCE_THRESHOLDS.BAND_GIVEN_OUT ? `Below ${GUIDANCE_THRESHOLDS.BAND_GIVEN_OUT.toLocaleString()}` : undefined;
+
+      recommendations.push({
+        id: uid('guidance_consultant'),
+        kpi: 'Consultant Performance',
+        kpiCode: 'consultant_performance',
+        severity,
+        level: 'consultant',
+        consultantId: c.user_id,
+        consultantName: c.name,
+        officeName: c.office_name,
+        districtName: c.district_name,
+        provinceName: c.province_name,
+        issues,
+        band,
+        currentValue: c.given_out,
+        target: GUIDANCE_THRESHOLDS.BAND_GIVEN_OUT,
+        benchmark: c.given_out,
+        variance: c.given_out - GUIDANCE_THRESHOLDS.BAND_GIVEN_OUT,
+        trend: 'stable',
+        whatNeedsAttention: `${c.name} — ${issuesDisplay}`,
+        whyAttentionIsNeeded: `Consultant performance flags: ${issuesDisplay}.`,
+        recommendedAction: `Coach ${c.name} to improve collections and move the given-out figure above the K${GUIDANCE_THRESHOLDS.BAND_GIVEN_OUT.toLocaleString()} band.`,
+        route: `/lms/kpi-dashboard?tab=consultant_performance`,
+        priority: 50,
+        createdAt: new Date().toISOString(),
+        status: 'generated',
+      });
     }
 
-    return weakest.level;
+    return this.rankRecommendations(recommendations).slice(0, maxRecommendations);
   }
 
-  filterByScope(
-    recommendations: ManagerGuidanceRecommendation[],
-    context: ManagerContext
-  ): ManagerGuidanceRecommendation[] {
-    const tier = context.userTier;
-    const provinceId = context.provinceId;
-    const districtId = 0;
-    const officeId = context.officeId;
-
-    return recommendations.filter((rec) => {
-      if (rec.severity === 'healthy') return false;
-
-      if (rec.level === 'consultant' && tier !== 'branch') return false;
-      if (rec.level === 'office' && tier === 'institution') return true;
-      if (rec.level === 'office' && tier === 'province') return true;
-      if (rec.level === 'office' && tier === 'district') return true;
-      if (rec.level === 'office' && tier === 'branch') {
-        if (rec.office && rec.office.id === officeId) return true;
-        return false;
-      }
-      if (rec.level === 'district' && (tier === 'institution' || tier === 'province')) return true;
-      if (rec.level === 'district' && tier === 'district') return true;
-      if (rec.level === 'province' && tier === 'institution') return true;
-      if (rec.level === 'province' && tier === 'province') {
-        if (rec.province && rec.province.id === provinceId) return true;
-        return false;
-      }
-      if (rec.level === 'institution') return tier === 'institution';
-
-      return true;
-    });
-  }
-
-  deduplicate(recommendations: ManagerGuidanceRecommendation[]): ManagerGuidanceRecommendation[] {
-    const seen = new Map<string, ManagerGuidanceRecommendation>();
-    for (const rec of recommendations) {
-      const key = `${rec.kpiCode}_${rec.level}_${rec.province?.id ?? 0}_${rec.district?.id ?? 0}_${rec.office?.id ?? 0}`;
-      const existing = seen.get(key);
-      if (!existing || rec.priority > existing.priority) {
-        seen.set(key, rec);
-      }
-    }
-    return Array.from(seen.values());
+  private classifyIssue(issue: string): GuidanceSeverity {
+    if (issue.includes('target was missed')) return 'high';
+    if (issue.includes('below the K') && issue.includes('band')) return 'high';
+    if (issue.includes('PDUA')) return 'medium';
+    if (issue.includes('still uncollected')) return 'medium';
+    return 'medium';
   }
 
   rankRecommendations(recommendations: ManagerGuidanceRecommendation[]): ManagerGuidanceRecommendation[] {
     return [...recommendations].sort((a, b) => {
-      const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, healthy: 4 };
-      const sevDiff = severityOrder[a.severity] - severityOrder[b.severity];
+      const severityOrder: Record<GuidanceSeverity, number> = {
+        healthy: 0,
+        low: 1,
+        medium: 2,
+        high: 3,
+        critical: 4,
+      };
+      const sevDiff = severityOrder[b.severity] - severityOrder[a.severity];
       if (sevDiff !== 0) return sevDiff;
       return b.priority - a.priority;
     });
-  }
-
-  generateRecommendations(input: GuidanceEngineInput): ManagerGuidanceRecommendation[] {
-    const { managerContext, kpiData, orgHierarchy, historicalData, maxRecommendations = 5 } = input;
-    const recommendations: ManagerGuidanceRecommendation[] = [];
-
-    const derivedRules: KPIGuidanceRule[] = [];
-    const allRules: KPIGuidanceRule[] = [...KPI_GUIDANCE_RULES];
-
-    // Dynamically derive rules for any KPIs in kpiData that don't have a hardcoded rule
-    for (const [kpiCode, rawData] of Object.entries(kpiData)) {
-      if (allRules.some(r => r.kpiCode === kpiCode)) continue;
-      const kpiName = (rawData as any)?.kpiName || kpiCode.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
-      const derived = deriveRule(kpiCode, kpiName, rawData);
-      if (derived) allRules.push(derived);
-    }
-
-    for (const rule of allRules) {
-      if (!rule.applicableRoles.includes(managerContext.userTier)) continue;
-
-      const rawData = kpiData[rule.kpiCode];
-      if (!rawData) continue;
-
-      const currentValue = parseNumber(rawData.current ?? rawData.value ?? rawData.normalized_score);
-      const target = parseNumber(rawData.target ?? rule.target) ?? rule.target;
-      const benchmark = parseNumber(rawData.institutionalAvg ?? rawData.benchmark) ?? 0;
-
-      if (currentValue === null) continue;
-
-      const severity = this.evaluateKPIAgainstRule(currentValue, rule);
-      if (severity === 'healthy') continue;
-
-      const variance = currentValue - target;
-      const trend = this.analyzeTrend(currentValue, historicalData?.[rule.kpiCode]);
-
-      const provinceValue = parseNumber((rawData as any).provinceValue) ?? undefined;
-      const districtValue = parseNumber((rawData as any).districtValue) ?? undefined;
-      const officeValue = parseNumber((rawData as any).officeValue) ?? undefined;
-      const consultantValue = parseNumber((rawData as any).consultantValue) ?? undefined;
-
-      const branchPerformances = (rawData as any).branchPerformances as BranchPerformance[] | undefined;
-      const weakestBranch = branchPerformances?.length
-        ? [...branchPerformances].sort((a, b) => {
-            const aVal = rule.higherIsBetter ? a.par.rate : -a.par.rate;
-            const bVal = rule.higherIsBetter ? b.par.rate : -b.par.rate;
-            return aVal - bVal;
-          })[0]
-        : undefined;
-
-      const level: GuidanceLevel = this.determineWeaknessLevel(
-        currentValue,
-        target,
-        benchmark,
-        rule,
-        {
-          provinceValue,
-          districtValue,
-          officeValue,
-          consultantValue,
-        }
-      );
-
-      const province = orgHierarchy?.provinces?.[0];
-      const district = province?.districts?.[0];
-      const office = weakestBranch ? { id: weakestBranch.branch_id, name: weakestBranch.branch_name } : undefined;
-
-      const orgImpact = branchPerformances?.length ?? 1;
-      const priority = this.calculatePriority(severity, variance, benchmark, currentValue, trend, orgImpact);
-
-      const whyNeeded = this.generateExplanation(
-        rule.kpiName,
-        currentValue,
-        target,
-        benchmark,
-        variance,
-        level
-      );
-
-      const action = this.generateRecommendedAction(rule, level, managerContext);
-
-      const whatNeedsAttention = `${rule.kpiName} Requires Attention`;
-
-      const recommendation: ManagerGuidanceRecommendation = {
-        id: uid(`guidance_${rule.kpiCode}`),
-        kpi: rule.kpiName,
-        kpiCode: rule.kpiCode,
-        severity,
-        level,
-        province,
-        district,
-        office,
-        currentValue: typeof currentValue === 'number' ? Math.round(currentValue * 10) / 10 : currentValue,
-        target: typeof target === 'number' ? Math.round(target * 10) / 10 : target,
-        benchmark: typeof benchmark === 'number' ? Math.round(benchmark * 10) / 10 : benchmark,
-        variance: typeof variance === 'number' ? Math.round(variance * 10) / 10 : variance,
-        trend,
-        whatNeedsAttention,
-        whyAttentionIsNeeded: whyNeeded,
-        recommendedAction: action,
-        route: rule.route,
-        priority,
-        createdAt: new Date().toISOString(),
-        status: 'generated',
-      };
-
-      recommendations.push(recommendation);
-    }
-
-    const filtered = this.filterByScope(recommendations, managerContext);
-    const deduped = this.deduplicate(filtered);
-    const ranked = this.rankRecommendations(deduped);
-
-    if (ranked.length === 0 && recommendations.length > 0) {
-      const topUnfiltered = this.rankRecommendations(recommendations)[0];
-      if (topUnfiltered) {
-        return [topUnfiltered];
-      }
-    }
-
-    return ranked.slice(0, maxRecommendations);
   }
 
   updateStatus(
@@ -444,13 +186,8 @@ export class ManagerGuidanceService {
   }
 
   markAllViewed(recommendations: ManagerGuidanceRecommendation[]): ManagerGuidanceRecommendation[] {
-    return recommendations.map((r) => (r.status === 'generated' ? { ...r, status: 'viewed' as GuidanceStatus } : r));
+    return recommendations.map((r) => (r.status === 'generated' ? { ...r, status: 'viewed' } : r));
   }
 }
 
 export const managerGuidanceService = ManagerGuidanceService.getInstance();
-
-
-
-
-

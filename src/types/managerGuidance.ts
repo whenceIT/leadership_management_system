@@ -9,6 +9,43 @@ export interface OrgUnit {
   name: string;
 }
 
+/**
+ * A single consultant's loan-performance record returned by the Performance API
+ * (`GET /api/performance/consultants-performance-by-office`).
+ */
+export interface ConsultantPerformance {
+  user_id: number;
+  name: string;
+  office: number;
+  district: number;
+  province: number;
+  office_name?: string;
+  district_name?: string;
+  province_name?: string;
+  total_uncollected: number;
+  total_collected: number;
+  still_uncollected: number;
+  given_out: number;
+  pdua: number;               // total_collected / total_uncollected (decimal)
+  target_met_current: number; // 1 = met, 0 = missed
+  target_history: number[];
+}
+
+/**
+ * Thresholds used to decide whether a consultant shows "poor performance".
+ * A consultant appears in the guidance sheet only when at least one condition below is true.
+ */
+export const GUIDANCE_THRESHOLDS = {
+  /** Consultants below this `given_out` value are flagged as below band. */
+  BAND_GIVEN_OUT: 40000,
+  /** PDUA below this is flagged as low. */
+  PDUA_LOW: 0.40,
+  /** still_uncollected above this is flagged as high. */
+  STILL_UNCOLLECTED_HIGH: 3000,
+  /** total_uncollected above this is flagged as high. */
+  TOTAL_UNCOLLECTED_HIGH: 8000,
+} as const;
+
 export interface ManagerGuidanceRecommendation {
   id: string;
   kpi: string;
@@ -18,7 +55,15 @@ export interface ManagerGuidanceRecommendation {
   province?: OrgUnit;
   district?: OrgUnit;
   office?: OrgUnit;
-  consultants?: Array<{ id: number; name: string }>;
+  consultantId?: number;
+  consultantName?: string;
+  officeName?: string;
+  districtName?: string;
+  provinceName?: string;
+  /** Poor-performance conditions that triggered this recommendation. */
+  issues: string[];
+  /** Band label when the consultant is below the given-out band (e.g. "Below 40,000"). */
+  band?: string;
   currentValue: number | string;
   target: number | string;
   benchmark: number | string;
@@ -34,6 +79,11 @@ export interface ManagerGuidanceRecommendation {
   status: GuidanceStatus;
 }
 
+/**
+ * Legacy rule type retained for the kpiGuidanceRules config file. The guidance
+ * engine no longer evaluates KPI rules — it evaluates consultant performance
+ * against GUIDANCE_THRESHOLDS instead.
+ */
 export interface KPIGuidanceRule {
   kpiCode: string;
   kpiName: string;
@@ -70,12 +120,7 @@ export interface ManagerContext {
 
 export interface GuidanceEngineInput {
   managerContext: ManagerContext;
-  kpiData: Record<string, any>;
-  orgHierarchy?: {
-    provinces?: Array<{ id: number; name: string; districts?: any[] }>;
-    branches?: Array<{ id: number; name: string; provinceId: number; districtId?: number }>;
-    consultants?: Array<{ id: number; name: string; officeId: number }>;
-  };
-  historicalData?: Record<string, number[]>;
+  /** Consultant performance records to evaluate. Only poor performers are surfaced. */
+  consultants: ConsultantPerformance[];
   maxRecommendations?: number;
 }
