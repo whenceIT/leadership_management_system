@@ -31,12 +31,25 @@ export class LoanConsultantMetricsService {
   /**
     * Fetch loan consultant metrics by office from API
     */
-  public async fetchConsultantsPerformanceByOffice(officeId: number, startDate: string, endDate: string): Promise<LoanConsultantMetrics[]> {
+  public async fetchConsultantsPerformanceByOffice(officeId: number | undefined, startDate: string, endDate: string): Promise<LoanConsultantMetrics[]> {
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://lms2backend.whencefinancesystem.com';
 
+      let userJobPosition: number | undefined;
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('thisUser');
+          if (stored) userJobPosition = JSON.parse(stored)?.job_position;
+        } catch {}
+      }
+
+      const params = new URLSearchParams();
+      if (userJobPosition !== 20 && officeId && officeId > 0) params.set('office_id', String(officeId));
+      if (startDate) params.set('start_date', startDate);
+      if (endDate) params.set('end_date', endDate);
+
       const response = await fetch(
-        `${API_BASE_URL}/consultants-performance-by-office?office_id=${officeId}&start_date=${startDate}&end_date=${endDate}`,
+        `${API_BASE_URL}/consultants-performance-by-office?${params.toString()}`,
         {
           method: 'GET',
           headers: {

@@ -39,12 +39,19 @@ function normalizeConsultant(c: any): ConsultantPerformance {
  * Returns an empty array when the office has no consultants or the call fails.
  */
 export async function fetchConsultantPerformanceByOffice(
-  officeId: number,
+  officeId?: number,
   startDate?: string,
   endDate?: string
 ): Promise<ConsultantPerformance[]> {
-  if (!officeId || officeId <= 0) return [];
-  const params = new URLSearchParams({ office_id: String(officeId) });
+  let userJobPosition: number | undefined;
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('thisUser');
+      if (stored) userJobPosition = JSON.parse(stored)?.job_position;
+    } catch {}
+  }
+  const params = new URLSearchParams();
+  if (userJobPosition !== 20 && officeId && officeId > 0) params.set('office_id', String(officeId));
   if (startDate) params.set('start_date', startDate);
   if (endDate) params.set('end_date', endDate);
   const url = `${PERFORMANCE_API_BASE}/consultants-performance-by-office?${params.toString()}`;
