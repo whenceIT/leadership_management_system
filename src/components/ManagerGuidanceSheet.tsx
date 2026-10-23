@@ -1,4 +1,4 @@
-'use client';
+d .'use client';
 
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -156,9 +156,9 @@ export default function ManagerGuidanceSheet({ input }: { input?: any }) {
     const provinces = new Map<string, ProvinceNode>();
 
     for (const rec of recommendations) {
-      const provinceName = rec.provinceName || 'Unassigned Province';
-      const districtName = rec.districtName || 'Unassigned District';
-      const officeName = rec.officeName || 'Unassigned Office';
+      const provinceName = rec.province?.name || rec.provinceName || 'Unknown Province';
+      const districtName = rec.district?.name || rec.districtName || 'Unknown District';
+      const officeName = rec.office?.name || rec.officeName || 'Unknown Office';
       const consultantName = rec.consultantName || 'Unknown Consultant';
 
       let pNode = provinces.get(provinceName);
@@ -329,9 +329,14 @@ export default function ManagerGuidanceSheet({ input }: { input?: any }) {
   const renderContent = () => {
     if (isLoading || !effectiveInput) {
       return (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">Analyzing consultant performance…</p>
+        <div className="space-y-3 py-4 animate-pulse">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <div className="h-4 w-1/3 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
+              <div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+              <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700 rounded" />
+            </div>
+          ))}
         </div>
       );
     }
