@@ -353,6 +353,20 @@ export default function ManagerGuidanceSheet({ input }: { input?: any }) {
       );
     }
 
+    if (recommendations.length === 0) {
+      return (
+        <div className="space-y-3 py-4 animate-pulse">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <div className="h-4 w-1/3 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
+              <div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+              <div className="h-3 w-1/2 bg-gray-200 dark:bg-gray-700 rounded" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     return (
       <div className="space-y-4">
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
