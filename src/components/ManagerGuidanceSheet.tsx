@@ -353,20 +353,6 @@ export default function ManagerGuidanceSheet({ input }: { input?: any }) {
       );
     }
 
-    if (recommendations.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="w-12 h-12 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
-            <span className="text-green-500 text-xl">✓</span>
-          </div>
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">No Poor Performance</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 text-center max-w-xs">
-            All consultants are meeting their performance bands and targets.
-          </p>
-        </div>
-      );
-    }
-
     return (
       <div className="space-y-4">
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
