@@ -17,8 +17,8 @@ export interface ConsultantPerformance {
   user_id: number;
   name: string;
   office: number;
-  district: number;
-  province: number;
+  district: number | string;
+  province: number | string;
   office_name?: string;
   district_name?: string;
   province_name?: string;
