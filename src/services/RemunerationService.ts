@@ -377,6 +377,53 @@ export function fetchPerformance(
   );
 }
 
+/* ------------------------- Performance criteria (API) ------------------------- */
+
+/**
+ * Fetches the total collected amount (monthly revenue) for a manager's
+ * position from the performance criteria API. For revenue-based roles the
+ * response `total_collected` is used as the measured amount that is compared
+ * against the monthly revenue targets in the remuneration guide to assign a tier.
+ */
+export interface PerformanceCriteriaResponse {
+  job_position: string;
+  user_id: string | null;
+  office_id: string | null;
+  period: {
+    start_date: string;
+    end_date: string;
+  };
+  total_collected: number;
+  detail: {
+    scope: string;
+    office_id?: string;
+    province_id?: string;
+    district_id?: string;
+  };
+}
+
+export interface PerformanceCriteriaParams {
+  job_position: string;
+  office_id?: string;
+  user_id?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export function fetchPerformanceCriteria(
+  params: PerformanceCriteriaParams
+): Promise<PerformanceCriteriaResponse> {
+  const query = new URLSearchParams();
+  query.set('job_position', params.job_position);
+  if (params.office_id) query.set('office_id', params.office_id);
+  if (params.user_id) query.set('user_id', params.user_id);
+  if (params.start_date) query.set('start_date', params.start_date);
+  if (params.end_date) query.set('end_date', params.end_date);
+  return request<PerformanceCriteriaResponse>(
+    `https://smartbackend.whencefinancesystem.com/api/remuneration/performance-creteria?${query.toString()}`
+  );
+}
+
 /* ------------------------------- Calculate -------------------------------- */
 
 export interface CalculationResponse {

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { StatementPanel } from '@/components/remuneration/StatementPanel';
 import {
   EmptyState,
   ErrorState,
@@ -14,59 +13,55 @@ import {
   TierBadge,
   inputClass,
 } from '@/components/remuneration/ui';
-import { currentPeriod, formatMonth, formatZMW, initialsOf, periodList } from '@/lib/remuneration/format';
+import { currentPeriod, formatMonth, formatZMW, initialsOf, periodList, tierTone } from '@/lib/remuneration/format';
 import type { ManagerProfile, RemunerationComputation } from '@/lib/remuneration/types';
 import {
   calculateRemuneration,
   fetchManagers,
-  fetchPerformance,
+  fetchPerformanceCriteria,
   loadStatutoryOverrides,
   saveStatement,
+  type PerformanceCriteriaParams,
   type PerformancePayload,
 } from '@/services/RemunerationService';
 
-const STEPS = [
-  { id: 1, title: 'Select manager', description: 'Who are we calculating for?' },
-  { id: 2, title: 'Performance & tier', description: 'Verify the result and the qualifying band.' },
-  { id: 3, title: 'Statement', description: 'Review, validate and submit for approval.' },
-];
+const ROLE_TO_POSITION: Record<string, string> = {
+  branch_manager: 'branch_manager',
+  district_manager: 'district_manager',
+  provincial_manager: 'province_manager',
+};
+
+function periodDates(period: string): { start: string; end: string } {
+  const [year, month] = period.split('-').map(Number);
+  const startDay = 24;
+  const start = new Date(Date.UTC(year, month - 1, startDay));
+  const end = new Date(Date.UTC(year, month, 0));
+  end.setUTCDate(24);
+  const fmt = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  return { start: fmt(start), end: fmt(end) };
+}
+
+interface ComputationRow {
+  manager: ManagerProfile;
+  computation: RemunerationComputation | null;
+  measuredRevenue: number | null;
+  loading: boolean;
+  error: string | null;
+  saved: boolean;
+}
 
 export default function RemunerationCalculatorPage() {
-  const [step, setStep] = useState(1);
   const [period, setPeriod] = useState(currentPeriod());
   const [managers, setManagers] = useState<ManagerProfile[]>([]);
   const [managersLoading, setManagersLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [performance, setPerformance] = useState<PerformancePayload | null>(null);
-  const [previousTier, setPreviousTier] = useState<number | null>(null);
-  const [performanceLoading, setPerformanceLoading] = useState(false);
-  const [computation, setComputation] = useState<RemunerationComputation | null>(null);
+  const [rows, setRows] = useState<ComputationRow[]>([]);
   const [calculating, setCalculating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let active = true;
-    setManagersLoading(true);
-    fetchManagers()
-      .then((response) => {
-        if (active) setManagers(response.managers);
-      })
-      .catch((err) => {
-        if (active)
-          setError(err instanceof Error ? err.message : 'Unable to load the manager registry.');
-      })
-      .finally(() => {
-        if (active) setManagersLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const [submittedCount, setSubmittedCount] = useState(0);
 
   const roles = useMemo(() => {
     const map = new Map<string, string>();
@@ -95,101 +90,219 @@ export default function RemunerationCalculatorPage() {
       .slice(0, 120);
   }, [managers, roleFilter, search]);
 
-  const selected = useMemo(
-    () => managers.find((manager) => manager.id === selectedId) ?? null,
-    [managers, selectedId]
-  );
+  useEffect(() => {
+    let active = true;
+    setManagersLoading(true);
+    fetchManagers()
+      .then((response) => {
+        if (active) setManagers(response.managers);
+      })
+      .catch((err) => {
+        if (active)
+          setError(err instanceof Error ? err.message : 'Unable to load the manager registry.');
+      })
+      .finally(() => {
+        if (active) setManagersLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const loadPerformance = useCallback(
-    async (managerId: string, activePeriod: string) => {
-      setPerformanceLoading(true);
-      setError(null);
+  const fetchPerformanceForManager = useCallback(
+    async (manager: ManagerProfile, periodValue: string): Promise<PerformancePayload | null> => {
+      const position = ROLE_TO_POSITION[manager.roleId];
+      if (!position) return null;
+
+      const params: PerformanceCriteriaParams = { job_position: position };
+      const officeId = manager.scope.officeId;
+      if (officeId && officeId > 0) params.office_id = String(officeId);
+
+      const { start, end } = periodDates(periodValue);
+      params.start_date = start;
+      params.end_date = end;
+
       try {
-        const response = await fetchPerformance(managerId, activePeriod);
-        setPerformance(response.performance);
-        return response;
+        const result = await fetchPerformanceCriteria(params);
+        return {
+          value: result.total_collected ?? null,
+          source: 'revenue_achievement',
+          measures: [],
+          manualTier: null,
+          overrideReason: null,
+          efficiencyScore: null,
+          pduaScore: null,
+          branchCount: manager.scope.branchCount ?? null,
+        };
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to load the performance result.');
-        setPerformance(null);
         return null;
-      } finally {
-        setPerformanceLoading(false);
       }
     },
     []
   );
 
-  const selectManager = useCallback(
-    async (managerId: string) => {
-      setSelectedId(managerId);
-      setComputation(null);
-      setNotice(null);
-      setPreviousTier(managers.find((manager) => manager.id === managerId)?.previousTier ?? null);
-      await loadPerformance(managerId, period);
-      setStep(2);
-    },
-    [loadPerformance, managers, period]
-  );
-
-  useEffect(() => {
-    if (selectedId) loadPerformance(selectedId, period);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [period]);
-
-  const runCalculation = useCallback(async () => {
-    if (!selectedId) return;
-    setCalculating(true);
-    setError(null);
-    try {
+  const runCalculation = useCallback(
+    async (manager: ManagerProfile, performance: PerformancePayload | null, previousTier: number | null) => {
       const response = await calculateRemuneration({
-        managerId: selectedId,
+        managerId: manager.id,
         period,
         performance: performance ?? undefined,
         previousTier,
         statutory: loadStatutoryOverrides() ?? undefined,
       });
-      setComputation(response.computation);
-      setStep(3);
+      return response.computation;
+    },
+    [period]
+  );
+
+  const calculateAll = useCallback(async () => {
+    setCalculating(true);
+    setError(null);
+    setNotice(null);
+
+    const nextRows: ComputationRow[] = filteredManagers.map((manager) => ({
+      manager,
+      computation: null,
+      measuredRevenue: null,
+      loading: true,
+      error: null,
+      saved: false,
+    }));
+    setRows(nextRows);
+
+    const { start, end } = periodDates(period);
+
+    try {
+      for (const manager of filteredManagers) {
+        const rowIndex = nextRows.findIndex((r) => r.manager.id === manager.id);
+        if (rowIndex === -1) continue;
+
+        let performance: PerformancePayload | null = null;
+        try {
+          const position = ROLE_TO_POSITION[manager.roleId];
+          if (position) {
+            const params: PerformanceCriteriaParams = { job_position: position };
+            const officeId = manager.scope.officeId;
+            if (officeId && officeId > 0) params.office_id = String(officeId);
+            params.start_date = start;
+            params.end_date = end;
+
+            const result = await fetchPerformanceCriteria(params);
+            performance = {
+              value: result.total_collected ?? null,
+              source: 'revenue_achievement',
+              measures: [],
+              manualTier: null,
+              overrideReason: null,
+              efficiencyScore: null,
+              pduaScore: null,
+              branchCount: manager.scope.branchCount ?? null,
+            };
+          }
+        } catch (err) {
+          performance = null;
+        }
+
+        let computation: RemunerationComputation | null = null;
+        let errMsg: string | null = null;
+        try {
+          const response = await calculateRemuneration({
+            managerId: manager.id,
+            period,
+            performance: performance ?? undefined,
+            previousTier: manager.previousTier,
+            statutory: loadStatutoryOverrides() ?? undefined,
+          });
+          computation = response.computation;
+        } catch (err) {
+          errMsg = err instanceof Error ? err.message : 'Calculation failed.';
+        }
+
+        setRows((prev) =>
+          prev.map((r) =>
+            r.manager.id === manager.id
+              ? { ...r, computation, measuredRevenue: performance?.value ?? null, loading: false, error: errMsg }
+              : r
+          )
+        );
+      }
+
+      const failed = nextRows.filter((r) => r.error).length;
+      const succeeded = nextRows.length - failed;
+      setNotice(
+        `Calculated ${succeeded} of ${nextRows.length} manager${nextRows.length !== 1 ? 's' : ''}${
+          failed ? ` (${failed} failed)` : ''
+        }.`
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The calculation could not be completed.');
+      setError(err instanceof Error ? err.message : 'Bulk calculation failed.');
     } finally {
       setCalculating(false);
     }
-  }, [selectedId, period, performance, previousTier]);
+  }, [filteredManagers, period]);
 
-  const submit = useCallback(
-    async (status: 'draft' | 'pending_approval') => {
-      if (!selectedId) return;
-      setSaving(true);
-      setError(null);
+  const submitAll = useCallback(async () => {
+    setSaving(true);
+    setError(null);
+
+    const unsaved = rows.filter((r) => r.computation && !r.saved);
+    let success = 0;
+    let failed = 0;
+
+    for (const row of unsaved) {
+      if (!row.computation) continue;
       try {
         await saveStatement({
-          managerId: selectedId,
+          managerId: row.manager.id,
           period,
-          performance: performance ?? undefined,
-          previousTier,
+          performance: row.computation.qualification
+            ? {
+                value: row.computation.qualification.achievementPct ?? null,
+                source: 'revenue_achievement',
+                measures: [],
+                manualTier: null,
+                overrideReason: null,
+                efficiencyScore: null,
+                pduaScore: null,
+                branchCount: row.manager.scope.branchCount ?? null,
+              }
+            : undefined,
+          previousTier: row.manager.previousTier,
           statutory: loadStatutoryOverrides() ?? undefined,
-          status,
+          status: 'pending_approval',
         });
-        setNotice(
-          status === 'pending_approval'
-            ? 'Statement submitted for approval. It now appears in the approval queue.'
-            : 'Statement saved as a draft.'
+        setRows((prev) =>
+          prev.map((r) => (r.manager.id === row.manager.id ? { ...r, saved: true } : r))
         );
+        success += 1;
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'The statement could not be saved.');
-      } finally {
-        setSaving(false);
+        failed += 1;
       }
-    },
-    [selectedId, period, performance, previousTier]
+    }
+
+    setSubmittedCount(success);
+    setNotice(
+      `Submitted ${success} statement${success !== 1 ? 's' : ''} for approval.${failed ? ` ${failed} failed.` : ''}`
+    );
+    setSaving(false);
+  }, [rows, period]);
+
+  const qualifiedCount = useMemo(() => rows.filter((r) => r.computation?.qualification.tier).length, [rows]);
+  const totalCompanyCost = useMemo(
+    () => rows.reduce((sum, r) => sum + (r.computation?.totalCompanyCost ?? 0), 0),
+    [rows]
+  );
+  const totalGrossPay = useMemo(
+    () => rows.reduce((sum, r) => sum + (r.computation?.grossPay ?? 0), 0),
+    [rows]
+  );
+  const totalNetPay = useMemo(
+    () => rows.reduce((sum, r) => sum + (r.computation?.netCashPay ?? 0), 0),
+    [rows]
   );
 
-  const updatePerformance = (patch: Partial<PerformancePayload>) => {
-    setPerformance((previous) =>
-      previous ? { ...previous, ...patch, source: 'manual' } : previous
-    );
-  };
+  const allCalculated = rows.length > 0 && rows.every((r) => !r.loading);
+  const allSaved = rows.length > 0 && rows.every((r) => r.saved);
 
   return (
     <div className="space-y-6">
@@ -200,12 +313,12 @@ export default function RemunerationCalculatorPage() {
               Managerial remuneration
             </p>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Remuneration calculator
+              Bulk remuneration calculator
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
-              Build a manager&apos;s monthly statement in three steps: select the manager,
-              verify the performance result that sets the tier, then review the pay, the
-              deductions and the cost to the company.
+              Calculate monthly remuneration statements for every manager at once. Each
+              manager&rsquo;s tier is assigned automatically from their measured monthly
+              revenue against the approved pay bands in the remuneration guide.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -239,422 +352,288 @@ export default function RemunerationCalculatorPage() {
       {error ? <ErrorState message={error} onRetry={() => setError(null)} /> : null}
 
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-        {/* ------------------------------ Step rail ----------------------------- */}
+        {/* ------------------------------ Manager list ----------------------------- */}
         <aside className="space-y-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <ol className="space-y-1">
-              {STEPS.map((item) => {
-                const active = step === item.id;
-                const done = step > item.id;
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (item.id === 1 || (selectedId && item.id === 2) || computation) {
-                          setStep(item.id);
-                        }
-                      }}
-                      disabled={item.id !== 1 && !selectedId && !computation}
-                      className={`flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition ${
-                        active
-                          ? 'bg-brand-50 dark:bg-brand-500/10'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                      } ${item.id !== 1 && !selectedId && !computation ? 'opacity-50' : ''}`}
-                    >
-                      <span
-                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                          done
-                            ? 'bg-emerald-500 text-white'
-                            : active
-                            ? 'bg-brand-500 text-white'
-                            : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        {done ? '✓' : item.id}
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Managers in scope
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by name, office, district or province…"
+                className={inputClass}
+              />
+              <select
+                value={roleFilter}
+                onChange={(event) => setRoleFilter(event.target.value)}
+                className={inputClass}
+              >
+                <option value="all">All managerial roles</option>
+                {roles.map(([id, label]) => (
+                  <option key={id} value={id}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {managersLoading ? (
+              <LoadingState label="Loading the manager registry…" />
+            ) : filteredManagers.length === 0 ? (
+              <EmptyState
+                title="No managers match"
+                description="Adjust the search or register a managerial assignment on the Managers page."
+              />
+            ) : (
+              <div className="mt-3 max-h-[400px] space-y-2 overflow-y-auto pr-1">
+                {filteredManagers.map((manager) => (
+                  <div
+                    key={manager.id}
+                    className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-gray-700 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/5"
+                  >
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                      {initialsOf(manager.fullName)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">
+                        {manager.fullName}
                       </span>
-                      <span className="min-w-0">
-                        <span
-                          className={`block text-sm font-semibold ${
-                            active ? 'text-brand-600 dark:text-brand-300' : 'text-gray-800 dark:text-gray-100'
-                          }`}
-                        >
-                          {item.title}
-                        </span>
-                        <span className="block text-xs text-gray-500 dark:text-gray-400">
-                          {item.description}
-                        </span>
+                      <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                        {manager.scope.officeName ??
+                          manager.scope.districtName ??
+                          manager.scope.provinceName ??
+                          'No scope'}
+                        {manager.scope.branchCount ? ` · ${manager.scope.branchCount} branch(es)` : ''}
                       </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
+                    </span>
+                    <span className="shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400">
+                      {manager.roleName}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
-          {selected ? (
-            <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Selected manager
-              </p>
-              <div className="mt-3 flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-600 dark:bg-brand-500/15 dark:text-brand-300">
-                  {initialsOf(selected.fullName)}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                    {selected.fullName}
-                  </p>
-                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                    {selected.roleName}
-                  </p>
-                </div>
-              </div>
-              <dl className="mt-4 space-y-2 text-xs">
-                <div className="flex justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Scope</dt>
-                  <dd className="text-right font-medium text-gray-800 dark:text-gray-100">
-                    {selected.scope.officeName ??
-                      selected.scope.districtName ??
-                      selected.scope.provinceName ??
-                      'Not assigned'}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Branches in scope</dt>
-                  <dd className="text-right font-medium text-gray-800 dark:text-gray-100">
-                    {selected.scope.branchCount || '—'}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Appointment</dt>
-                  <dd className="text-right font-medium text-gray-800 dark:text-gray-100">
-                    {selected.appointmentDate ?? 'Not recorded'}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-gray-500 dark:text-gray-400">Status</dt>
-                  <dd className="text-right font-medium text-gray-800 dark:text-gray-100">
-                    {selected.acting ? 'Acting' : 'Substantive'}
-                  </dd>
-                </div>
-              </dl>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedId(null);
-                  setPerformance(null);
-                  setComputation(null);
-                  setPreviousTier(null);
-                  setStep(1);
-                }}
-                className="mt-4 w-full rounded-xl border border-gray-300 px-3 py-2 text-xs font-semibold text-gray-600 transition hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Bulk actions
+            </p>
+            <div className="mt-3 space-y-2">
+              <PrimaryButton
+                onClick={calculateAll}
+                disabled={calculating || filteredManagers.length === 0}
               >
-                Choose a different manager
-              </button>
+                {calculating ? 'Calculating all…' : 'Calculate all statements'}
+              </PrimaryButton>
+              <SecondaryButton
+                onClick={submitAll}
+                disabled={saving || !allCalculated || allSaved || rows.length === 0}
+              >
+                {saving ? 'Submitting…' : 'Submit all for approval'}
+              </SecondaryButton>
+              {submittedCount > 0 && (
+                <SecondaryButton onClick={() => setSubmittedCount(0)}>
+                  Dismiss notice
+                </SecondaryButton>
+              )}
             </div>
-          ) : null}
+            <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+              {filteredManagers.length} manager{filteredManagers.length !== 1 ? 's' : ''} in current filter.
+            </p>
+          </div>
         </aside>
 
-        {/* ------------------------------- Content ------------------------------ */}
+        {/* ------------------------------- Results table ------------------------------ */}
         <div className="min-w-0 space-y-6">
-          {step === 1 ? (
+          {rows.length === 0 ? (
             <SectionCard
-              title="Select a manager"
-              description="Search the staff registry and the office appointments. Managers can also be registered on the Managers page."
+              title="No calculations yet"
+              description="Select a pay period and click Calculate all statements to generate remuneration statements for every manager."
             >
-              {managersLoading ? (
-                <LoadingState label="Loading the manager registry…" />
-              ) : (
-                <>
-                  <div className="mb-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
-                    <input
-                      type="search"
-                      value={search}
-                      onChange={(event) => setSearch(event.target.value)}
-                      placeholder="Search by name, office, district or province…"
-                      className={inputClass}
-                    />
-                    <select
-                      value={roleFilter}
-                      onChange={(event) => setRoleFilter(event.target.value)}
-                      className={inputClass}
-                    >
-                      <option value="all">All managerial roles</option>
-                      {roles.map(([id, label]) => (
-                        <option key={id} value={id}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {filteredManagers.length === 0 ? (
-                    <EmptyState
-                      title="No managers match"
-                      description="Adjust the search or register a managerial assignment on the Managers page."
-                    />
-                  ) : (
-                    <div ref={listRef} className="max-h-[520px] space-y-2 overflow-y-auto pr-1">
-                      {filteredManagers.map((manager) => (
-                        <button
-                          key={manager.id}
-                          type="button"
-                          onClick={() => selectManager(manager.id)}
-                          className="flex w-full items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-gray-700 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/5"
-                        >
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-200">
-                            {initialsOf(manager.fullName)}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">
-                              {manager.fullName}
-                            </span>
-                            <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
-                              {manager.scope.officeName ??
-                                manager.scope.districtName ??
-                                manager.scope.provinceName ??
-                                'No scope'}
-                              {manager.scope.branchCount ? ` · ${manager.scope.branchCount} branch(es)` : ''}
-                            </span>
-                          </span>
-                          <span className="shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400">
-                            {manager.roleName}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              )}
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Each manager&rsquo;s tier is determined automatically from their measured
+                monthly revenue against the approved bands in the remuneration guide.
+              </p>
             </SectionCard>
-          ) : null}
-
-          {step === 2 && selected ? (
-            performanceLoading ? (
-              <LoadingState label="Retrieving performance results…" />
-            ) : (
-              <SectionCard
-                title="Performance result and qualifying tier"
-                description="Confirm the measured result before the tier is applied."
-                actions={
-                  <SecondaryButton onClick={() => setStep(1)}>Change manager</SecondaryButton>
-                }
-              >
-                {performance ? (
-                  <div className="space-y-6">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field
-                        label={`${performance.measures[0]?.label ?? 'Measured result'} (${performance.measures[0]?.unit ?? 'ZMW'})`}
-                        hint={
-                          performance.source === 'manual'
-                            ? 'Entered manually — internal audit must verify it.'
-                            : `Source: ${performance.source}`
-                        }
-                      >
-                        <input
-                          type="number"
-                          value={performance.value ?? ''}
-                          onChange={(event) =>
-                            updatePerformance({
-                              value:
-                                event.target.value === '' ? null : Number(event.target.value),
-                            })
-                          }
-                          className={inputClass}
-                          placeholder="e.g. 580314"
-                        />
-                      </Field>
-                      <Field
-                        label="Branches in scope"
-                        hint="Used for the branch-count condition attached to a band."
-                      >
-                        <input
-                          type="number"
-                          value={performance.branchCount ?? ''}
-                          onChange={(event) =>
-                            updatePerformance({
-                              branchCount:
-                                event.target.value === '' ? null : Number(event.target.value),
-                            })
-                          }
-                          className={inputClass}
-                        />
-                      </Field>
-                      <Field
-                        label="Tier earned last period"
-                        hint="Applies the housing continuity rule when the tier drops."
-                      >
-                        <select
-                          value={previousTier ?? ''}
-                          onChange={(event) =>
-                            setPreviousTier(
-                              event.target.value === '' ? null : Number(event.target.value)
-                            )
-                          }
-                          className={inputClass}
-                        >
-                          <option value="">Not recorded</option>
-                          {[1, 2, 3, 4, 5, 6].map((tier) => (
-                            <option key={tier} value={tier}>
-                              Tier {tier}
-                            </option>
-                          ))}
-                        </select>
-                      </Field>
-                    </div>
-
-                    {performance.measures.length ? (
-                      <div className="rounded-xl border border-gray-200 dark:border-gray-700">
-                        <p className="border-b border-gray-100 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400">
-                          Source evidence
-                        </p>
-                        <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-                          {performance.measures.map((measure) => (
-                            <li
-                              key={measure.code}
-                              className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
-                            >
-                              <div>
-                                <p className="font-medium text-gray-800 dark:text-gray-100">
-                                  {measure.label}
-                                </p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500">
-                                  {measure.source}
-                                  {measure.period ? ` · ${measure.period}` : ''}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-semibold tabular-nums text-gray-900 dark:text-white">
-                                  {measure.value === null ? '—' : formatZMW(measure.value)}
-                                </p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500">
-                                  {measure.target !== null
-                                    ? `target ${formatZMW(measure.target)}`
-                                    : 'no target'}
-                                </p>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field
-                        label="Verified efficiency score (%)"
-                        hint="Supports the annual bonus conditions."
-                      >
-                        <input
-                          type="number"
-                          value={performance.efficiencyScore ?? ''}
-                          onChange={(event) =>
-                            updatePerformance({
-                              efficiencyScore:
-                                event.target.value === '' ? null : Number(event.target.value),
-                            })
-                          }
-                          className={inputClass}
-                          placeholder="e.g. 82"
-                        />
-                      </Field>
-                      <Field
-                        label="Verified PDUA score (%)"
-                        hint="Supports the annual bonus conditions."
-                      >
-                        <input
-                          type="number"
-                          value={performance.pduaScore ?? ''}
-                          onChange={(event) =>
-                            updatePerformance({
-                              pduaScore:
-                                event.target.value === '' ? null : Number(event.target.value),
-                            })
-                          }
-                          className={inputClass}
-                          placeholder="e.g. 85"
-                        />
-                      </Field>
-                    </div>
-
-                    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-500/30 dark:bg-amber-500/5">
-                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                        Assign a tier manually
-                      </p>
-                      <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
-                        Some bands are assessed on scope and evidence rather than a number. Select
-                        the qualifying band and record the reason so the decision is auditable.
-                      </p>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
-                        <select
-                          value={performance.manualTier ?? ''}
-                          onChange={(event) =>
-                            updatePerformance({
-                              manualTier:
-                                event.target.value === '' ? null : Number(event.target.value),
-                            })
-                          }
-                          className={inputClass}
-                        >
-                          <option value="">Automatic</option>
-                          {(computation?.qualification.evaluatedTiers.length
-                            ? computation.qualification.evaluatedTiers
-                            : []
-                          ).map((tier) => (
-                            <option key={tier.tier} value={tier.tier}>
-                              Tier {tier.tier}
-                            </option>
-                          ))}
-                          {[1, 2, 3, 4, 5, 6].map((tier) => (
-                            <option key={tier} value={tier}>
-                              Tier {tier}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="text"
-                          value={performance.overrideReason ?? ''}
-                          onChange={(event) =>
-                            updatePerformance({ overrideReason: event.target.value })
-                          }
-                          placeholder="Reason for the manual assignment"
-                          className={inputClass}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end">
-                      <PrimaryButton onClick={runCalculation} disabled={calculating}>
-                        {calculating ? 'Calculating…' : 'Calculate statement'}
-                      </PrimaryButton>
-                    </div>
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="No performance result available"
-                    description="The source system did not return a result for this scope. Enter the measured value manually — the system records it as a manual entry for audit."
-                  />
-                )}
-              </SectionCard>
-            )
-          ) : null}
-
-          {step === 3 && computation ? (
+          ) : (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <SecondaryButton onClick={() => setStep(2)}>Back to performance</SecondaryButton>
-                <div className="flex flex-wrap gap-3">
-                  <SecondaryButton onClick={() => submit('draft')} disabled={saving}>
-                    Save draft
-                  </SecondaryButton>
-                  <PrimaryButton onClick={() => submit('pending_approval')} disabled={saving}>
-                    {saving ? 'Saving…' : 'Submit for approval'}
-                  </PrimaryButton>
+              <div className="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <div className="border-b border-gray-200 px-6 py-4 dark:border-gray-700 sm:flex sm:items-center sm:justify-between">
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                    Calculation results
+                  </h2>
+                  <div className="mt-2 sm:mt-0 flex flex-wrap gap-2 text-sm">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      qualifiedCount === rows.length && rows.length > 0
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                    }`}>
+                      {qualifiedCount} of {rows.length} qualified
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Manager
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Role
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Scope
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Measured revenue
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Tier
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Gross pay
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Net cash pay
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Cost to company
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {rows.map((row) => (
+                        <tr key={row.manager.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                          <td className="px-6 py-3">
+                            <div className="flex items-center gap-3">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                                {initialsOf(row.manager.fullName)}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                  {row.manager.fullName}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                  {row.manager.email ?? 'No email'}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
+                            {row.manager.roleName}
+                          </td>
+                          <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300 truncate">
+                            {row.manager.scope.officeName ??
+                              row.manager.scope.districtName ??
+                              row.manager.scope.provinceName ??
+                              'No scope'}
+                          </td>
+                          <td className="px-6 py-3 text-right text-sm tabular-nums text-gray-700 dark:text-gray-300">
+                            {(() => {
+                              const rev = row.measuredRevenue;
+                              if (rev === null) return row.loading ? '—' : '—';
+                              return formatZMW(rev);
+                            })()}
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            {row.loading ? (
+                              <span className="text-xs text-gray-400">—</span>
+                            ) : row.computation?.qualification.tier ? (
+                              <TierBadge
+                                tier={row.computation.qualification.tier}
+                                label={row.computation.qualification.label}
+                                proposed={row.computation.qualification.status === 'proposed'}
+                              />
+                            ) : (
+                              <span className="text-xs text-red-500 dark:text-red-400">Not qualified</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-3 text-right text-sm tabular-nums text-gray-700 dark:text-gray-300">
+                            {row.computation ? formatZMW(row.computation.grossPay) : '—'}
+                          </td>
+                          <td className="px-6 py-3 text-right text-sm tabular-nums text-emerald-600 dark:text-emerald-400 font-medium">
+                            {row.computation ? formatZMW(row.computation.netCashPay) : '—'}
+                          </td>
+                          <td className="px-6 py-3 text-right text-sm tabular-nums text-gray-700 dark:text-gray-300">
+                            {row.computation ? formatZMW(row.computation.totalCompanyCost) : '—'}
+                          </td>
+                          <td className="px-6 py-3 text-left">
+                            {row.error ? (
+                              <span className="text-xs text-red-500 dark:text-red-400">Error</span>
+                            ) : row.loading ? (
+                              <span className="text-xs text-gray-400 animate-pulse">Calculating…</span>
+                            ) : row.saved ? (
+                              <span className="text-xs text-emerald-600 dark:text-emerald-400">Submitted</span>
+                            ) : (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">Pending</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <StatementPanel computation={computation} />
+
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">
+                  Totals
+                </h3>
+                <div className="grid gap-4 sm:grid-cols-4">
+                  <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Managers calculated
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
+                      {rows.length}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Qualified for a tier
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
+                      {qualifiedCount}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Total gross pay
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
+                      {formatZMW(totalGrossPay)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      Total cost to company
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
+                      {formatZMW(totalCompanyCost)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <SecondaryButton onClick={() => setRows([])}>Clear results</SecondaryButton>
+                <PrimaryButton
+                  onClick={submitAll}
+                  disabled={saving || !allCalculated || allSaved || rows.length === 0}
+                >
+                  {saving ? 'Submitting…' : 'Submit all for approval'}
+                </PrimaryButton>
+              </div>
             </>
-          ) : null}
+          )}
         </div>
       </div>
     </div>
