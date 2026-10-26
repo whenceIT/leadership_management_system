@@ -289,46 +289,39 @@ function ConsultantCard({
   );
 }
 
-// ─── Collapsible tree rows ────────────────────────────────────────────────────
+// ─── Drill-down rows ───────────────────────────────────────────────────────────
 
 function SeverityDot({ sev }: { sev: GuidanceSeverity }) {
   return <span className={`w-2 h-2 rounded-full ${SEV[sev].dot} shrink-0`} />;
 }
 
-function TreeRow({
-  label, count, sev, depth, open, onToggle, children,
+function DrillRow({
+  label, count, sev, onPress,
 }: {
   label: string; count: number; sev: GuidanceSeverity;
-  depth: 0 | 1 | 2; open: boolean; onToggle: () => void;
-  children?: React.ReactNode;
+  onPress: () => void;
 }) {
-  const depthStyles = {
-    0: 'bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 mb-2',
-    1: 'ml-4 border-l-2 border-slate-200 dark:border-slate-700 pl-3 mb-2',
-    2: 'ml-4 border-l border-slate-200 dark:border-slate-700 pl-3 mb-2',
-  }[depth];
-
-  const buttonStyles = {
-    0: 'w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors',
-    1: 'w-full flex items-center gap-2 px-3 py-2 text-left bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors',
-    2: 'w-full flex items-center gap-2 px-3 py-1.5 text-left bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors',
-  }[depth];
-
-  const labelSize = depth === 0 ? 'text-[13px] font-semibold text-slate-900 dark:text-white'
-    : depth === 1 ? 'text-[12px] font-semibold text-slate-700 dark:text-slate-200'
-    : 'text-[11px] font-medium text-slate-600 dark:text-slate-300';
-
   return (
-    <div className={depthStyles}>
-      <button type="button" onClick={onToggle} className={buttonStyles}>
-        <SeverityDot sev={sev} />
-        <span className={`flex-1 ${labelSize}`}>{label}</span>
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${SEV[sev].pillBg} ${SEV[sev].pillText}`}>
-          {count}
-        </span>
-        <Chevron open={open} />
+    <button type="button" onClick={onPress} className="w-full flex items-center gap-2.5 px-4 py-3 text-left bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+      <SeverityDot sev={sev} />
+      <span className="flex-1 min-w-0 text-[13px] font-semibold text-slate-900 dark:text-white truncate">{label}</span>
+      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${SEV[sev].pillBg} ${SEV[sev].pillText}`}>
+        {count}
+      </span>
+      <Chevron open={false} />
+    </button>
+  );
+}
+
+function DrillHeader({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <div className="flex items-center gap-2 px-4 py-3 text-left bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 mb-2">
+      <button type="button" onClick={onBack} className="-ml-1 p-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0" aria-label="Back">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+        </svg>
       </button>
-      {open && <div className={depth === 0 ? 'px-3 pb-3' : 'pt-1.5'}>{children}</div>}
+      <span className="flex-1 min-w-0 text-[13px] font-semibold text-slate-900 dark:text-white truncate">{title}</span>
     </div>
   );
 }
@@ -382,9 +375,7 @@ export default function ManagerGuidanceSheet({ input }: { input?: any }) {
   const [isClosing, setIsClosing] = useState(false);
   const [tab, setTab] = useState<'all' | 'critical' | 'high'>('all');
 
-  const [expandedProvinces, setExpandedProvinces] = useState<Set<string>>(new Set());
-  const [expandedDistricts, setExpandedDistricts] = useState<Set<string>>(new Set());
-  const [expandedOffices, setExpandedOffices] = useState<Set<string>>(new Set());
+  const [drillPath, setDrillPath] = useState<string[]>([]);
 
   const seenSignaturesRef = useRef<Set<string>>(new Set());
   const userDismissedRef = useRef(false);
@@ -426,18 +417,6 @@ export default function ManagerGuidanceSheet({ input }: { input?: any }) {
       }
     }
   }, [recommendations, isOpen]);
-
-  // ── tree toggle helpers ──
-
-  const toggleProvince = useCallback((name: string) => {
-    setExpandedProvinces((p) => { const n = new Set(p); n.has(name) ? n.delete(name) : n.add(name); return n; });
-  }, []);
-  const toggleDistrict = useCallback((key: string) => {
-    setExpandedDistricts((p) => { const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n; });
-  }, []);
-  const toggleOffice = useCallback((key: string) => {
-    setExpandedOffices((p) => { const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n; });
-  }, []);
 
   // ── group recs into province→district→office tree ──
 
@@ -557,52 +536,81 @@ export default function ManagerGuidanceSheet({ input }: { input?: any }) {
     return (
       <div className="space-y-1">
         <StatsBar criticalCount={criticalCount} activeCount={activeCount} />
-        {Array.from(grouped.entries()).map(([provinceName, pNode]) => {
-          const pOpen = expandedProvinces.has(provinceName);
-          const pCount = Array.from(pNode.districts.values())
-            .reduce((a, d) => a + Array.from(d.offices.values()).reduce((b, o) => b + o.consultants.length, 0), 0);
 
-          return (
-            <TreeRow
-              key={provinceName} label={provinceName} count={pCount}
-              sev={pNode.worstSeverity} depth={0} open={pOpen}
-              onToggle={() => toggleProvince(provinceName)}
-            >
-              {Array.from(pNode.districts.entries()).map(([districtName, dNode]) => {
-                const dKey = `${provinceName}::${districtName}`;
-                const dOpen = expandedDistricts.has(dKey);
-                const dCount = Array.from(dNode.offices.values()).reduce((a, o) => a + o.consultants.length, 0);
+        {/* ─── Drill level: provinces ─── */}
+        {!drillPath[0] && (
+          <div className="space-y-1">
+            {Array.from(grouped.entries()).map(([provinceName, pNode]) => {
+              const pCount = Array.from(pNode.districts.values())
+                .reduce((a, d) => a + Array.from(d.offices.values()).reduce((b, o) => b + o.consultants.length, 0), 0);
 
-                return (
-                  <TreeRow
-                    key={districtName} label={districtName} count={dCount}
-                    sev={dNode.worstSeverity} depth={1} open={dOpen}
-                    onToggle={() => toggleDistrict(dKey)}
-                  >
-                    {Array.from(dNode.offices.entries()).map(([officeName, oNode]) => {
-                      const oKey = `${dKey}::${officeName}`;
-                      const oOpen = expandedOffices.has(oKey);
+              return (
+                <DrillRow
+                  key={provinceName} label={provinceName} count={pCount}
+                  sev={pNode.worstSeverity}
+                  onPress={() => setDrillPath([provinceName])}
+                />
+              );
+            })}
+          </div>
+        )}
 
+        {drillPath[0] && (
+          <>
+            <DrillHeader title={drillPath[0]} onBack={() => setDrillPath([])} />
+
+            {/* ─── Drill level: districts ─── */}
+            {!drillPath[1] && (
+              <div className="space-y-1">
+                {Array.from(grouped.get(drillPath[0])!.districts.entries()).map(([districtName, dNode]) => {
+                  const dCount = Array.from(dNode.offices.values()).reduce((a, o) => a + o.consultants.length, 0);
+
+                  return (
+                    <DrillRow
+                      key={districtName} label={districtName} count={dCount}
+                      sev={dNode.worstSeverity}
+                      onPress={() => setDrillPath([drillPath[0]!, districtName])}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {drillPath[0] && drillPath[1] && (
+              <>
+                <DrillHeader title={drillPath[1]} onBack={() => setDrillPath(drillPath.slice(0, -1))} />
+
+                {/* ─── Drill level: offices ─── */}
+                {!drillPath[2] && (
+                  <div className="space-y-1">
+                    {Array.from(grouped.get(drillPath[0])!.districts.get(drillPath[1])!.offices.entries()).map(([officeName, oNode]) => {
                       return (
-                        <TreeRow
+                        <DrillRow
                           key={officeName} label={officeName} count={oNode.consultants.length}
-                          sev={oNode.worstSeverity} depth={2} open={oOpen}
-                          onToggle={() => toggleOffice(oKey)}
-                        >
-                          <div className="space-y-2 pt-1">
-                            {oNode.consultants.map((node) => (
-                              <ConsultantCard key={node.rec.id} node={node} onNavigate={navigateToRoute} />
-                            ))}
-                          </div>
-                        </TreeRow>
+                          sev={oNode.worstSeverity}
+                          onPress={() => setDrillPath([drillPath[0]!, drillPath[1]!, officeName])}
+                        />
                       );
                     })}
-                  </TreeRow>
-                );
-              })}
-            </TreeRow>
-          );
-        })}
+                  </div>
+                )}
+
+                {drillPath[0] && drillPath[1] && drillPath[2] && (
+                  <>
+                    <DrillHeader title={drillPath[2]} onBack={() => setDrillPath(drillPath.slice(0, -1))} />
+
+                    {/* ─── Drill level: consultants ─── */}
+                    <div className="space-y-2 pt-1">
+                      {grouped.get(drillPath[0])!.districts.get(drillPath[1])!.offices.get(drillPath[2])!.consultants.map((node) => (
+                        <ConsultantCard key={node.rec.id} node={node} onNavigate={navigateToRoute} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </>
+        )}
       </div>
     );
   };

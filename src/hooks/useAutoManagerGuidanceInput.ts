@@ -47,8 +47,12 @@ export function useAutoManagerGuidanceInput(enabled: boolean): GuidanceEngineInp
 
     async function load() {
       try {
+        // Branch managers see only their own office; higher tiers see every office.
+        const fetchAllOffices = tier !== 'branch';
+        const targetOfficeId = fetchAllOffices ? undefined : officeId;
+
         const consultants = await fetchConsultantPerformanceByOffice(
-          officeId,
+          targetOfficeId,
           new Date().toISOString().slice(0, 7) + '-01',
           new Date().toISOString().slice(0, 10)
         );
@@ -69,14 +73,14 @@ export function useAutoManagerGuidanceInput(enabled: boolean): GuidanceEngineInp
     return () => {
       cancelled = true;
     };
-  }, [enabled, officeId]);
+  }, [enabled, officeId, tier]);
 
   return useMemo(() => {
     if (!enabled) return null;
     return {
       managerContext,
       consultants: fetchedData?.consultants ?? [],
-      maxRecommendations: 5,
+      maxRecommendations: 1000,
     };
   }, [enabled, managerContext, fetchedData?.consultants]);
 }
