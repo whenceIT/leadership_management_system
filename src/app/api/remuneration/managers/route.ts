@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { createBackendAssignment } from '@/lib/remuneration/backend';
+import { buildRegistry, fetchApiManagers, mapApiManager } from '@/lib/remuneration/registry';
 import {
   loadServiceAssignments,
   loadServiceStructure,
   resolveServiceConfig,
 } from '@/lib/remuneration/payroll';
-import { buildRegistry } from '@/lib/remuneration/registry';
 import { getAdapter, makeId } from '@/lib/remuneration/store';
 import { ROLES_BY_ID } from '@/lib/remuneration/structure';
 import type { ManagerProfile, ManagerScope } from '@/lib/remuneration/types';
@@ -27,6 +27,14 @@ export async function GET(request: NextRequest) {
     const scopeFilter = searchParams.get('scope');
 
     const adapter = await getAdapter();
+
+    const apiManagers = await fetchApiManagers();
+    const apiProfiles = apiManagers.map(mapApiManager);
+
+    for (const profile of apiProfiles) {
+      await adapter.saveProfile(profile);
+    }
+
     const registered = await adapter.listProfiles();
     const [snapshot, structure, serviceAssignments] = await Promise.all([
       buildRegistry(registered),
@@ -174,6 +182,7 @@ export async function POST(request: NextRequest) {
       email: body.email ?? existing?.email ?? null,
       roleId: role.id,
       roleName: role.name,
+      jobPosition: role.name,
       scope,
       appointmentDate: body.appointmentDate ?? existing?.appointmentDate ?? null,
       acting: body.acting ?? existing?.acting ?? false,

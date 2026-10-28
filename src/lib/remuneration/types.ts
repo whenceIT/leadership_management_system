@@ -202,6 +202,7 @@ export interface ManagerProfile {
   email: string | null;
   roleId: string;
   roleName: string;
+  jobPosition: string | null;
   scope: ManagerScope;
   appointmentDate: string | null;
   acting: boolean;

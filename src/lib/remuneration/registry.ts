@@ -7,7 +7,7 @@
  * and effective remuneration period).
  */
 
-import { getRoleForPosition } from './structure';
+import { getRoleForPosition, ROLES_BY_ID } from './structure';
 import {
   fetchOfficeManagers,
   fetchOffices,
@@ -16,6 +16,162 @@ import {
   type SourceStaff,
 } from './source';
 import type { ManagerProfile, ManagerScope, RoleDefinition } from './types';
+
+const MANAGERS_API_BASE = 'https://smartbackend.whencefinancesystem.com/api/remuneration';
+
+export interface ApiManager {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  status: string;
+  created_at: string;
+  office_id: number | null;
+  office_name: string | null;
+  district_id: number | null;
+  district_name: string | null;
+  province_id: number | null;
+  province_name: string | null;
+  job_position_id: number | null;
+  job_position: string | null;
+  role_id: number;
+}
+
+export async function fetchApiManagers(): Promise<ApiManager[]> {
+  try {
+    const response = await fetch(`${MANAGERS_API_BASE}/managers`, {
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) return [];
+    const payload = await response.json().catch(() => ({ success: false, data: [] }));
+    if (!payload.success || !Array.isArray(payload.data)) return [];
+    return payload.data;
+  } catch {
+    return [];
+  }
+}
+
+function inferRoleFromPosition(jobPosition: string | null): RoleDefinition | null {
+  if (!jobPosition) return null;
+  const normalized = jobPosition.toLowerCase();
+
+  if (
+    normalized.includes('executive chairperson') ||
+    normalized.includes('director') ||
+    normalized.includes('department head')
+  ) {
+    const role = ROLES_BY_ID['provincial_manager'];
+    if (role) return role;
+  }
+  if (
+    normalized.includes('general operations administrator') ||
+    normalized.includes('personnel') ||
+    normalized.includes('recruit')
+  ) {
+    const role = ROLES_BY_ID['personnel_manager'];
+    if (role) return role;
+  }
+  if (
+    normalized.includes('performance operations administrator') ||
+    normalized.includes('poua') ||
+    normalized.includes('poa')
+  ) {
+    const role = ROLES_BY_ID['performance_manager'];
+    if (role) return role;
+  }
+  if (normalized.includes('branch manager')) {
+    const role = ROLES_BY_ID['branch_manager'];
+    if (role) return role;
+  }
+  if (
+    normalized.includes('district') &&
+    (normalized.includes('manager') || normalized.includes('regional'))
+  ) {
+    const role = ROLES_BY_ID['district_manager'];
+    if (role) return role;
+  }
+  if (normalized.includes('provincial') && normalized.includes('manager')) {
+    const role = ROLES_BY_ID['provincial_manager'];
+    if (role) return role;
+  }
+  if (normalized.includes('loan consultant')) {
+    const role = ROLES_BY_ID['branch_manager'];
+    if (role) return role;
+  }
+  if (normalized.includes('motor vehicle')) {
+    const role = ROLES_BY_ID['motor_vehicle_manager'];
+    if (role) return role;
+  }
+  if (normalized.includes('recoveries')) {
+    const role = ROLES_BY_ID['recoveries_coordinator'];
+    if (role) return role;
+  }
+
+  const defaultRole = ROLES_BY_ID['branch_manager'];
+  return defaultRole ?? null;
+}
+
+function estimateBranchCount(
+  officeId: number | null,
+  districtId: number | null,
+  provinceId: number | null
+): number {
+  if (!officeId) return 1;
+  if (provinceId === 2) return 15;
+  if (provinceId === 6 || provinceId === 3 || provinceId === 9) return 10;
+  if (districtId === 65 || districtId === 20) return 5;
+  return 1;
+}
+
+export function mapApiManager(manager: ApiManager): ManagerProfile {
+  const fullName = `${manager.first_name} ${manager.last_name}`;
+  const roleFromId =
+    manager.job_position_id != null ? getRoleForPosition(manager.job_position_id) : null;
+  const role = roleFromId ?? inferRoleFromPosition(manager.job_position);
+
+  const roleId = role?.id ?? 'branch_manager';
+  const roleName = role?.name ?? 'Branch Manager';
+  const jobPosition = manager.job_position;
+
+  const branchCount = estimateBranchCount(
+    manager.office_id,
+    manager.district_id,
+    manager.province_id
+  );
+  const now = new Date().toISOString();
+
+  return {
+    id: `api-${manager.id}`,
+    userId: manager.id,
+    fullName,
+    email: manager.email,
+    roleId,
+    roleName,
+    jobPosition,
+    scope: {
+      officeId: manager.office_id,
+      officeName: manager.office_name,
+      districtId: manager.district_id,
+      districtName: manager.district_name,
+      provinceId: manager.province_id,
+      provinceName: manager.province_name,
+      department: null,
+      branchCount,
+    },
+    appointmentDate: null,
+    acting: false,
+    effectiveFrom: null,
+    effectiveTo: null,
+    status: manager.status === 'Active' ? 'active' : 'inactive',
+    source: 'registered',
+    registeredId: null,
+    previousTier: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 export const PROVINCE_NAMES: Record<number, string> = {
   1: 'Lusaka',
@@ -132,6 +288,7 @@ function profileFromStaff(
     email: staff.email,
     roleId: role.id,
     roleName: role.name,
+    jobPosition: role.name,
     scope: scopeFor(role, office, offices, districts),
     appointmentDate: null,
     acting: false,
@@ -161,6 +318,7 @@ function profileFromOfficeAppointment(
     email: manager.email,
     roleId: role.id,
     roleName: role.name,
+    jobPosition: role.name,
     scope: scopeFor(role, office, offices, districts),
     appointmentDate: null,
     acting: false,
@@ -197,6 +355,7 @@ function mergeProfiles(
         id: existing.id,
         source: 'registered',
         registeredId: profile.id,
+        jobPosition: profile.jobPosition ?? existing.jobPosition,
         scope: {
           ...existing.scope,
           ...profile.scope,
@@ -228,11 +387,12 @@ async function safeSource<T>(label: string, run: () => Promise<T>, fallback: T):
 export async function buildRegistry(
   registeredProfiles: ManagerProfile[] = []
 ): Promise<RegistrySnapshot> {
-  const [offices, staff, officeManagers, districts] = await Promise.all([
+  const [offices, staff, officeManagers, districts, apiManagers] = await Promise.all([
     safeSource('offices', fetchOffices, []),
     safeSource('staff', fetchStaff, []),
     safeSource('office managers', fetchOfficeManagers, []),
     safeSource('districts', fetchDistricts, []),
+    safeSource('managers API', fetchApiManagers, []),
   ]);
 
   const derived: ManagerProfile[] = [];
@@ -254,6 +414,13 @@ export async function buildRegistry(
         if (derived.some((d) => d.userId === manager.id)) continue;
         derived.push(profileFromOfficeAppointment(manager, office, branchRole, offices, districts));
       }
+    }
+  }
+
+  for (const apiManager of apiManagers) {
+    const profile = mapApiManager(apiManager);
+    if (!derived.some((d) => d.userId === profile.userId)) {
+      derived.push(profile);
     }
   }
 

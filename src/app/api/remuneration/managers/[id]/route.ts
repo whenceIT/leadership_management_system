@@ -68,6 +68,7 @@ export async function PATCH(
       email: body.email ?? existing.email,
       roleId: role.id,
       roleName: role.name,
+      jobPosition: role.name,
       scope,
       appointmentDate: body.appointmentDate ?? existing.appointmentDate,
       acting: body.acting ?? existing.acting,

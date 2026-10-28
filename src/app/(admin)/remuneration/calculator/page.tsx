@@ -25,11 +25,19 @@ import {
   type PerformancePayload,
 } from '@/services/RemunerationService';
 
-const ROLE_TO_POSITION: Record<string, string> = {
-  branch_manager: 'branch_manager',
-  district_manager: 'district_manager',
+const POSITION_API_OVERRIDES: Record<string, string> = {
   provincial_manager: 'province_manager',
 };
+
+function derivePositionApiString(jobPosition: string | null, roleId: string): string | null {
+  if (!jobPosition) {
+    const fallback = POSITION_API_OVERRIDES[roleId];
+    if (!fallback) return null;
+    return fallback;
+  }
+  const candidate = jobPosition.toLowerCase().replace(/[\s/]+/g, '_').replace(/['']/g, '');
+  return POSITION_API_OVERRIDES[roleId] ?? candidate;
+}
 
 function periodDates(period: string): { start: string; end: string } {
   const [year, month] = period.split('-').map(Number);
@@ -85,9 +93,8 @@ export default function RemunerationCalculatorPage() {
         ]
           .join(' ')
           .toLowerCase()
-          .includes(term);
-      })
-      .slice(0, 120);
+           .includes(term);
+       })
   }, [managers, roleFilter, search]);
 
   useEffect(() => {
@@ -111,7 +118,7 @@ export default function RemunerationCalculatorPage() {
 
   const fetchPerformanceForManager = useCallback(
     async (manager: ManagerProfile, periodValue: string): Promise<PerformancePayload | null> => {
-      const position = ROLE_TO_POSITION[manager.roleId];
+      const position = derivePositionApiString(manager.jobPosition, manager.roleId);
       if (!position) return null;
 
       const params: PerformanceCriteriaParams = { job_position: position };
@@ -179,7 +186,7 @@ export default function RemunerationCalculatorPage() {
 
         let performance: PerformancePayload | null = null;
         try {
-          const position = ROLE_TO_POSITION[manager.roleId];
+          const position = derivePositionApiString(manager.jobPosition, manager.roleId);
           if (position) {
             const params: PerformanceCriteriaParams = { job_position: position };
             const officeId = manager.scope.officeId;
