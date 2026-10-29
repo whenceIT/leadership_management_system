@@ -133,7 +133,7 @@ export function mapApiManager(manager: ApiManager): ManagerProfile {
 
   const roleId = role?.id ?? 'branch_manager';
   const roleName = role?.name ?? 'Branch Manager';
-  const jobPosition = manager.job_position;
+  const jobPosition = manager.job_position ?? 'No Position';
 
   const branchCount = estimateBranchCount(
     manager.office_id,

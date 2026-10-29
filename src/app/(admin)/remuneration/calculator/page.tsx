@@ -86,7 +86,7 @@ export default function RemunerationCalculatorPage() {
         return [
           manager.fullName,
           manager.email ?? '',
-          manager.roleName,
+          manager.jobPosition ?? '',
           manager.scope.officeName ?? '',
           manager.scope.districtName ?? '',
           manager.scope.provinceName ?? '',
@@ -365,14 +365,8 @@ export default function RemunerationCalculatorPage() {
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
               Managers in scope
             </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by name, office, district or province…"
-                className={inputClass}
-              />
+            <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_0px]">
+       
               <select
                 value={roleFilter}
                 onChange={(event) => setRoleFilter(event.target.value)}
@@ -399,25 +393,30 @@ export default function RemunerationCalculatorPage() {
                 {filteredManagers.map((manager) => (
                   <div
                     key={manager.id}
-                    className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-gray-700 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/5"
+                    className="flex items-start gap-3 rounded-xl border border-gray-200 px-4 py-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-gray-700 dark:hover:border-brand-500/40 dark:hover:bg-brand-500/5"
                   >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-200">
                       {initialsOf(manager.fullName)}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-gray-900 dark:text-white">
+                      <span className="block text-sm font-semibold text-gray-900 dark:text-white">
                         {manager.fullName}
                       </span>
-                      <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+                      <span className="block text-xs font-medium text-gray-600 dark:text-gray-300">
+                        {manager.jobPosition}
+                      </span>
+                      <span className="block text-xs text-gray-500 dark:text-gray-400">
                         {manager.scope.officeName ??
                           manager.scope.districtName ??
                           manager.scope.provinceName ??
                           'No scope'}
                         {manager.scope.branchCount ? ` · ${manager.scope.branchCount} branch(es)` : ''}
                       </span>
-                    </span>
-                    <span className="shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400">
-                      {manager.roleName}
+                      {manager.email ? (
+                        <span className="block truncate text-xs text-gray-400/80 dark:text-gray-500">
+                          {manager.email}
+                        </span>
+                      ) : null}
                     </span>
                   </div>
                 ))}
@@ -490,8 +489,8 @@ export default function RemunerationCalculatorPage() {
                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                           Manager
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                          Role
+                          <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            Position
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                           Scope
@@ -535,7 +534,7 @@ export default function RemunerationCalculatorPage() {
                             </div>
                           </td>
                           <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
-                            {row.manager.roleName}
+                            {row.manager.jobPosition}
                           </td>
                           <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300 truncate">
                             {row.manager.scope.officeName ??
