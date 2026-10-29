@@ -113,7 +113,7 @@ const navItems: NavItem[] = [
     icon: <PayrollIcon />,
     subItems: [
       { name: "Dashboard", path: "/remuneration", pro: false, new: true },
-      { name: "Managers", path: "/remuneration/managers", pro: false },
+      // { name: "Managers", path: "/remuneration/managers", pro: false },
       { name: "Calculator", path: "/remuneration/calculator", pro: false },
       { name: "Approvals", path: "/remuneration/approvals", pro: false },
       { name: "Structure", path: "/remuneration/structure", pro: false },
