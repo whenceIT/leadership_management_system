@@ -41,11 +41,10 @@ function derivePositionApiString(jobPosition: string | null, roleId: string): st
 
 function periodDates(period: string): { start: string; end: string } {
   const [year, month] = period.split('-').map(Number);
-  const startDay = 24;
-  const start = new Date(Date.UTC(year, month - 1, startDay));
-  const end = new Date(Date.UTC(year, month, 0));
-  end.setUTCDate(24);
-  const fmt = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  const start = new Date(Date.UTC(year, month - 2, 24));
+  const end = new Date(Date.UTC(year, month - 1, 24));
+  const fmt = (d: Date) =>
+    `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
   return { start: fmt(start), end: fmt(end) };
 }
 
