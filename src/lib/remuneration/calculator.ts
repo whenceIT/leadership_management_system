@@ -457,7 +457,11 @@ export function calculateRemuneration(input: CalculationInput): RemunerationComp
 
   const housing = assessHousing(role, tier, previousTier);
 
-  const approvedGross = tier?.payBlock.grossPay ?? 0;
+  const currentRangeMin =
+    role.tiers.length > 0
+      ? Math.min(...role.tiers.map((t) => t.payBlock.grossPay))
+      : 0;
+  const approvedGross = tier?.payBlock.grossPay ?? currentRangeMin;
   const adjustedGross = round(Math.max(0, approvedGross - housing.continuityAdjustment));
 
   const statutoryResult = computeStatutory(adjustedGross, statutory);
