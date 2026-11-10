@@ -481,65 +481,59 @@ export default function RemunerationCalculatorPage() {
                     </span>
                   </div>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="max-h-[70vh] overflow-auto">
                   <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    <thead className="sticky top-0 z-10 bg-emerald-900">
+                      <tr className="border-b border-emerald-950">
+                        <th className="bg-emerald-900 px-6 py-3 text-left text-xs font-bold uppercase tracking-wide text-white">
                           Manager
                         </th>
-                          <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                            Position
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                          Scope
-                        </th>
-                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th className="bg-emerald-900 px-6 py-3 text-right text-xs font-bold uppercase tracking-wide text-white">
                           Measured revenue
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th className="bg-emerald-900 px-6 py-3 text-right text-xs font-bold uppercase tracking-wide text-white">
                           Tier
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th className="bg-emerald-900 px-6 py-3 text-right text-xs font-bold uppercase tracking-wide text-white">
                           Gross pay
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th className="bg-emerald-900 px-6 py-3 text-right text-xs font-bold uppercase tracking-wide text-white">
                           Net cash pay
                         </th>
-                        <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th className="bg-emerald-900 px-6 py-3 text-right text-xs font-bold uppercase tracking-wide text-white">
                           Cost to company
                         </th>
-                        <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                        <th className="bg-emerald-900 px-6 py-3 text-left text-xs font-bold uppercase tracking-wide text-white">
                           Status
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                       {rows.map((row) => (
-                        <tr key={row.manager.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                        <tr key={row.manager.id} className="align-top hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                           <td className="px-6 py-3">
-                            <div className="flex items-center gap-3">
-                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-200">
+                            <div className="flex items-start gap-3">
+                              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-200">
                                 {initialsOf(row.manager.fullName)}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">
                                   {row.manager.fullName}
                                 </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                   {row.manager.email ?? 'No email'}
+                                </p>
+                                <p className="mt-0.5 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                  {row.manager.jobPosition}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {row.manager.scope.officeName ??
+                                    row.manager.scope.districtName ??
+                                    row.manager.scope.provinceName ??
+                                    'No scope'}
                                 </p>
                               </div>
                             </div>
-                          </td>
-                          <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300">
-                            {row.manager.jobPosition}
-                          </td>
-                          <td className="px-6 py-3 text-sm text-gray-700 dark:text-gray-300 truncate">
-                            {row.manager.scope.officeName ??
-                              row.manager.scope.districtName ??
-                              row.manager.scope.provinceName ??
-                              'No scope'}
                           </td>
                           <td className="px-6 py-3 text-right text-sm tabular-nums text-gray-700 dark:text-gray-300">
                             {(() => {

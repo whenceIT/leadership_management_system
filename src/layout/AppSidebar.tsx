@@ -318,7 +318,9 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
+      className={`fixed mt-16 lg:mt-0 top-0 left-0 z-50 h-screen px-5 flex flex-col overflow-hidden border-r border-cyan-200/60 text-gray-900 transition-all duration-300 ease-in-out dark:border-cyan-800/40 dark:text-white
+        bg-gradient-to-b from-cyan-50 via-sky-100/90 to-teal-50
+        dark:from-slate-950 dark:via-cyan-950/80 dark:to-sky-950/70
         ${
           isExpanded || isMobileOpen
             ? "w-[290px]"
@@ -331,48 +333,66 @@ const AppSidebar: React.FC = () => {
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div
-        className={`py-8 flex items-center gap-3 ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-        }`}
-      >
-        <Link href="/" className="flex items-center gap-3">
-          <Image
-            src="/images/logo/logo.jpg"
-            alt="Logo"
-            width={isExpanded || isHovered || isMobileOpen ? 40 : 40}
-            height={isExpanded || isHovered || isMobileOpen ? 40 : 40}
-            className="object-contain"
-          />
-          {(isExpanded || isHovered || isMobileOpen) && (
-            <span className="text-xl font-semibold text-gray-900 dark:text-white">
-              Whence
-            </span>
-          )}
-        </Link>
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-16 h-64 w-64 rounded-full bg-cyan-300/40 blur-3xl dark:bg-cyan-500/20" />
+        <div className="absolute top-1/3 -right-20 h-72 w-72 rounded-full bg-sky-300/35 blur-3xl dark:bg-sky-500/15" />
+        <div className="absolute bottom-0 left-0 h-56 w-56 rounded-full bg-teal-200/40 blur-3xl dark:bg-teal-500/15" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.55),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(186,230,253,0.45),transparent_30%),radial-gradient(circle_at_50%_80%,rgba(153,246,228,0.35),transparent_35%)] dark:bg-[radial-gradient(circle_at_20%_20%,rgba(34,211,238,0.12),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(56,189,248,0.10),transparent_30%),radial-gradient(circle_at_50%_80%,rgba(45,212,191,0.10),transparent_35%)]" />
+        <div
+          className="absolute inset-0 opacity-20 mix-blend-soft-light dark:opacity-15"
+          style={{
+            backgroundImage:
+              "radial-gradient(rgba(14,165,233,0.35) 0.8px, transparent 0.8px), radial-gradient(rgba(20,184,166,0.25) 0.8px, transparent 0.8px)",
+            backgroundSize: "22px 22px, 34px 34px",
+            backgroundPosition: "0 0, 12px 10px",
+          }}
+        />
       </div>
-      <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
-        <nav className="mb-6">
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2
-                className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
-                  !isExpanded && !isHovered
-                    ? "lg:justify-center"
-                    : "justify-start"
-                }`}
-              >
-                {isExpanded || isHovered || isMobileOpen ? (
-                  "Menu"
-                ) : (
-                  <HorizontaLDots />
-                )}
-              </h2>
-              {renderMenuItems(navItems)}
+
+      <div className="relative z-10 flex h-full flex-col">
+        <div
+          className={`py-8 flex items-center gap-3 ${
+            !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
+          }`}
+        >
+          <Link href="/" className="flex items-center gap-3">
+            <Image
+              src="/images/logo/logo.jpg"
+              alt="Logo"
+              width={isExpanded || isHovered || isMobileOpen ? 40 : 40}
+              height={isExpanded || isHovered || isMobileOpen ? 40 : 40}
+              className="object-contain"
+            />
+            {(isExpanded || isHovered || isMobileOpen) && (
+              <span className="text-xl font-semibold text-gray-900 dark:text-white">
+                Whence
+              </span>
+            )}
+          </Link>
+        </div>
+        <div className="flex flex-col overflow-y-auto duration-300 ease-linear no-scrollbar">
+          <nav className="mb-6">
+            <div className="flex flex-col gap-4">
+              <div>
+                <h2
+                  className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-500 dark:text-cyan-200/70 ${
+                    !isExpanded && !isHovered
+                      ? "lg:justify-center"
+                      : "justify-start"
+                  }`}
+                >
+                  {isExpanded || isHovered || isMobileOpen ? (
+                    "Menu"
+                  ) : (
+                    <HorizontaLDots />
+                  )}
+                </h2>
+                {renderMenuItems(navItems)}
+              </div>
             </div>
-          </div>
-        </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
+          </nav>
+          {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
+        </div>
       </div>
     </aside>
   );
