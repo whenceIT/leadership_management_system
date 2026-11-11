@@ -25,6 +25,7 @@ import { useRevenueAchievements } from '@/hooks/useRevenueAchievements';
 import { useProfitabilityContribution } from '@/hooks/useProfitabilityContribution';
 import { useCashPosition, useCashHealthPosition } from '@/hooks/useCashPosition';
 import { useUserPosition } from '@/hooks/useUserPosition';
+import { useProvince } from '@/hooks/useProvince';
 import { fetchOfficeUsers, OfficeUsersResponse } from '@/services/OfficeUserService';
 
 interface BranchManagerDashboardProps {
@@ -115,7 +116,11 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
 
   // Get user's office ID
   const { user: userPosition } = useUserPosition();
+  const { getProvinceName } = useProvince();
   const officeId = userPosition?.office_id || userPosition?.officeId || userPosition?.id || 3;
+  const userProvinceId = Number((userPosition as any)?.province_id ?? (userPosition as any)?.provinceId ?? 0);
+  const provinceName = userProvinceId ? getProvinceName(userProvinceId) : null;
+  const resolvedProvinceName = provinceName && provinceName !== 'Unknown Province' ? provinceName : null;
 
   // Fetch cash position data
   const { data: cashPositionData, isLoading: isCashPositionLoading, error: cashPositionError } = useCashHealthPosition(officeId);
@@ -576,6 +581,7 @@ export default function BranchManagerDashboard({ userTier }: BranchManagerDashbo
       title="Branch Manager Dashboard"
       subtitle="Real-time branch performance and operations overview"
       userTier={userTier}
+      provinceName={resolvedProvinceName}
     >
       {/* Institutional Health Summary - Landing Page View */}
       <InstitutionalHealthSummary

@@ -122,5 +122,7 @@ export interface GuidanceEngineInput {
   managerContext: ManagerContext;
   /** Consultant performance records to evaluate. Only poor performers are surfaced. */
   consultants: ConsultantPerformance[];
+  /** Date range used for the fetched consultant performance (optional, for display). */
+  dateRange?: { startDate?: string; endDate?: string };
   maxRecommendations?: number;
 }

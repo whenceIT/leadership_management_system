@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const API_BASE_URL = 'https://smartbackend.whencefinancesystem.com';
 
 export async function GET(request: NextRequest) {
@@ -15,7 +18,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Call external API to get user data
-    const apiResponse = await fetch(`${API_BASE_URL}/get-user/${encodeURIComponent(email)}`);
+    const apiResponse = await fetch(`${API_BASE_URL}/get-user/${encodeURIComponent(email)}`, {
+      cache: 'no-store',
+    });
 
     if (!apiResponse.ok) {
       const errorData = await apiResponse.json().catch(() => ({}));

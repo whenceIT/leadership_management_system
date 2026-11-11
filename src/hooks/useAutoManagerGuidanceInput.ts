@@ -34,6 +34,15 @@ export function useAutoManagerGuidanceInput(enabled: boolean): GuidanceEngineInp
   const [fetchedData, setFetchedData] = useState<ConsultantData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 24));
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 24));
+    const fmt = (d: Date) =>
+      `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+    return { startDate: fmt(start), endDate: fmt(end) };
+  }, []);
+
   interface ConsultantData {
     consultants: import('@/types/managerGuidance').ConsultantPerformance[];
   }
@@ -53,8 +62,8 @@ export function useAutoManagerGuidanceInput(enabled: boolean): GuidanceEngineInp
 
         const consultants = await fetchConsultantPerformanceByOffice(
           targetOfficeId,
-          new Date().toISOString().slice(0, 7) + '-01',
-          new Date().toISOString().slice(0, 10)
+          dateRange.startDate,
+          dateRange.endDate
         );
         if (!cancelled && enabled) {
           setFetchedData({ consultants });
@@ -73,14 +82,15 @@ export function useAutoManagerGuidanceInput(enabled: boolean): GuidanceEngineInp
     return () => {
       cancelled = true;
     };
-  }, [enabled, officeId, tier]);
+  }, [enabled, officeId, tier, dateRange]);
 
   return useMemo(() => {
     if (!enabled) return null;
     return {
       managerContext,
       consultants: fetchedData?.consultants ?? [],
+      dateRange,
       maxRecommendations: 1000,
     };
-  }, [enabled, managerContext, fetchedData?.consultants]);
+  }, [enabled, managerContext, fetchedData?.consultants, dateRange]);
 }

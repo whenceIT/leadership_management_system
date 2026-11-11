@@ -161,8 +161,7 @@ export function useUserPosition() {
       if (typeof currentUser.email === 'string' && currentUser.email) {
         try {
           const response = await fetch(`/api/auth/user?email=${encodeURIComponent(currentUser.email)}`, {
-            cache: "force-cache",
-            next: { revalidate: 300 }
+            cache: "no-store",
           });
           const data = await response.json();
 

@@ -7,6 +7,8 @@ import { InstitutionalHealthSummary, getInstitutionalSummaryData } from './Insti
 import { roleCardsData } from '@/data/role-cards-data';
 import { useUserKPI } from '@/hooks/useUserKPI';
 import { useDistrictCashPosition } from '@/hooks/useInstitutionalCashPosition';
+import { useUserPosition } from '@/hooks/useUserPosition';
+import { useProvince } from '@/hooks/useProvince';
 
 interface DistrictManagerDashboardProps {
   position?: string;
@@ -24,11 +26,18 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
     kpis: []
   };
 
+  const { user } = useUserPosition();
+  const { getProvinceName } = useProvince();
+
   // Get user-specific KPI data
   const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
 
   // Cash position metrics from Cash Health District API
   const { data: cashPositionData } = useDistrictCashPosition(districtId ?? 0);
+
+  const userProvinceId = Number((user as any)?.province_id ?? (user as any)?.provinceId ?? 0);
+  const provinceName = userProvinceId ? getProvinceName(userProvinceId) : null;
+  const resolvedProvinceName = provinceName && provinceName !== 'Unknown Province' ? provinceName : null;
   
   // Build KPIs from user-specific KPI data
   const kpis = processedKPIs.length > 0 ? processedKPIs.map(kpi => ({
@@ -147,6 +156,7 @@ export default function DistrictManagerDashboard({ position = 'District Manager'
       title={roleCard.title}
       subtitle="Cross-branch performance and district-wide oversight"
       userTier={userTier}
+      provinceName={resolvedProvinceName}
     >
       {/* Institutional Health Summary - Landing Page View */}
       <InstitutionalHealthSummary

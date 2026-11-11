@@ -8,21 +8,27 @@ interface DashboardBaseProps {
   title: string;
   subtitle?: string;
   userTier?: string | null;
+  provinceName?: string | null;
   className?: string;
 }
 
-export function DashboardBase({ children, title, subtitle, userTier, className = '' }: DashboardBaseProps) {
+export function DashboardBase({ children, title, subtitle, userTier, provinceName, className = '' }: DashboardBaseProps) {
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Dashboard Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {title}
           </h1>
           {userTier && (
             <span className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
               Tier: {userTier}
+            </span>
+          )}
+          {provinceName && (
+            <span className="px-3 py-1 text-sm font-medium bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300 rounded-full">
+              Province: {provinceName}
             </span>
           )}
         </div>

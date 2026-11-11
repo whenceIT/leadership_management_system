@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
         email,
         password,
       }),
+      cache: 'no-store',
     });
 
     if (!apiResponse.ok) {

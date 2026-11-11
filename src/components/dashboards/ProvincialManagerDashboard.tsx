@@ -20,6 +20,7 @@ import ProvincialDataService, {
 import { useUserPosition } from '@/hooks/useUserPosition';
 import { useOffice } from '@/hooks/useOffice';
 import { useUserKPI, ProcessedKPI } from '@/hooks/useUserKPI';
+import { useProvince } from '@/hooks/useProvince';
 import { useProvincialStaffAdequacy } from '@/hooks/useStaffAdequacy';
 import { useProvincialCollectionEfficiency } from '@/hooks/useProvincialCollectionEfficiency';
 import { useProvincialPortfolioQuality } from '@/hooks/useProvincialPortfolioQuality';
@@ -42,6 +43,7 @@ import { useProvincialCashPosition } from '@/hooks/useProvincialCashPosition';
 export default function ProvincialManagerDashboard() {
   const { user, positionName, isLoading: isPositionLoading } = useUserPosition();
   const { getOffice } = useOffice();
+  const { getProvinceName } = useProvince();
   const [performanceData, setPerformanceData] = useState<ProvincialPerformanceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +52,10 @@ export default function ProvincialManagerDashboard() {
   
   // Get user-specific KPI data
   const { processedKPIs, isLoading: isKpiLoading, error: kpiError } = useUserKPI();
+
+  const userProvinceId = Number((user as any)?.province_id ?? (user as any)?.provinceId ?? 0);
+  const provinceName = userProvinceId ? getProvinceName(userProvinceId) : null;
+  const resolvedProvinceName = provinceName && provinceName !== 'Unknown Province' ? provinceName : null;
 
   // Get province ID from user's office
   const getProvinceIdFromUser = (): number => {
@@ -320,6 +326,7 @@ export default function ProvincialManagerDashboard() {
     <DashboardBase
       title="Provincial Manager Dashboard"
       subtitle="Provincial strategic oversight, portfolio health, and growth leadership"
+      provinceName={resolvedProvinceName}
     >
       {/* Institutional Health Summary - Landing Page View */}
       <InstitutionalHealthSummary
@@ -355,84 +362,7 @@ export default function ProvincialManagerDashboard() {
         />
 
 
-      <div className="grid grid-cols-12 gap-4 md:gap-6 mt-6">
-        {/* Branch Performance Overview - Dynamic from API */}
-        <div className="col-span-12">
-          <CollapsibleCard title="Branch Performance Overview">
-            {performanceData && performanceData.branches.length > 0 ? (
-              <div className={`grid grid-cols-${Math.min(performanceData.branches.length, 5)} gap-4`}>
-                {performanceData.branches.slice(0, 5).map((branch) => {
-                  const avgContribution = getAverageContribution(performanceData.branches);
-                  const contributionColor = getContributionColor(branch.net_contribution_value, avgContribution);
-                  
-                  return (
-                    <div key={branch.branch_id} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                      <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{branch.branch_name}</p>
-                      <p className={`text-2xl font-bold ${contributionColor} mt-1`}>{branch.net_contribution}</p>
-                      <p className="text-xs text-gray-500">Net Contribution</p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-xs text-gray-400">PAR: {branch.par.rate}%</span>
-                        <span className="text-xs text-gray-400">•</span>
-                        <span className="text-xs text-gray-400">Col: {branch.collections.rate}%</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              // Empty state when no branch performance data is available
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <div className="flex justify-center mb-4">
-                  <svg className="w-24 h-24 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Branch Performance Data</h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                  Branch performance data is currently unavailable. Please check back later for real-time branch metrics and contributions.
-                </p>
-              </div>
-            )}
-          </CollapsibleCard>
-        </div>
-        
-        
-        {/* Provincial Health - Dynamic from API */}
-        <div className="col-span-12">
-          <CollapsibleCard title="Provincial Health Indicators">
-            {performanceData && performanceData.branches.length > 0 ? (
-              <div className="space-y-3">
-                {performanceData.branches.map((branch) => {
-                  const service = ProvincialDataService.getInstance();
-                  const healthStatus = service.getBranchHealthStatus(branch);
-                  const statusStyle = getHealthStatusStyle(healthStatus);
-                  
-                  return (
-                    <div key={branch.branch_id} className={`flex items-center justify-between p-3 ${statusStyle.bg} rounded-lg`}>
-                      <span className={`text-sm font-medium ${statusStyle.text}`}>{branch.branch_name}</span>
-                      <span className={`text-xs px-2 py-1 ${statusStyle.badge} rounded-full`}>{statusStyle.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              // Empty state when no branch health data is available
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-                <div className="flex justify-center mb-4">
-                  <svg className="w-24 h-24 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Health Indicator Data</h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                  Branch health indicator data is currently unavailable. Please check back later for real-time health status updates.
-                </p>
-              </div>
-            )}
-          </CollapsibleCard>
-        </div>
-
-      </div>
+      
     </DashboardBase>
   );
 }

@@ -7,6 +7,22 @@ import { useAutoManagerGuidanceInput } from '@/hooks/useAutoManagerGuidanceInput
 import { useLoading } from '@/context/LoadingContext';
 import type { ManagerGuidanceRecommendation, GuidanceSeverity } from '@/types/managerGuidance';
 
+function formatDateRange(start?: string, end?: string): string | null {
+  if (!start || !end) return null;
+  try {
+    const startDate = new Date(`${start}T00:00:00Z`);
+    const endDate = new Date(`${end}T00:00:00Z`);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null;
+    const sameMonth = startDate.getUTCFullYear() === endDate.getUTCFullYear() && startDate.getUTCMonth() === endDate.getUTCMonth();
+    const sameYear = startDate.getUTCFullYear() === endDate.getUTCFullYear();
+    const startFmt = startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC', ...(sameYear ? {} : { year: 'numeric' }) });
+    const endFmt = endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+    return sameMonth ? `${startDate.getUTCDate()}–${endFmt}` : `${startFmt} – ${endFmt}`;
+  } catch {
+    return `${start} – ${end}`;
+  }
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const AUTO_OPEN_STORAGE_KEY = 'manager_guidance_auto_opened';
@@ -384,6 +400,7 @@ export default function ManagerGuidanceSheet({ input }: { input?: any }) {
   const autoInput = useAutoManagerGuidanceInput(!isGlobalLoading);
   const effectiveInput = input ?? autoInput;
   const { recommendations, isLoading, error, hasCritical, activeCount, criticalCount } = useManagerGuidance(effectiveInput ?? undefined);
+  const dateRangeLabel = formatDateRange(effectiveInput?.dateRange?.startDate, effectiveInput?.dateRange?.endDate);
 
   // ── navigation helpers ──
 
@@ -519,8 +536,8 @@ export default function ManagerGuidanceSheet({ input }: { input?: any }) {
     );
 
     if (recommendations.length === 0) return (
-      <div className="flex flex-col items-center justify-center py-6 text-center">
-        <img src="/preloader/modal-preloader.gif" alt="Loading" className="w-12 h-12" />
+      <div className="flex flex-col items-center justify-center py-10 text-center">
+        <p className="text-sm text-slate-500 dark:text-slate-400">No poor performance found</p>
       </div>
     );
 
@@ -668,8 +685,13 @@ export default function ManagerGuidanceSheet({ input }: { input?: any }) {
                     <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
                       {activeCount > 0
                         ? `${activeCount} consultant${activeCount !== 1 ? 's' : ''} require${activeCount === 1 ? 's' : ''} attention`
-                        : 'All consultants performing well'}
+                        : 'Loan consultant performance'}
                     </p>
+                    {dateRangeLabel && (
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight mt-1">
+                        Cycle: {dateRangeLabel}
+                      </p>
+                    )}
                   </div>
                 </div>
 

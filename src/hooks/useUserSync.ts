@@ -28,8 +28,7 @@ export function useUserSync() {
 
       // Fetch latest user data from API
       const response = await fetch(`/api/auth/user?email=${encodeURIComponent(currentUser.email)}`, {
-        cache: "force-cache",
-        next: { revalidate: 300 }
+        cache: "no-store",
       });
       const data = await response.json();
 
