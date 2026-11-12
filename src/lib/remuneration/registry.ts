@@ -54,7 +54,7 @@ export async function fetchApiManagers(): Promise<ApiManager[]> {
 }
 
 function isLoanConsultantPosition(jobPosition: string | null | undefined): boolean {
-  return (jobPosition ?? '').toLower().includes('loan consultant');
+  return (jobPosition ?? '').toLowerCase().includes('loan consultant');
 }
 
 function inferRoleFromPosition(jobPosition: string | null): RoleDefinition | null {

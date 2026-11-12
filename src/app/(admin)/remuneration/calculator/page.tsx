@@ -71,7 +71,7 @@ export default function RemunerationCalculatorPage() {
   const [submittedCount, setSubmittedCount] = useState(0);
 
   const scopedManagers = useMemo(
-    () => managers.filter((manager) => manager.jobPosition !== 'Loan Consultant'),
+    () => managers.filter((manager) => manager.jobPosition !== 'Loan Consultant' && manager.jobPosition !== 'No Position'),
     [managers]
   );
 
