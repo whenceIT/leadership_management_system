@@ -70,15 +70,20 @@ export default function RemunerationCalculatorPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [submittedCount, setSubmittedCount] = useState(0);
 
+  const scopedManagers = useMemo(
+    () => managers.filter((manager) => manager.jobPosition !== 'Loan Consultant'),
+    [managers]
+  );
+
   const roles = useMemo(() => {
     const map = new Map<string, string>();
-    managers.forEach((manager) => map.set(manager.roleId, manager.roleName));
+    scopedManagers.forEach((manager) => map.set(manager.roleId, manager.roleName));
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [managers]);
+  }, [scopedManagers]);
 
   const filteredManagers = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return managers
+    return scopedManagers
       .filter((manager) => (roleFilter === 'all' ? true : manager.roleId === roleFilter))
       .filter((manager) => {
         if (!term) return true;
@@ -92,9 +97,9 @@ export default function RemunerationCalculatorPage() {
         ]
           .join(' ')
           .toLowerCase()
-           .includes(term);
-       })
-  }, [managers, roleFilter, search]);
+          .includes(term);
+      });
+  }, [scopedManagers, roleFilter, search]);
 
   useEffect(() => {
     let active = true;

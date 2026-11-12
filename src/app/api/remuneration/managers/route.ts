@@ -29,7 +29,9 @@ export async function GET(request: NextRequest) {
     const adapter = await getAdapter();
 
     const apiManagers = await fetchApiManagers();
-    const apiProfiles = apiManagers.map(mapApiManager);
+    const apiProfiles = apiManagers
+      .map(mapApiManager)
+      .filter((profile) => !(profile.jobPosition ?? '').toLowerCase().includes('loan consultant'));
 
     for (const profile of apiProfiles) {
       await adapter.saveProfile(profile);

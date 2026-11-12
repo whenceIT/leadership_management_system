@@ -53,9 +53,17 @@ export async function fetchApiManagers(): Promise<ApiManager[]> {
   }
 }
 
+function isLoanConsultantPosition(jobPosition: string | null | undefined): boolean {
+  return (jobPosition ?? '').toLower().includes('loan consultant');
+}
+
 function inferRoleFromPosition(jobPosition: string | null): RoleDefinition | null {
   if (!jobPosition) return null;
   const normalized = jobPosition.toLowerCase();
+
+  if (normalized.includes('loan consultant')) {
+    return null;
+  }
 
   if (
     normalized.includes('executive chairperson') ||
@@ -94,10 +102,6 @@ function inferRoleFromPosition(jobPosition: string | null): RoleDefinition | nul
   }
   if (normalized.includes('provincial') && normalized.includes('manager')) {
     const role = ROLES_BY_ID['provincial_manager'];
-    if (role) return role;
-  }
-  if (normalized.includes('loan consultant')) {
-    const role = ROLES_BY_ID['branch_manager'];
     if (role) return role;
   }
   if (normalized.includes('motor vehicle')) {
@@ -419,13 +423,16 @@ export async function buildRegistry(
 
   for (const apiManager of apiManagers) {
     const profile = mapApiManager(apiManager);
+    if (isLoanConsultantPosition(profile.jobPosition)) continue;
     if (!derived.some((d) => d.userId === profile.userId)) {
       derived.push(profile);
     }
   }
 
   return {
-    profiles: mergeProfiles(derived, registeredProfiles),
+    profiles: mergeProfiles(derived, registeredProfiles).filter(
+      (profile) => !isLoanConsultantPosition(profile.jobPosition)
+    ),
     offices,
     districts,
     generatedAt: new Date().toISOString(),
